@@ -1,0 +1,8 @@
+﻿node_modules/
+logs/
+tmp/
+*.traineddata
+.cloudflared/
+backup_golden_stable_20260909/
+report-output/
+output/

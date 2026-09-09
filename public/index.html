@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>DPSir 智云盘</title>
+    <link rel="manifest" href="/manifest.webmanifest?v=20260812-logo3" />
+    <link rel="icon" href="/favicon.ico?v=20260812-logo3" sizes="any" />
+    <link rel="icon" type="image/png" href="/app-icon-192.png?v=20260812-logo3" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260812-logo3" />
+    <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
+    <meta name="theme-color" content="#1473e6" />
+    <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260909_backup_ui" />
+  </head>
+  <body>
+    <main id="app">
+      <section id="loginView" class="login-shell hidden">
+        <canvas id="loginFxCanvas" class="login-fx-canvas" aria-hidden="true"></canvas>
+        <form id="loginForm" class="login-panel">
+          <div class="brand-mark">DP</div>
+          <div>
+            <p class="eyebrow">DPSir AI Cloud Drive</p>
+            <h1>DPSir 智云盘</h1>
+            <p class="login-subtitle">AI 驱动的个人云端资料库</p>
+          </div>
+          <label>
+            账号
+            <input id="username" autocomplete="username" value="admin" />
+          </label>
+          <label>
+            密码
+            <input id="password" type="password" autocomplete="current-password" />
+          </label>
+          <label id="registrationKeyField" class="hidden">
+            注册密钥
+            <input id="registrationKeyInput" autocomplete="one-time-code" placeholder="请输入管理员发放的注册密钥" />
+          </label>
+          <button id="loginSubmitBtn" type="submit">登录</button>
+          <div class="login-secondary-actions">
+            <button id="authModeToggle" class="ghost" type="button">注册账号</button>
+            <button id="forgotPasswordBtn" class="ghost" type="button">找回密码</button>
+          </div>
+          <p id="loginError" class="error"></p>
+        </form>
+      </section>
+
+      <section id="passwordResetModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small dialog-modal-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">账号恢复</p>
+              <h2>找回登录密码</h2>
+            </div>
+            <button id="closePasswordResetModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+          </header>
+          <p class="modal-description">
+            这里不会显示旧密码，只会用管理员/本机恢复密码验证后，为指定账号设置一个新登录密码。
+          </p>
+          <label class="field">
+            要找回的账号
+            <input id="resetUsernameInput" autocomplete="username" />
+          </label>
+          <label class="field">
+            管理员/本机恢复密码
+            <input id="resetRecoveryPasswordInput" type="password" autocomplete="current-password" />
+          </label>
+          <label class="field">
+            新登录密码
+            <input id="resetNewPasswordInput" type="password" autocomplete="new-password" />
+          </label>
+          <p class="modal-hint">如果管理员密码也忘了，可以在服务器电脑本地查看 .cloudflared 里的网盘密码文件。</p>
+          <p id="passwordResetError" class="error modal-error"></p>
+          <div class="modal-actions">
+            <button id="confirmPasswordResetBtn" class="primary" type="button">重置密码</button>
+            <button id="cancelPasswordResetBtn" class="ghost" type="button">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="registrationKeysModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card registration-keys-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">管理员入口</p>
+              <h2>注册密钥管理</h2>
+            </div>
+            <button id="closeRegistrationKeysModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+          </header>
+          <div class="registration-keys-body">
+            <section class="registration-key-create">
+              <div>
+                <strong>一次性注册密钥</strong>
+                <p>密钥生成后 15 分钟内有效，注册成功后自动失效。完整密钥只在生成后显示，建议立即复制发给新用户。</p>
+              </div>
+              <button id="generateRegistrationKeyBtn" class="primary" type="button">生成密钥</button>
+            </section>
+            <section id="newRegistrationKeyPanel" class="registration-key-result hidden">
+              <span>新密钥</span>
+              <strong id="newRegistrationKeyValue"></strong>
+              <button id="copyRegistrationKeyBtn" class="ghost" type="button">复制密钥</button>
+            </section>
+            <div class="registration-key-list-header">
+              <strong>密钥记录</strong>
+              <button id="refreshRegistrationKeysBtn" class="ghost" type="button">刷新</button>
+            </div>
+            <div id="registrationKeyList" class="registration-key-list"></div>
+            <p id="registrationKeysError" class="error modal-error"></p>
+          </div>
+          <div class="modal-actions">
+            <button id="cancelRegistrationKeysBtn" class="ghost" type="button">关闭</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="driveView" class="drive-shell hidden">
+        <aside class="sidebar">
+          <div class="brand-row">
+            <div class="brand-mark">DP</div>
+            <div>
+              <p class="eyebrow">DPSir AI Cloud Drive</p>
+              <h1>DPSir 智云盘</h1>
+            </div>
+          </div>
+
+          <div class="storage-box">
+            <span>存储位置</span>
+            <strong id="storageRoot" title="D:\PersonalCloudDrive\files">D:\PersonalCloudDrive\files</strong>
+          </div>
+
+          <div class="access-box">
+            <span>访问地址</span>
+            <div id="lanAccessLinks" class="access-links">
+              <small>正在检测局域网地址...</small>
+            </div>
+            <small id="activeClientCount">Active IPs: -</small>
+            <a id="publicAccessLink" href="https://dpsirperson.085410.xyz">公网备用</a>
+            <small id="networkStatus" class="network-status">当前访问：正在检测...</small>
+            <div id="healthStatus" class="health-box checking">
+              <span>服务状态</span>
+              <strong>正在检测...</strong>
+              <small>检查本机服务、存储、公网和账号隔离</small>
+            </div>
+          </div>
+
+          <div class="side-metrics">
+            <div>
+              <span id="folderCount">0</span>
+              <small>文件夹</small>
+            </div>
+            <div>
+              <span id="fileCount">0</span>
+              <small>文件</small>
+            </div>
+            <div class="storage-usage-metric">
+              <span id="storageUsed">0 B</span>
+              <small>已用 / 可用</small>
+            </div>
+          </div>
+
+          <button id="recycleBinBtn" class="ghost wide" type="button">🗑️ 回收站</button>
+          <button id="mySharesBtn" class="ghost wide" type="button">🔗 我的分享</button>
+          <button id="registrationKeysBtn" class="ghost wide admin-action hidden">注册密钥管理</button>
+          <button id="logoutBtn" class="ghost wide">退出登录</button>
+        </aside>
+
+        <section class="content">
+          <div class="toolbar-stack">
+          <header class="topbar">
+            <div class="path-panel">
+              <div class="path-controls">
+                <button id="backBtn" class="icon-button" title="返回上级" aria-label="返回上级">‹</button>
+                <div>
+                  <div id="breadcrumb" class="breadcrumb"></div>
+                  <p id="statusLine">准备就绪</p>
+                </div>
+              </div>
+              <div class="upload-target">
+                <span>上传位置</span>
+                <strong id="currentFolderLabel">全部文件</strong>
+              </div>
+            </div>
+
+            <div class="actions">
+              <input id="fileInput" type="file" multiple hidden />
+              <input id="folderInput" type="file" multiple webkitdirectory directory hidden />
+              <button id="uploadBtn" class="primary">上传文件</button>
+              <button id="newFolderBtn" class="primary secondary">新建文件夹</button>
+              <button id="selectModeBtn" class="ghost">多选</button>
+<button id="refreshBtn" class="ghost">刷新</button>
+            </div>
+          </header>
+
+          <section class="search-panel" aria-label="关键词搜索">
+            <div class="search-row">
+              <label class="search-box">
+                <span>关键词搜索</span>
+                <input
+                  id="searchInput"
+                  type="search"
+                  placeholder="可搜文件名、文件夹名、路径、类型、时间、大小"
+                  autocomplete="off"
+                />
+              </label>
+              <button id="searchBtn" class="primary secondary" type="button">搜索</button>
+              <button id="clearSearchBtn" class="ghost hidden" type="button">清除搜索</button>
+              <div class="search-options-stack">
+                <div id="searchScopeLabel" class="search-scope-label" title="当前搜索目录：全部文件">
+                  <span>当前搜索目录：</span><strong class="search-scope-path">全部文件</strong>
+                </div>
+              </div>
+              <button id="aiModeToggleBtn" class="ai-mode-toggle" type="button" aria-pressed="false">AI模式</button>
+              <button id="aiGlobalSearchBtn" class="ai-global-search hidden" type="button" title="使用满血 AI 旗舰大模型（deepseek-v4-pro）进行全库问答与检索">AI全库问答</button>
+            </div>
+            <div id="searchTools" class="search-tools hidden">
+              <div id="searchCategoryTabs" class="search-tabs" aria-label="搜索结果分类"></div>
+              <label class="search-sort">
+                <span>排序</span>
+                <select id="searchSort" title="搜索结果排序">
+                  <option value="relevance">最相关</option>
+                  <option value="modifiedDesc">最近修改</option>
+                  <option value="sizeDesc">文件大小</option>
+                  <option value="type">文件类型</option>
+                  <option value="name">名称</option>
+                </select>
+              </label>
+            </div>
+            <p class="search-hint">
+              提示：可搜名称、路径、类型、日期和大小。
+            </p>
+            <p id="searchSummary" class="search-summary hidden"></p>
+          </section>
+
+          <div id="uploadProgress" class="upload-progress hidden">
+            <div>
+              <span id="uploadProgressText">正在上传...</span>
+              <strong id="uploadProgressPercent">0%</strong>
+            </div>
+            <div class="progress-track"><span id="uploadProgressBar"></span></div>
+          </div>
+
+          <div id="selectionBar" class="selection-bar hidden">
+            <strong id="selectionCount">已选择 0 项</strong>
+            <div id="normalSelectionActions">
+              <button id="selectAllBtn" class="ghost">全选</button>
+              <button id="bulkDownloadBtn" class="ghost">下载</button>
+              <button id="bulkCopyBtn" class="ghost">复制</button>
+              <button id="bulkMoveBtn" class="ghost">移动</button>
+              <button id="bulkDeleteBtn" class="danger">删除</button>
+              <button id="clearSelectionBtn" class="ghost">取消</button>
+            </div>
+            <div id="trashSelectionActions" class="hidden">
+              <button id="trashSelectAllBtn" class="ghost" type="button">全选</button>
+              <button id="bulkRestoreTrashBtn" class="primary" type="button">一键还原</button>
+              <button id="bulkPermanentDeleteBtn" class="danger" type="button">一键彻底删除</button>
+              <button id="clearTrashSelectionBtn" class="ghost" type="button">取消</button>
+            </div>
+          </div>
+          </div>
+
+          <section id="dropZone" class="file-panel">
+            <div id="dropOverlay" class="drop-overlay">松开后上传到当前文件夹</div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="select-col"><input type="checkbox" id="headerSelectAll" class="row-select" aria-label="全选所有项目" /></th>
+                  <th>名称</th>
+                  <th>大小</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="fileRows"></tbody>
+            </table>
+            <div id="emptyState" class="empty hidden">
+              <strong>这个文件夹还是空的</strong>
+              <span>点击上传文件，或把文件拖到这里</span>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <section id="aiDrawer" class="ai-drawer-shell hidden" aria-hidden="true">
+        <div class="ai-drawer-backdrop" id="aiDrawerBackdrop"></div>
+        <aside class="ai-drawer" aria-label="AI对话面板">
+          <div class="ai-drawer-glow"></div>
+          <header class="ai-drawer-header">
+            <button id="aiDrawerBackBtn" class="ai-drawer-back-button hidden" type="button">返回全库问答</button>
+            <div>
+              <h2 id="aiDrawerTitle">AI对话</h2>
+              <p id="aiDrawerSubtitle">选择一个入口开始</p>
+            </div>
+            <button id="aiDrawerCloseBtn" class="icon-button small-icon" type="button" aria-label="关闭">×</button>
+          </header>
+
+          <div class="ai-drawer-toolbar">
+            <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button">思考</button>
+            <button id="aiWebSearchToggleBtn" class="ai-model-pill ai-web-search-toggle" type="button" aria-pressed="false">联网关闭</button>
+            <button id="aiScopeBtn" class="ai-model-pill subtle" type="button">当前范围</button>
+          </div>
+
+          <div id="aiContextCard" class="ai-context-card"></div>
+          <div id="aiSuggestionList" class="ai-suggestions"></div>
+          <div id="aiMessages" class="ai-messages" aria-live="polite"></div>
+
+          <form id="aiPromptForm" class="ai-prompt-form">
+            <label class="ai-prompt-box">
+              <span id="aiPromptHint">输入你的问题</span>
+              <textarea id="aiPromptInput" rows="1" placeholder="例如：帮我找毕业设计相关资料"></textarea>
+            </label>
+            <button id="aiPromptSendBtn" class="ai-send-btn" type="submit">发送</button>
+          </form>
+        </aside>
+      </section>
+
+      <section id="uploadModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">Upload Target</p>
+              <h2>选择上传位置</h2>
+            </div>
+            <button id="closeUploadModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+          </header>
+          <label class="field">
+            上传到
+            <select id="uploadFolderSelect" class="folder-target-select"></select>
+          </label>
+          <div class="modal-actions">
+            <button id="chooseFilesBtn" class="primary">选择文件</button>
+            <button id="chooseFolderBtn" class="primary secondary">选择文件夹</button>
+            <button id="cancelUploadTargetBtn" class="ghost">取消</button>
+          </div>
+        </div>
+      </section>
+      <section id="bulkMoveModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">批量移动</p>
+              <h2>移动选中项目</h2>
+            </div>
+            <button id="closeBulkMoveModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+          </header>
+          <label class="field">
+            移动到
+            <select id="bulkMoveFolderSelect" class="folder-target-select"></select>
+          </label>
+          <div class="modal-actions">
+            <button id="confirmBulkMoveBtn" class="primary">移动</button>
+            <button id="cancelBulkMoveBtn" class="ghost">取消</button>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="previewModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card preview-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h2 id="previewTitle">文件预览</h2>
+            </div>
+            <div class="modal-actions compact">
+              <button id="previewAiSummarizeBtn" class="ghost small-btn hidden" type="button" title="使用 DeepSeek AI 总结此文档">✨ AI 总结</button>
+              <a id="previewDownloadLink" class="download-link" href="#">下载</a>
+              <button id="closePreviewBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            </div>
+          </header>
+          <div id="previewBody" class="preview-body"></div>
+        </div>
+      </section>
+
+      <section id="folderPasswordModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small password-modal-card">
+          <header class="modal-header">
+            <div>
+              <p id="folderPasswordEyebrow" class="eyebrow">文件夹加密</p>
+              <h2 id="folderPasswordTitle">设置文件夹密码</h2>
+            </div>
+            <button id="closeFolderPasswordModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+          </header>
+          <p id="folderPasswordDescription" class="modal-description"></p>
+          <label id="folderAdminPasswordField" class="field">
+            <span id="folderAdminPasswordLabel">网盘登录密码</span>
+            <input id="folderAdminPasswordInput" type="password" autocomplete="current-password" />
+          </label>
+          <label id="folderCurrentPasswordField" class="field hidden">
+            <span id="folderCurrentPasswordLabel">当前文件夹密码</span>
+            <input id="folderCurrentPasswordInput" type="password" autocomplete="off" />
+          </label>
+          <label id="folderNewPasswordField" class="field hidden">
+            <span id="folderNewPasswordLabel">新的文件夹密码</span>
+            <input id="folderNewPasswordInput" type="password" autocomplete="new-password" />
+          </label>
+          <p id="folderPasswordHint" class="modal-hint"></p>
+          <p id="folderPasswordError" class="error modal-error"></p>
+          <div class="modal-actions">
+            <button id="confirmFolderPasswordBtn" class="primary">确认</button>
+            <button id="resetFolderPasswordBtn" class="ghost hidden">忘记密码</button>
+            <button id="removeFolderPasswordBtn" class="danger hidden">取消密码</button>
+            <button id="cancelFolderPasswordBtn" class="ghost">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="dialogModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small dialog-modal-card">
+          <header class="modal-header">
+            <div>
+              <p id="dialogEyebrow" class="eyebrow">操作</p>
+              <h2 id="dialogTitle">确认</h2>
+            </div>
+            <button id="closeDialogModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+          </header>
+          <p id="dialogDescription" class="modal-description"></p>
+          <label id="dialogInputField" class="field hidden">
+            <span id="dialogInputLabel">输入内容</span>
+            <input id="dialogInput" type="text" autocomplete="off" />
+          </label>
+          <label id="dialogSelectField" class="field hidden">
+            <span id="dialogSelectLabel">选择内容</span>
+            <select id="dialogSelect" class="folder-target-select"></select>
+          </label>
+          <label id="dialogSecondInputField" class="field hidden">
+            <span id="dialogSecondInputLabel">第二项输入</span>
+            <input id="dialogSecondInput" type="text" autocomplete="off" />
+          </label>
+          <p id="dialogError" class="error modal-error"></p>
+          <div class="modal-actions">
+            <button id="confirmDialogBtn" class="primary">确认</button>
+            <button id="cancelDialogBtn" class="ghost">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="zipArchiveModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card zip-archive-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">ZIP 压缩包在线浏览</p>
+              <h2 id="zipArchiveTitle">压缩包内容</h2>
+            </div>
+            <div class="modal-actions compact">
+              <button id="zipDownloadAllBtn" class="primary" type="button">下载整个压缩包</button>
+              <button id="closeZipArchiveBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            </div>
+          </header>
+          <div class="zip-archive-body">
+            <div class="zip-nav-bar" id="zipNavBar">
+              <button id="zipBackBtn" class="ghost compact zip-back-btn hidden" type="button">⬅️ 返回上一级</button>
+              <div id="zipBreadcrumb" class="zip-breadcrumb"></div>
+            </div>
+            <div id="zipTreeContainer" class="zip-tree-container"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="shareModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">公开分享</p>
+              <h2 id="shareModalTitle">创建外链分享</h2>
+            </div>
+            <button id="closeShareModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+          </header>
+          <p class="modal-description" id="shareItemName">选择的项目</p>
+          <label class="field">
+            有效期
+            <select id="shareExpireDays">
+              <option value="7">7 天</option>
+              <option value="1">1 天</option>
+              <option value="30">30 天</option>
+              <option value="0">永久有效</option>
+            </select>
+          </label>
+          <label class="field">
+            提取码（可选，留空则免提取码公开访问）
+            <input id="sharePasswordInput" placeholder="例如：1234，留空则公开" maxlength="20" />
+          </label>
+          <div id="shareResultPanel" class="hidden share-result-panel">
+            <!-- 🌐 公网分享链接 -->
+            <div class="share-link-group">
+              <div class="share-link-header">
+                <span class="share-link-badge public">🌐 公网分享链接</span>
+                <span class="share-link-hint">适合微信好友、外网/远程访问</span>
+              </div>
+              <div class="share-link-input-row">
+                <input id="sharePublicLink" readonly class="share-url-input" />
+                <button id="copyPublicLinkBtn" class="primary compact" type="button">📋 复制公网</button>
+              </div>
+            </div>
+
+            <!-- 🏠 局域网分享链接 -->
+            <div class="share-link-group">
+              <div class="share-link-header">
+                <span class="share-link-badge lan">🏠 局域网分享链接</span>
+                <span class="share-link-hint">适合同 Wi-Fi / 内网极速直连</span>
+              </div>
+              <div class="share-link-input-row">
+                <input id="shareLanLink" readonly class="share-url-input" />
+                <button id="copyLanLinkBtn" class="ghost compact" type="button">📋 复制局域网</button>
+              </div>
+            </div>
+
+            <input id="shareResultLink" type="hidden" />
+            <button id="copyShareLinkBtn" class="share-copy-all-btn" type="button">📋 一键复制全部（含双链接与提取码）</button>
+          </div>
+          <div class="modal-actions" id="shareActionButtons">
+            <button id="createShareBtn" class="primary" type="button">生成分享链接</button>
+            <button id="shareDoneBtn" class="primary hidden" type="button">完成</button>
+            <button id="cancelShareBtn" class="ghost" type="button">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="mySharesModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">分享管理</p>
+              <h2>我的外链分享</h2>
+            </div>
+            <button id="closeMySharesModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+          </header>
+          <div id="mySharesList" class="my-shares-list"></div>
+        </div>
+      </section>
+
+      <section id="aiDocSummaryModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card ai-summary-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">DeepSeek AI 文档分析</p>
+              <h2 id="aiDocSummaryTitle">文档智能总结</h2>
+            </div>
+            <button id="closeAiDocSummaryModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+          </header>
+          <div id="aiDocSummaryBody" class="ai-summary-body">
+            <div class="ai-summary-loading">正在提取文档文本并由 DeepSeek 深度分析总结中...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="/cache-cleanup.js"></script>
+    <script src="/vendor/marked/marked.min.js"></script>
+    <script src="/vendor/dompurify/purify.min.js"></script>
+    <script src="/vendor/katex/katex.min.js"></script>
+    <script src="/vendor/katex/contrib/auto-render.min.js"></script>
+    <script src="/app.js?v=20260909_backup_ui"></script>
+    <script src="/login-fx.js"></script>
+  </body>
+</html>

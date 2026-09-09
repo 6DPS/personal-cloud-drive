@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>DPSir个人云网盘 AI 登录背景预览</title>
+    <style>
+      :root {
+        --bg-0: #06111f;
+        --bg-1: #0a1c33;
+        --bg-2: #0e3156;
+        --cyan: #42c8ff;
+        --blue: #247dff;
+        --mint: #3ee7c7;
+        --gold: #f2c65a;
+        --text: #f4f8ff;
+        --muted: #a8c3e6;
+        --line: rgba(98, 193, 255, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          "Microsoft YaHei",
+          "PingFang SC",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: var(--text);
+        background: #eef3fa;
+        display: grid;
+        place-items: center;
+      }
+
+      .preview-frame {
+        width: min(1440px, calc(100vw - 32px));
+        aspect-ratio: 16 / 9;
+        min-height: 720px;
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 72% 43%, rgba(63, 201, 255, 0.34), transparent 24%),
+          radial-gradient(circle at 18% 82%, rgba(36, 125, 255, 0.28), transparent 28%),
+          linear-gradient(120deg, var(--bg-0), var(--bg-1) 46%, #071427);
+        box-shadow: 0 30px 90px rgba(15, 35, 65, 0.28);
+      }
+
+      .preview-frame::before {
+        content: "";
+        position: absolute;
+        inset: -12%;
+        opacity: 0.8;
+        background:
+          linear-gradient(115deg, transparent 0 38%, rgba(66, 200, 255, 0.14) 39%, transparent 41%),
+          linear-gradient(70deg, transparent 0 46%, rgba(62, 231, 199, 0.11) 47%, transparent 49%),
+          radial-gradient(circle at 78% 66%, rgba(66, 200, 255, 0.2) 0 1px, transparent 2px),
+          radial-gradient(circle at 34% 72%, rgba(66, 200, 255, 0.18) 0 1px, transparent 2px);
+        background-size:
+          100% 100%,
+          100% 100%,
+          74px 74px,
+          96px 96px;
+        animation: networkDrift 18s linear infinite;
+      }
+
+      .preview-frame::after {
+        content: "";
+        position: absolute;
+        inset: auto -8% -12% -8%;
+        height: 42%;
+        background:
+          radial-gradient(ellipse at 50% 0%, rgba(59, 180, 255, 0.34), transparent 48%),
+          linear-gradient(90deg, transparent, rgba(66, 200, 255, 0.26), transparent);
+        filter: blur(10px);
+        opacity: 0.92;
+      }
+
+      .top-brand {
+        position: absolute;
+        top: 54px;
+        left: 68px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        z-index: 3;
+        color: #eaf6ff;
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .top-brand img {
+        width: 42px;
+        height: 42px;
+        border-radius: 34%;
+        box-shadow: 0 0 28px rgba(66, 200, 255, 0.4);
+      }
+
+      .left-copy {
+        position: absolute;
+        z-index: 3;
+        left: 68px;
+        top: 166px;
+        width: 430px;
+      }
+
+      .left-copy h1 {
+        margin: 0;
+        font-size: clamp(44px, 3.9vw, 62px);
+        line-height: 1.06;
+        letter-spacing: 0;
+      }
+
+      .left-copy h1 span {
+        display: block;
+        color: #58caff;
+        margin-top: 10px;
+        font-size: 0.86em;
+      }
+
+      .lead {
+        margin: 24px 0 0;
+        color: #b9d6f8;
+        font-size: 19px;
+        line-height: 1.8;
+      }
+
+      .capabilities {
+        display: grid;
+        gap: 18px;
+        margin-top: 38px;
+      }
+
+      .capability {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .capability-icon {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(66, 200, 255, 0.5);
+        border-radius: 15px;
+        color: #6ed9ff;
+        background: rgba(16, 62, 104, 0.5);
+        box-shadow: inset 0 0 18px rgba(66, 200, 255, 0.16), 0 0 22px rgba(66, 200, 255, 0.12);
+      }
+
+      .capability strong {
+        display: block;
+        color: #eef8ff;
+        font-size: 16px;
+      }
+
+      .capability small {
+        display: block;
+        margin-top: 3px;
+        color: #91b6dc;
+        font-size: 12px;
+      }
+
+      .ai-stage {
+        position: absolute;
+        z-index: 2;
+        right: 52px;
+        top: 84px;
+        width: 640px;
+        height: 620px;
+      }
+
+      .cloud-core {
+        position: absolute;
+        left: 134px;
+        top: 118px;
+        width: 360px;
+        height: 220px;
+        filter: drop-shadow(0 0 34px rgba(66, 200, 255, 0.72));
+      }
+
+      .cloud-shape {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 28% 52%, rgba(54, 180, 255, 0.92) 0 55px, transparent 56px),
+          radial-gradient(circle at 45% 36%, rgba(54, 180, 255, 0.98) 0 78px, transparent 79px),
+          radial-gradient(circle at 63% 50%, rgba(54, 180, 255, 0.94) 0 64px, transparent 65px),
+          linear-gradient(180deg, rgba(59, 196, 255, 0.96), rgba(24, 103, 236, 0.88));
+        clip-path: path("M67 160 C30 160 8 137 8 106 C8 75 31 53 62 52 C75 22 105 8 139 17 C163 -7 205 -2 228 26 C257 21 291 36 302 68 C332 74 354 96 354 128 C354 150 336 160 312 160 Z");
+        border: 1px solid rgba(180, 236, 255, 0.9);
+      }
+
+      .cloud-mesh {
+        position: absolute;
+        inset: 18px 20px 40px;
+        opacity: 0.68;
+        background:
+          linear-gradient(30deg, transparent 46%, rgba(255, 255, 255, 0.42) 47%, transparent 48%),
+          linear-gradient(145deg, transparent 46%, rgba(255, 255, 255, 0.35) 47%, transparent 48%),
+          radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px);
+        background-size:
+          64px 64px,
+          76px 76px,
+          48px 48px;
+        clip-path: path("M49 140 C18 139 10 120 13 101 C16 78 33 65 63 65 C78 30 108 22 139 32 C168 4 207 12 227 37 C263 35 290 57 295 90 C322 94 341 111 341 131 C341 143 327 149 306 149 Z");
+      }
+
+      .ai-text {
+        position: absolute;
+        inset: 64px 0 auto;
+        text-align: center;
+        font-size: 70px;
+        line-height: 1;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.95);
+        text-shadow: 0 0 26px rgba(255, 255, 255, 0.48);
+      }
+
+      .beam {
+        position: absolute;
+        left: 272px;
+        top: 286px;
+        width: 98px;
+        height: 262px;
+        transform: perspective(520px) rotateX(58deg);
+        transform-origin: top center;
+        background: linear-gradient(180deg, rgba(84, 205, 255, 0.82), rgba(84, 205, 255, 0));
+        clip-path: polygon(32% 0, 68% 0, 100% 100%, 0 100%);
+        filter: blur(2px);
+      }
+
+      .ring {
+        position: absolute;
+        left: 130px;
+        top: 492px;
+        width: 390px;
+        height: 112px;
+        border: 2px solid rgba(100, 211, 255, 0.75);
+        border-radius: 50%;
+        box-shadow:
+          0 0 28px rgba(66, 200, 255, 0.38),
+          inset 0 0 28px rgba(66, 200, 255, 0.24);
+      }
+
+      .ring::before,
+      .ring::after {
+        content: "";
+        position: absolute;
+        inset: 18px 34px;
+        border: 1px solid rgba(100, 211, 255, 0.38);
+        border-radius: 50%;
+      }
+
+      .ring::after {
+        inset: 34px 70px;
+      }
+
+      .floating-card {
+        position: absolute;
+        width: 170px;
+        min-height: 98px;
+        padding: 16px;
+        border: 1px solid rgba(95, 191, 255, 0.42);
+        border-radius: 18px;
+        background: linear-gradient(145deg, rgba(13, 47, 86, 0.82), rgba(8, 24, 47, 0.72));
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22), inset 0 0 24px rgba(66, 200, 255, 0.08);
+        color: #dff5ff;
+        opacity: 0.74;
+      }
+
+      .floating-card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        letter-spacing: 0;
+      }
+
+      .floating-card small {
+        display: block;
+        color: #76bde6;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .floating-card p {
+        margin: 12px 0 0;
+        color: #aed6f7;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .card-classify {
+        left: 62px;
+        top: 44px;
+      }
+
+      .card-search {
+        right: 0;
+        top: 190px;
+      }
+
+      .card-privacy {
+        right: 76px;
+        bottom: 86px;
+      }
+
+      .card-analyze {
+        display: none;
+      }
+
+      .connector {
+        position: absolute;
+        border: 1px dashed rgba(91, 200, 255, 0.38);
+        border-color: rgba(91, 200, 255, 0.38) transparent transparent transparent;
+        border-radius: 50%;
+      }
+
+      .connector.one {
+        left: 174px;
+        top: 160px;
+        width: 190px;
+        height: 92px;
+        transform: rotate(20deg);
+      }
+
+      .connector.two {
+        right: 120px;
+        top: 260px;
+        width: 180px;
+        height: 84px;
+        transform: rotate(-22deg);
+      }
+
+      .file-stream {
+        position: absolute;
+        z-index: 2;
+        left: 52px;
+        right: 0;
+        bottom: 62px;
+        height: 180px;
+        pointer-events: none;
+        opacity: 0.46;
+      }
+
+      .stream-line {
+        position: absolute;
+        left: 0;
+        right: 58%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(64, 200, 255, 0.85), transparent);
+        transform: skewY(-11deg);
+        box-shadow: 0 0 16px rgba(64, 200, 255, 0.45);
+      }
+
+      .stream-line:nth-child(1) {
+        top: 28px;
+      }
+
+      .stream-line:nth-child(2) {
+        top: 72px;
+        left: 90px;
+      }
+
+      .stream-line:nth-child(3) {
+        top: 116px;
+        left: 16px;
+      }
+
+      .file-chip {
+        position: absolute;
+        width: 70px;
+        height: 70px;
+        border: 1px solid rgba(109, 211, 255, 0.58);
+        border-radius: 16px;
+        background: rgba(25, 95, 150, 0.5);
+        box-shadow: 0 0 28px rgba(66, 200, 255, 0.28);
+        display: grid;
+        place-items: center;
+        color: #8ee3ff;
+      }
+
+      .file-chip:nth-child(4) {
+        left: 38px;
+        top: 74px;
+      }
+
+      .file-chip:nth-child(5) {
+        left: 166px;
+        top: 104px;
+      }
+
+      .file-chip:nth-child(6) {
+        left: 298px;
+        top: 48px;
+      }
+
+      .login-card {
+        position: absolute;
+        z-index: 5;
+        left: 52%;
+        top: 50%;
+        width: 356px;
+        transform: translate(-46%, -42%);
+        padding: 34px 34px 30px;
+        border: 1px solid rgba(104, 187, 255, 0.34);
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(8, 24, 45, 0.94), rgba(8, 18, 35, 0.88));
+        box-shadow:
+          0 30px 90px rgba(0, 0, 0, 0.36),
+          0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      }
+
+      .login-logo {
+        width: 86px;
+        height: 86px;
+        display: block;
+        margin: 0 auto 14px;
+        border-radius: 34%;
+        box-shadow: 0 0 38px rgba(66, 200, 255, 0.35);
+      }
+
+      .login-card h2 {
+        margin: 0;
+        text-align: center;
+        font-size: 25px;
+        letter-spacing: 0;
+      }
+
+      .login-card .sub {
+        margin: 9px 0 26px;
+        text-align: center;
+        color: #94bce6;
+        font-size: 14px;
+      }
+
+      .field {
+        height: 48px;
+        border: 1px solid rgba(99, 172, 235, 0.28);
+        border-radius: 13px;
+        background: rgba(4, 16, 31, 0.68);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 14px;
+        color: #6fa7d6;
+        margin-bottom: 14px;
+      }
+
+      .field span {
+        color: #789fc5;
+        font-size: 14px;
+      }
+
+      .submit {
+        width: 100%;
+        height: 48px;
+        border: 0;
+        border-radius: 14px;
+        margin-top: 10px;
+        color: white;
+        font-size: 16px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #4cc8ff, #2f78ff);
+        box-shadow: 0 16px 34px rgba(45, 124, 255, 0.32);
+      }
+
+      .login-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 18px;
+        color: #77bde8;
+        font-size: 13px;
+      }
+
+      .bottom-features {
+        position: absolute;
+        z-index: 4;
+        left: 64px;
+        bottom: 36px;
+        display: none;
+        grid-template-columns: repeat(4, 1fr);
+        width: 520px;
+        border-top: 1px solid rgba(94, 180, 240, 0.24);
+        opacity: 0.72;
+      }
+
+      .bottom-feature {
+        padding-top: 18px;
+        color: #b7d7f2;
+        font-size: 12px;
+      }
+
+      .bottom-feature strong {
+        display: block;
+        color: #ecf8ff;
+        font-size: 14px;
+        margin-top: 6px;
+      }
+
+      svg {
+        display: block;
+      }
+
+      @keyframes networkDrift {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-70px, -36px, 0);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .preview-frame {
+          width: 100vw;
+          min-height: 100vh;
+          border-radius: 0;
+        }
+
+        .left-copy,
+        .top-brand,
+        .bottom-features {
+          left: 24px;
+          width: calc(100% - 48px);
+        }
+
+        .left-copy {
+          top: 104px;
+        }
+
+        .left-copy h1 {
+          font-size: 38px;
+        }
+
+        .lead,
+        .capabilities,
+        .ai-stage,
+        .file-stream,
+        .bottom-features {
+          display: none;
+        }
+
+        .login-card {
+          width: calc(100% - 48px);
+          left: 50%;
+          top: 58%;
+          transform: translate(-50%, -50%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="preview-frame" aria-label="DPSir个人云网盘 AI 登录背景预览">
+      <div class="top-brand">
+        <img src="../public/dp-logo.png" alt="DPSir" />
+        <span>DPSir个人云网盘</span>
+      </div>
+
+      <div class="left-copy">
+        <h1>AI-Powered<br />Cloud Drive<span>更智能的<br />个人云网盘</span></h1>
+        <p class="lead">让 AI 帮你理解文件、整理资料、保护隐私，并在海量内容中快速找到真正需要的内容。</p>
+
+        <div class="capabilities">
+          <div class="capability">
+            <div class="capability-icon">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M8 4h8l3 4v12H5V4h3Z" stroke="currentColor" stroke-width="1.8" />
+                <path d="M15 4v5h4M8 13h8M8 16h6" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </div>
+            <div><strong>智能内容搜索</strong><small>按文件名、类型、内容关键词快速定位资料</small></div>
+          </div>
+          <div class="capability">
+            <div class="capability-icon">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3 19 6v5c0 4.2-2.7 7.8-7 10-4.3-2.2-7-5.8-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.8" />
+                <path d="m9 12 2 2 4-5" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </div>
+            <div><strong>文件夹密码保护</strong><small>加密目录独立验证，账号之间存储隔离</small></div>
+          </div>
+          <div class="capability">
+            <div class="capability-icon">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z" stroke="currentColor" stroke-width="1.8" />
+                <path d="M4 7l8 4 8-4M12 11v10" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+            </div>
+            <div><strong>多端资料管理</strong><small>局域网优先，公网兜底，移动端和电脑端一致</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-stage" aria-hidden="true">
+        <div class="connector one"></div>
+        <div class="connector two"></div>
+        <div class="floating-card card-classify">
+          <h3>智能分类</h3>
+          <small>AI Classification</small>
+          <p>识别文档、图片、视频与压缩包。</p>
+        </div>
+        <div class="floating-card card-search">
+          <h3>语义搜索</h3>
+          <small>Smart Search</small>
+          <p>根据关键词理解资料内容。</p>
+        </div>
+        <div class="floating-card card-privacy">
+          <h3>安全保护</h3>
+          <small>Private Storage</small>
+          <p>独立账号、加密文件夹与权限验证。</p>
+        </div>
+        <div class="floating-card card-analyze">
+          <h3>文件分析</h3>
+          <small>File Insight</small>
+          <p>预览、识别、索引与缓存协同。</p>
+        </div>
+        <div class="cloud-core">
+          <div class="cloud-shape"></div>
+          <div class="cloud-mesh"></div>
+          <div class="ai-text">AI</div>
+        </div>
+        <div class="beam"></div>
+        <div class="ring"></div>
+      </div>
+
+      <div class="login-card">
+        <img class="login-logo" src="../public/dp-logo.png" alt="DPSir个人云网盘" />
+        <h2>DPSir个人云网盘</h2>
+        <p class="sub">AI 驱动的个人资料管理中心</p>
+        <div class="field">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+          <span>请输入账号</span>
+        </div>
+        <div class="field">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+          <span>请输入密码</span>
+        </div>
+        <button class="submit" type="button">登录</button>
+        <div class="login-actions">
+          <span>注册账号</span>
+          <span>找回密码</span>
+        </div>
+      </div>
+
+      <div class="file-stream" aria-hidden="true">
+        <div class="stream-line"></div>
+        <div class="stream-line"></div>
+        <div class="stream-line"></div>
+        <div class="file-chip">
+          <svg width="35" height="35" viewBox="0 0 24 24" fill="none">
+            <path d="M4 7h6l2 2h8v9H4V7Z" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="file-chip">
+          <svg width="35" height="35" viewBox="0 0 24 24" fill="none">
+            <path d="M5 4h10l4 4v12H5V4Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M9 14h6M9 17h4" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="file-chip">
+          <svg width="35" height="35" viewBox="0 0 24 24" fill="none">
+            <path d="M5 5h14v14H5V5Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="m8 16 3-4 2 2 2-3 2 5H8Z" fill="currentColor" opacity=".5" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="bottom-features">
+        <div class="bottom-feature">Massive Storage<strong>大容量存储</strong></div>
+        <div class="bottom-feature">Secure Preview<strong>安全预览</strong></div>
+        <div class="bottom-feature">Fast Transfer<strong>高速传输</strong></div>
+        <div class="bottom-feature">Account Isolation<strong>账号隔离</strong></div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "DPSir 智云盘",
+  "short_name": "DPSir 智云盘",
+  "description": "DPSir AI Cloud Drive",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#edf2f8",
+  "theme_color": "#1473e6",
+  "icons": [
+    {
+      "src": "/app-icon-192.png?v=20260812-logo3",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icon-512.png?v=20260812-logo3",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

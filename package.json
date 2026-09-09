@@ -1,0 +1,26 @@
+{
+  "name": "personal-cloud-drive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small personal cloud drive for local file storage.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:watchdog": "node scripts/server-watchdog.js",
+    "test:smoke": "node tests/smoke.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "dompurify": "^3.1.6",
+    "express": "^4.19.2",
+    "fast-xml-parser": "^5.9.3",
+    "jszip": "^3.10.1",
+    "katex": "^0.16.11",
+    "mammoth": "^1.12.0",
+    "marked": "^12.0.2",
+    "multer": "^2.2.0",
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^5.1.1",
+    "xlsx": "^0.18.5"
+  }
+}
