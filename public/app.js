@@ -301,7 +301,13 @@ function syncAiWebSearchUi() {
   if (!aiWebSearchToggleBtn) return;
   aiWebSearchToggleBtn.classList.toggle("active", state.aiWebSearchEnabled);
   aiWebSearchToggleBtn.setAttribute("aria-pressed", state.aiWebSearchEnabled ? "true" : "false");
-  aiWebSearchToggleBtn.textContent = state.aiWebSearchEnabled ? "联网开启" : "联网关闭";
+  const webLabel = state.aiWebSearchEnabled ? "联网开启" : "联网关闭";
+  const labelEl = aiWebSearchToggleBtn.querySelector(".pill-label");
+  if (labelEl) {
+    labelEl.textContent = webLabel;
+  } else {
+    aiWebSearchToggleBtn.textContent = webLabel;
+  }
   aiWebSearchToggleBtn.title = state.aiWebSearchEnabled
     ? "已开启 DeepSeek 官方联网搜索；本次是否检索由 AI 根据问题自动判断"
     : "默认不联网；开启后可使用 DeepSeek 官方联网搜索";
@@ -310,7 +316,6 @@ function syncAiWebSearchUi() {
 function setAiWebSearchEnabled(enabled) {
   state.aiWebSearchEnabled = Boolean(enabled);
   syncAiWebSearchUi();
-  if (aiDrawer && !aiDrawer.classList.contains("hidden")) renderAiDrawer();
   setStatus(state.aiWebSearchEnabled ? "联网搜索开关已开启" : "联网搜索开关已关闭");
 }
 
@@ -375,7 +380,8 @@ function loadAiConversation(mode, item, key) {
 
 function setAiModel(model) {
   state.aiDrawer.model = "reasoner";
-  renderAiDrawer();
+  aiModelReasonerBtn?.classList.add("active");
+  setStatus("已启用深度思考模式 (DeepSeek Reasoner)");
 }
 
 function aiModelDisplayName() {
@@ -1561,7 +1567,12 @@ function renderAiDrawer() {
   aiModelReasonerBtn?.classList.add("active");
   syncAiWebSearchUi();
   aiDrawerBackBtn?.classList.toggle("hidden", !(isItemMode && state.aiDrawer.returnTo));
-  if (aiScopeBtn) aiScopeBtn.textContent = isItemMode ? "当前文件" : "当前范围";
+  if (aiScopeBtn) {
+    const scopeLabel = isItemMode ? "当前文件" : "当前范围";
+    const labelEl = aiScopeBtn.querySelector(".pill-label");
+    if (labelEl) labelEl.textContent = scopeLabel;
+    else aiScopeBtn.textContent = scopeLabel;
+  }
   if (aiPromptHint) aiPromptHint.textContent = isItemMode ? "围绕这个文件提问" : "问问整个网盘";
   if (aiPromptInput) {
     aiPromptInput.placeholder = isItemMode
@@ -1614,7 +1625,11 @@ async function submitAiPrompt() {
   renderAiMessages();
   scheduleAiPendingStages(pendingMessage, prompt, state.aiDrawer.mode, state.aiWebSearchEnabled);
   aiPromptSendBtn?.setAttribute("disabled", "true");
-  if (aiPromptSendBtn) aiPromptSendBtn.textContent = "分析中";
+  if (aiPromptSendBtn) {
+    const sendText = aiPromptSendBtn.querySelector(".send-text");
+    if (sendText) sendText.textContent = "分析中";
+    else aiPromptSendBtn.textContent = "分析中";
+  }
   try {
     const response = await requestAiAssistant({
       mode: state.aiDrawer.mode,
@@ -1641,7 +1656,11 @@ async function submitAiPrompt() {
   } finally {
     clearAiPendingTimers(pendingMessage);
     aiPromptSendBtn?.removeAttribute("disabled");
-    if (aiPromptSendBtn) aiPromptSendBtn.textContent = "发送";
+    if (aiPromptSendBtn) {
+      const sendText = aiPromptSendBtn.querySelector(".send-text");
+      if (sendText) sendText.textContent = "发送";
+      else aiPromptSendBtn.textContent = "发送";
+    }
     syncAiPromptSendState();
     renderAiMessages();
   }

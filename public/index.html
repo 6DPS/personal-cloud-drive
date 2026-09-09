@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
     <meta name="theme-color" content="#1473e6" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
-    <link rel="stylesheet" href="/styles.css?v=20260909_ai_ui_v2" />
+    <link rel="stylesheet" href="/styles.css?v=20260909_ai_ui_v4" />
   </head>
   <body>
     <main id="app">
@@ -309,13 +309,13 @@
 
           <div class="ai-drawer-toolbar">
             <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button">
-              <span class="pill-icon">💡</span>思考
+              <span class="pill-icon">💡</span><span class="pill-label">思考</span>
             </button>
             <button id="aiWebSearchToggleBtn" class="ai-model-pill ai-web-search-toggle" type="button" aria-pressed="false">
-              <span class="pill-icon">🌐</span>联网关闭
+              <span class="pill-icon">🌐</span><span class="pill-label">联网关闭</span>
             </button>
             <button id="aiScopeBtn" class="ai-model-pill subtle" type="button">
-              <span class="pill-icon">📂</span>当前范围
+              <span class="pill-icon">📂</span><span class="pill-label">当前范围</span>
             </button>
           </div>
 
@@ -331,9 +331,6 @@
               </label>
               <button id="aiPromptSendBtn" class="ai-send-btn" type="submit" aria-label="发送">
                 <span class="send-text">发送</span>
-                <svg class="send-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M3 10l14-7-7 14V10H3z" fill="currentColor"/>
-                </svg>
               </button>
             </div>
           </form>
@@ -575,7 +572,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260909_backup_ui"></script>
+    <script src="/app.js?v=20260909_ai_ui_v4"></script>
     <script src="/login-fx.js"></script>
   </body>
 </html>
