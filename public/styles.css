@@ -1605,12 +1605,15 @@ td:nth-child(5) {
 .ai-drawer-header {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 14px 18px;
   margin: -24px -24px 0;
+  width: calc(100% + 48px);
+  max-width: calc(100% + 48px);
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 32px 32px 0 0;
   background: linear-gradient(135deg,
     rgba(22, 185, 223, 0.08) 0%,
@@ -1620,65 +1623,8 @@ td:nth-child(5) {
   border-bottom: 1px solid rgba(20, 187, 176, 0.12);
 }
 
-.ai-drawer-title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.ai-drawer-icon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 60%),
-    linear-gradient(135deg, #16b9df, #14bbb0 50%, #f0b429);
-  color: #ffffff;
-  box-shadow:
-    0 6px 14px rgba(20, 187, 176, 0.28),
-    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
-}
-
-.ai-drawer-icon svg {
-  width: 20px;
-  height: 20px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
-}
-
-.ai-drawer-close-btn {
-  flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  min-height: unset;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid rgba(168, 185, 210, 0.38);
-  background: rgba(245, 249, 255, 0.88);
-  color: #7a8fa8;
-  box-shadow: 0 3px 8px rgba(42, 67, 104, 0.08);
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-
-.ai-drawer-close-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.ai-drawer-close-btn:hover {
-  background: rgba(255, 245, 245, 0.96);
-  border-color: rgba(239, 63, 55, 0.3);
-  color: #c84040;
-  box-shadow: 0 4px 12px rgba(239, 63, 55, 0.12);
-  transform: scale(1.08);
-}
-
 .ai-drawer-back-button {
+  flex: 0 0 auto;
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid rgba(20, 187, 176, 0.28);
@@ -1698,6 +1644,45 @@ td:nth-child(5) {
   line-height: 0;
 }
 
+.ai-drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.ai-drawer-title-text {
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.ai-drawer-icon {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 60%),
+    linear-gradient(135deg, #16b9df, #14bbb0 50%, #f0b429);
+  color: #ffffff;
+  box-shadow:
+    0 6px 14px rgba(20, 187, 176, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+}
+
+.ai-drawer-icon svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+}
+
 .ai-drawer-header h2 {
   margin: 0;
   color: #17243a;
@@ -1708,6 +1693,9 @@ td:nth-child(5) {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ai-drawer-header p {
@@ -1716,6 +1704,47 @@ td:nth-child(5) {
   font-size: 12.5px;
   font-weight: 700;
   -webkit-text-fill-color: #7c8aa2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-drawer-close-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(168, 185, 210, 0.45);
+  background: rgba(245, 249, 255, 0.95);
+  color: #687d96;
+  box-shadow: 0 3px 10px rgba(42, 67, 104, 0.1);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.ai-drawer-close-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.3;
+}
+
+.ai-drawer-close-btn:hover {
+  background: rgba(255, 242, 242, 0.98);
+  border-color: rgba(239, 63, 55, 0.35);
+  color: #d32f2f;
+  box-shadow: 0 4px 14px rgba(239, 63, 55, 0.16);
+  transform: scale(1.08);
 }
 
 .ai-drawer-toolbar,
