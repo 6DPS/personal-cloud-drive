@@ -908,12 +908,16 @@ select {
     linear-gradient(90deg, #16b9df 0%, #14bbb0 38%, #f0b429 72%, #f07a22 100%);
   color: #ffffff;
   font-weight: 800;
-  font-size: 13px;
+  font-size: inherit;
+  font-family: inherit;
+  letter-spacing: normal;
+  line-height: normal;
   cursor: pointer;
   white-space: nowrap;
   box-shadow:
-    0 8px 20px rgba(20, 187, 176, 0.22),
-    0 0 16px rgba(240, 180, 41, 0.18),
+    0 12px 28px rgba(20, 187, 176, 0.28),
+    0 0 20px rgba(240, 180, 41, 0.24),
+    0 0 16px rgba(240, 122, 34, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.24) inset;
   animation: aiGlobalIn 220ms ease;
   transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
