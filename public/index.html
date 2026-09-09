@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
     <meta name="theme-color" content="#1473e6" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
-    <link rel="stylesheet" href="/styles.css?v=20260909_ai_btn_match" />
+    <link rel="stylesheet" href="/styles.css?v=20260909_ai_ui_v2" />
   </head>
   <body>
     <main id="app">
@@ -287,17 +287,36 @@
           <div class="ai-drawer-glow"></div>
           <header class="ai-drawer-header">
             <button id="aiDrawerBackBtn" class="ai-drawer-back-button hidden" type="button">返回全库问答</button>
-            <div>
-              <h2 id="aiDrawerTitle">AI对话</h2>
-              <p id="aiDrawerSubtitle">选择一个入口开始</p>
+            <div class="ai-drawer-title-group">
+              <div class="ai-drawer-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="currentColor" opacity="0"/>
+                  <path d="M9.5 14.5c-.83 0-1.5-.67-1.5-1.5V11c0-.83.67-1.5 1.5-1.5S11 10.17 11 11v2c0 .83-.67 1.5-1.5 1.5zm5 0c-.83 0-1.5-.67-1.5-1.5V11c0-.83.67-1.5 1.5-1.5S16 10.17 16 11v2c0 .83-.67 1.5-1.5 1.5z" fill="currentColor"/>
+                  <path d="M12 3C7.03 3 3 7.03 3 12c0 2.12.74 4.06 1.97 5.6L3.5 20.5l3.03-1.43C7.94 20.3 9.9 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <h2 id="aiDrawerTitle">AI对话</h2>
+                <p id="aiDrawerSubtitle">选择一个入口开始</p>
+              </div>
             </div>
-            <button id="aiDrawerCloseBtn" class="icon-button small-icon" type="button" aria-label="关闭">×</button>
+            <button id="aiDrawerCloseBtn" class="ai-drawer-close-btn" type="button" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
 
           <div class="ai-drawer-toolbar">
-            <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button">思考</button>
-            <button id="aiWebSearchToggleBtn" class="ai-model-pill ai-web-search-toggle" type="button" aria-pressed="false">联网关闭</button>
-            <button id="aiScopeBtn" class="ai-model-pill subtle" type="button">当前范围</button>
+            <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button">
+              <span class="pill-icon">💡</span>思考
+            </button>
+            <button id="aiWebSearchToggleBtn" class="ai-model-pill ai-web-search-toggle" type="button" aria-pressed="false">
+              <span class="pill-icon">🌐</span>联网关闭
+            </button>
+            <button id="aiScopeBtn" class="ai-model-pill subtle" type="button">
+              <span class="pill-icon">📂</span>当前范围
+            </button>
           </div>
 
           <div id="aiContextCard" class="ai-context-card"></div>
@@ -305,11 +324,18 @@
           <div id="aiMessages" class="ai-messages" aria-live="polite"></div>
 
           <form id="aiPromptForm" class="ai-prompt-form">
-            <label class="ai-prompt-box">
-              <span id="aiPromptHint">输入你的问题</span>
-              <textarea id="aiPromptInput" rows="1" placeholder="例如：帮我找毕业设计相关资料"></textarea>
-            </label>
-            <button id="aiPromptSendBtn" class="ai-send-btn" type="submit">发送</button>
+            <div class="ai-prompt-wrap">
+              <label class="ai-prompt-box">
+                <span id="aiPromptHint">输入你的问题</span>
+                <textarea id="aiPromptInput" rows="1" placeholder="例如：帮我找毕业设计相关资料"></textarea>
+              </label>
+              <button id="aiPromptSendBtn" class="ai-send-btn" type="submit" aria-label="发送">
+                <span class="send-text">发送</span>
+                <svg class="send-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M3 10l14-7-7 14V10H3z" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
           </form>
         </aside>
       </section>
