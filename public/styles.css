@@ -4397,20 +4397,57 @@ tbody tr.drop-target-row {
 
 .modal .icon-button,
 .modal .small-icon,
-#closePreviewBtn {
-  width: 34px !important;
-  height: 34px !important;
-  min-height: 34px !important;
-  max-height: 34px !important;
-  flex: 0 0 34px !important;
+.modal-close-btn,
+#closePreviewBtn,
+#closeZipArchiveBtn,
+.ai-drawer-close-btn {
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
   padding: 0 !important;
   margin: 0 !important;
   display: inline-grid !important;
   place-items: center !important;
   border-radius: 50% !important;
-  font-size: 22px !important;
-  line-height: 1 !important;
-  text-align: center !important;
+  border: 1px solid rgba(168, 185, 210, 0.45) !important;
+  background: rgba(245, 249, 255, 0.95) !important;
+  color: #687d96 !important;
+  box-shadow: 0 3px 10px rgba(42, 67, 104, 0.1) !important;
+  cursor: pointer !important;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease !important;
+}
+
+.modal .icon-button svg,
+.modal .small-icon svg,
+.modal-close-btn svg,
+#closePreviewBtn svg,
+#closeZipArchiveBtn svg,
+.ai-drawer-close-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  stroke-width: 2.3 !important;
+  display: block !important;
+}
+
+.modal .icon-button:hover,
+.modal .small-icon:hover,
+.modal-close-btn:hover,
+#closePreviewBtn:hover,
+#closeZipArchiveBtn:hover,
+.ai-drawer-close-btn:hover {
+  background: rgba(255, 242, 242, 0.98) !important;
+  border-color: rgba(239, 63, 55, 0.35) !important;
+  color: #d32f2f !important;
+  box-shadow: 0 4px 14px rgba(239, 63, 55, 0.16) !important;
+  transform: scale(1.08) !important;
 }
 
 .modal input,

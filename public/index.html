@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
     <meta name="theme-color" content="#1473e6" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
-    <link rel="stylesheet" href="/styles.css?v=20260909_ai_ui_v7" />
+    <link rel="stylesheet" href="/styles.css?v=20260909_ai_ui_v8" />
   </head>
   <body>
     <main id="app">
@@ -53,7 +53,11 @@
               <p class="eyebrow">账号恢复</p>
               <h2>找回登录密码</h2>
             </div>
-            <button id="closePasswordResetModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+            <button id="closePasswordResetModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <p class="modal-description">
             这里不会显示旧密码，只会用管理员/本机恢复密码验证后，为指定账号设置一个新登录密码。
@@ -86,7 +90,11 @@
               <p class="eyebrow">管理员入口</p>
               <h2>注册密钥管理</h2>
             </div>
-            <button id="closeRegistrationKeysModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            <button id="closeRegistrationKeysModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <div class="registration-keys-body">
             <section class="registration-key-create">
@@ -344,7 +352,11 @@
               <p class="eyebrow">Upload Target</p>
               <h2>选择上传位置</h2>
             </div>
-            <button id="closeUploadModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            <button id="closeUploadModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <label class="field">
             上传到
@@ -364,7 +376,11 @@
               <p class="eyebrow">批量移动</p>
               <h2>移动选中项目</h2>
             </div>
-            <button id="closeBulkMoveModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+            <button id="closeBulkMoveModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <label class="field">
             移动到
@@ -388,7 +404,11 @@
             <div class="modal-actions compact">
               <button id="previewAiSummarizeBtn" class="ghost small-btn hidden" type="button" title="使用 DeepSeek AI 总结此文档">✨ AI 总结</button>
               <a id="previewDownloadLink" class="download-link" href="#">下载</a>
-              <button id="closePreviewBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+              <button id="closePreviewBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
           </header>
           <div id="previewBody" class="preview-body"></div>
@@ -402,7 +422,11 @@
               <p id="folderPasswordEyebrow" class="eyebrow">文件夹加密</p>
               <h2 id="folderPasswordTitle">设置文件夹密码</h2>
             </div>
-            <button id="closeFolderPasswordModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+            <button id="closeFolderPasswordModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <p id="folderPasswordDescription" class="modal-description"></p>
           <label id="folderAdminPasswordField" class="field">
@@ -435,7 +459,11 @@
               <p id="dialogEyebrow" class="eyebrow">操作</p>
               <h2 id="dialogTitle">确认</h2>
             </div>
-            <button id="closeDialogModalBtn" class="icon-button small-icon" aria-label="关闭">x</button>
+            <button id="closeDialogModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <p id="dialogDescription" class="modal-description"></p>
           <label id="dialogInputField" class="field hidden">
@@ -467,7 +495,11 @@
             </div>
             <div class="modal-actions compact">
               <button id="zipDownloadAllBtn" class="primary" type="button">下载整个压缩包</button>
-              <button id="closeZipArchiveBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+              <button id="closeZipArchiveBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
           </header>
           <div class="zip-archive-body">
@@ -487,7 +519,11 @@
               <p class="eyebrow">公开分享</p>
               <h2 id="shareModalTitle">创建外链分享</h2>
             </div>
-            <button id="closeShareModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            <button id="closeShareModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <p class="modal-description" id="shareItemName">选择的项目</p>
           <label class="field">
@@ -546,7 +582,11 @@
               <p class="eyebrow">分享管理</p>
               <h2>我的外链分享</h2>
             </div>
-            <button id="closeMySharesModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            <button id="closeMySharesModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <div id="mySharesList" class="my-shares-list"></div>
         </div>
@@ -559,7 +599,11 @@
               <p class="eyebrow">DeepSeek AI 文档分析</p>
               <h2 id="aiDocSummaryTitle">文档智能总结</h2>
             </div>
-            <button id="closeAiDocSummaryModalBtn" class="icon-button small-icon" aria-label="关闭">×</button>
+            <button id="closeAiDocSummaryModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
           </header>
           <div id="aiDocSummaryBody" class="ai-summary-body">
             <div class="ai-summary-loading">正在提取文档文本并由 DeepSeek 深度分析总结中...</div>
