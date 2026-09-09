@@ -2669,16 +2669,20 @@ td:nth-child(5) {
   z-index: 90 !important;
 }
 
-#dialogModal {
-  z-index: 120 !important;
+#previewModal {
+  z-index: 160 !important;
+}
+
+#aiDocSummaryModal {
+  z-index: 180 !important;
 }
 
 #folderPasswordModal {
-  z-index: 110 !important;
+  z-index: 200 !important;
 }
 
-#previewModal {
-  z-index: 160 !important;
+#dialogModal {
+  z-index: 220 !important;
 }
 
 .modal-card {
