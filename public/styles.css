@@ -643,7 +643,7 @@ select {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: stretch;
+  align-items: center;
   gap: 12px;
   margin-bottom: 8px;
 }
@@ -656,11 +656,14 @@ select {
   justify-content: space-between;
   gap: 12px;
   border: 1px solid rgba(211, 221, 236, 0.92);
-  border-radius: 30px;
-  padding: 10px 14px;
+  border-radius: 26px;
+  padding: 8px 16px;
+  min-height: 48px;
+  height: auto;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 16px 36px rgba(35, 52, 76, 0.09);
   overflow: hidden;
+  transition: min-height 0.2s ease, padding 0.2s ease;
 }
 
 .path-controls {
@@ -674,6 +677,9 @@ select {
 .path-controls > div {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   overflow: hidden;
 }
 
@@ -697,7 +703,7 @@ select {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  min-height: 30px;
+  min-height: 24px;
   color: #283852;
   font-weight: 700;
   white-space: nowrap;
@@ -717,23 +723,27 @@ select {
   margin: 0;
   color: #69778d;
   font-size: 13px;
-  line-height: 1.35;
-  white-space: nowrap;
+  line-height: 1.4;
+  word-break: break-word;
+  word-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
 .upload-target {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   display: grid;
-  gap: 3px;
+  gap: 2px;
   text-align: right;
+  min-width: 0;
 }
 
 .upload-target strong {
   color: #008d7f;
-  max-width: 220px;
+  max-width: min(240px, 25vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2189,7 +2199,7 @@ td:nth-child(5) {
 .ai-message.user {
   align-self: flex-end;
   width: fit-content;
-  max-width: min(88%, 520px);
+  max-width: min(92%, 580px);
   padding: 12px 18px;
   border-color: rgba(20, 187, 176, 0.35);
   background: linear-gradient(135deg, #e6f8f5 0%, #d6f2ee 55%, #fbf3df 100%);
@@ -2197,6 +2207,8 @@ td:nth-child(5) {
   font-weight: 500;
   border-radius: 20px 20px 6px 20px;
   box-shadow: 0 4px 14px rgba(20, 187, 176, 0.12);
+  word-break: break-word;
+  word-wrap: break-word;
 }
 
 .ai-message.user::before {
@@ -2214,14 +2226,19 @@ td:nth-child(5) {
 }
 
 .ai-message.initial-greeting {
+  width: fit-content;
+  max-width: 100%;
   border-radius: 14px;
-  background: rgba(244, 249, 255, 0.82);
+  background: rgba(244, 249, 255, 0.85);
   border-color: rgba(20, 187, 176, 0.22);
   color: #556782;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   padding: 10px 16px;
   box-shadow: none;
+  word-break: break-word;
+  word-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .ai-message.initial-greeting::before {
@@ -5544,11 +5561,20 @@ select:focus {
     flex: 1;
   }
 
-  .drive-shell.ai-drawer-docked .breadcrumb,
-  .drive-shell.ai-drawer-docked #statusLine {
+  .drive-shell.ai-drawer-docked .breadcrumb {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .drive-shell.ai-drawer-docked #statusLine {
+    word-break: break-word;
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
   }
 
   .drive-shell.ai-drawer-docked .search-box span {

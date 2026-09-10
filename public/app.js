@@ -2179,6 +2179,7 @@ function renderAiDrawer() {
     aiDrawerSubtitle.textContent = isItemMode && item
       ? `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 对象：${itemName(item)}`
       : `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 范围：${displayFolder(state.path || "") || "全部文件"}`;
+    aiDrawerSubtitle.title = aiDrawerSubtitle.textContent;
   }
   state.aiDrawer.model = "reasoner";
   aiModelReasonerBtn?.classList.add("active");
