@@ -823,6 +823,7 @@ select {
 .search-box {
   order: 1;
   flex: 1 1 auto;
+  max-width: 480px;
   margin-top: 0;
   display: flex;
   align-items: center;
@@ -891,6 +892,7 @@ select {
 
 .ai-mode-toggle {
   order: 4;
+  margin-left: auto;
   flex: 0 0 auto;
   min-width: 96px;
   width: auto;
@@ -936,7 +938,16 @@ select {
     0 0 16px rgba(240, 122, 34, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.24) inset;
   animation: aiGlobalIn 220ms ease;
-  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+  transition: opacity 0.22s ease, transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 769px) {
+  .ai-global-search.hidden {
+    display: inline-flex !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
 
 .ai-global-search:hover,
@@ -4033,6 +4044,7 @@ td:nth-child(5) {
 
   .ai-mode-toggle {
     order: 5;
+    margin-left: 0;
     grid-column: 2 / 3;
     width: 96px;
     min-height: 36px;
