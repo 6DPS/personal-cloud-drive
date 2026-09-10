@@ -2705,6 +2705,7 @@ async function api(url, options = {}) {
       }
     }
     const error = new Error(friendlyErrorMessage(data || {}, fallback));
+    error.status = response.status;
     if (data && typeof data === "object") Object.assign(error, data);
     error.message = friendlyErrorMessage(error);
     throw error;
@@ -4826,7 +4827,7 @@ function applyFolderData(data, options = {}) {
       renderAiHistoryPanel();
     }
   }
-  if (!options.silent) setStatus(`${state.items.length} items. Uploads will save to the selected folder.`);
+  if (!options.silent) setStatus(`已加载 ${state.items.length} 个项目，上传将保存到当前目录。`);
   if (!options.skipHistory) updateLocation(state.path, options.replaceHistory);
 }
 
@@ -4840,7 +4841,7 @@ async function loadFolder(path = state.path, options = {}) {
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
   if (cached) {
     applyFolderData(cached, { ...options, silent: true, noAnimation: true });
-    if (!options.silent) setStatus("Loading latest folder...");
+    if (!options.silent) setStatus("正在加载目录内容...");
   }
   const requestSeq = ++state.folderLoadRequestSeq;
   state.folderLoadController?.abort();
@@ -4857,6 +4858,9 @@ async function loadFolder(path = state.path, options = {}) {
       if (requestSeq !== state.folderLoadRequestSeq || controller.signal.aborted) return;
       data = await api(`/api/list?path=${encodeURIComponent(path)}`, { signal: controller.signal });
     } else {
+      if (!options.silent) {
+        setStatus(friendlyErrorMessage(error, "目录加载失败，请检查网络或刷新重试"));
+      }
       throw error;
     }
   }
@@ -5235,7 +5239,7 @@ async function uploadFiles(files, targetPath = state.path) {
   const filtered = filterUploadFiles(files);
   files = filtered.files;
   if (!files.length) {
-    setStatus("No uploadable files were found. Temporary/system files were skipped.");
+    setStatus("未找到可上传的文件，已自动跳过临时文件与系统文件。");
     return;
   }
   try {

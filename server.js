@@ -3798,10 +3798,21 @@ app.get("/api/events", requireAuth, (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
   res.write(`data: ${JSON.stringify({ type: "connected", at: Date.now() })}\n\n`);
+
+  // 每 25 秒发送轻量心跳包，防止代理中间件（如 Cloudflare Tunnel / 路由器 NAT）超时切断空闲连接
+  const pingInterval = setInterval(() => {
+    try {
+      res.write(": keepalive\n\n");
+    } catch {
+      clearInterval(pingInterval);
+    }
+  }, 25000);
+
   const userId = req.user.id;
   if (!eventClients.has(userId)) eventClients.set(userId, new Set());
   eventClients.get(userId).add(res);
   req.on("close", () => {
+    clearInterval(pingInterval);
     const clients = eventClients.get(userId);
     if (!clients) return;
     clients.delete(res);
