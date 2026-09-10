@@ -946,6 +946,31 @@ function renderMathInAiMessage(container) {
   }
 }
 
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "-9999px";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return Boolean(ok);
+  } catch {
+    return false;
+  }
+}
+
 function enhanceCodeBlocksInContainer(container) {
   container.querySelectorAll("pre").forEach((pre) => {
     if (pre.closest(".ai-code-block-wrapper")) return;
@@ -967,41 +992,38 @@ function enhanceCodeBlocksInContainer(container) {
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.className = "ai-code-copy-btn";
-    copyBtn.textContent = "复制代码";
+    copyBtn.innerHTML = `
+      <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <span>复制代码</span>
+    `;
     copyBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      let ok = false;
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(codeText);
-          ok = true;
-        } catch {}
-      }
-      if (!ok) {
-        try {
-          const ta = document.createElement("textarea");
-          ta.value = codeText;
-          ta.style.position = "fixed";
-          ta.style.top = "-9999px";
-          ta.style.left = "-9999px";
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          ok = document.execCommand("copy");
-          ta.remove();
-        } catch {}
-      }
+      const ok = await copyTextToClipboard(codeText);
       if (ok) {
-        copyBtn.textContent = "已复制 ✓";
+        copyBtn.innerHTML = `
+          <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>已复制 ✓</span>
+        `;
         copyBtn.classList.add("copied");
         setTimeout(() => {
-          copyBtn.textContent = "复制代码";
+          copyBtn.innerHTML = `
+            <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>复制代码</span>
+          `;
           copyBtn.classList.remove("copied");
         }, 2000);
       } else {
-        copyBtn.textContent = "复制失败";
+        copyBtn.querySelector("span").textContent = "复制失败";
         setTimeout(() => {
-          copyBtn.textContent = "复制代码";
+          copyBtn.querySelector("span").textContent = "复制代码";
         }, 2000);
       }
     });
@@ -1237,7 +1259,14 @@ function renderAiMarkdown(text = "", reasoning = "") {
     thoughtBox.className = "ai-thought-box";
     const summary = document.createElement("summary");
     summary.className = "ai-thought-summary";
-    summary.innerHTML = `<span class="ai-thought-icon">🧠</span> <strong class="ai-thought-title">深度思考过程</strong> <span class="ai-thought-badge">点击展开/折叠</span>`;
+    summary.innerHTML = `
+      <span class="ai-thought-icon">💡</span>
+      <strong class="ai-thought-title">深度思考过程</strong>
+      <span class="ai-thought-badge">点击展开</span>
+      <svg class="ai-thought-chevron" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6l4 4 4-4"/>
+      </svg>
+    `;
     const thoughtBody = document.createElement("div");
     thoughtBody.className = "ai-thought-body";
     thoughtBody.append(renderInnerMarkdown(thoughtText));
@@ -1253,10 +1282,84 @@ function renderAiMarkdown(text = "", reasoning = "") {
   return container;
 }
 
+function renderAiMessageActions(message, isLastAssistant) {
+  const actions = document.createElement("div");
+  actions.className = "ai-message-actions";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "ai-msg-action-btn copy-btn";
+  copyBtn.setAttribute("aria-label", "复制全文");
+  copyBtn.title = "复制完整回答正文到剪贴板";
+  copyBtn.innerHTML = `
+    <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    <span>复制全文</span>
+  `;
+  copyBtn.addEventListener("click", async () => {
+    const { mainText } = extractThinkingProcess(message.text, message.reasoning);
+    const textToCopy = mainText || message.text || "";
+    const ok = await copyTextToClipboard(textToCopy);
+    if (ok) {
+      copyBtn.classList.add("copied");
+      copyBtn.innerHTML = `
+        <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>已复制 ✓</span>
+      `;
+      window.setTimeout(() => {
+        copyBtn.classList.remove("copied");
+        copyBtn.innerHTML = `
+          <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>复制全文</span>
+        `;
+      }, 2000);
+    }
+  });
+  actions.append(copyBtn);
+
+  if (isLastAssistant) {
+    const regenBtn = document.createElement("button");
+    regenBtn.type = "button";
+    regenBtn.className = "ai-msg-action-btn regen-btn";
+    regenBtn.setAttribute("aria-label", "重新生成");
+    regenBtn.title = "重新向大模型请求生成本条回答";
+    regenBtn.innerHTML = `
+      <svg class="action-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M23 4v6h-6"></path>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+      <span>重新生成</span>
+    `;
+    regenBtn.addEventListener("click", () => {
+      regenerateLastAiAnswer();
+    });
+    actions.append(regenBtn);
+  }
+
+  return actions;
+}
+
 function renderAiMessages() {
   if (!aiMessages) return;
   aiMessages.replaceChildren();
-  for (const message of state.aiDrawer.messages) {
+  const total = state.aiDrawer.messages.length;
+  let lastCompletedAssistantIndex = -1;
+  for (let i = total - 1; i >= 0; i--) {
+    const m = state.aiDrawer.messages[i];
+    if (m.role === "assistant" && !m.pending && m.text) {
+      lastCompletedAssistantIndex = i;
+      break;
+    }
+  }
+
+  state.aiDrawer.messages.forEach((message, index) => {
     const bubble = document.createElement("div");
     bubble.className = `ai-message ${message.role === "user" ? "user" : "assistant"}${message.pending ? " pending" : ""}`;
     if (message.role === "assistant" && message.webSearch) {
@@ -1280,7 +1383,7 @@ function renderAiMessages() {
       const meta = document.createElement("div");
       meta.className = "ai-message-meta";
       const modeLabel = "思考";
-      meta.textContent = `${message.model || aiModelDisplayName()} · ${modeLabel}`;
+      meta.innerHTML = `<span class="meta-icon">💡</span> ${escapeHtml(message.model || aiModelDisplayName())} · ${modeLabel}`;
       bubble.append(meta);
     }
     bubble.append(renderAiMarkdown(message.text, message.reasoning));
@@ -1295,8 +1398,12 @@ function renderAiMessages() {
       }
       bubble.append(resultList);
     }
+    if (message.role === "assistant" && !message.pending && message.text) {
+      const isLast = index === lastCompletedAssistantIndex;
+      bubble.append(renderAiMessageActions(message, isLast));
+    }
     aiMessages.append(bubble);
-  }
+  });
   aiMessages.scrollTop = aiMessages.scrollHeight;
 }
 
@@ -1652,26 +1759,7 @@ async function requestAiAssistant({ mode, item, prompt, signal }) {
   });
 }
 
-async function submitAiPrompt() {
-  if (isAiGenerating) {
-    if (aiChatAbortController) {
-      aiChatAbortController.abort();
-    }
-    return;
-  }
-  const prompt = aiPromptInput?.value.trim() || "";
-  if (!prompt) {
-    aiPromptInput?.focus();
-    syncAiPromptSendState();
-    return;
-  }
-  state.aiDrawer.messages.push({ role: "user", text: prompt });
-  saveAiConversation();
-  if (aiPromptInput) {
-    aiPromptInput.value = "";
-    autoResizeAiPromptInput();
-  }
-  syncAiPromptSendState();
+async function executeAiChatTurn(prompt) {
   const pendingMessage = {
     role: "assistant",
     text: aiPendingText(prompt, state.aiDrawer.mode, state.aiWebSearchEnabled),
@@ -1740,6 +1828,47 @@ async function submitAiPrompt() {
     autoResizeAiPromptInput();
     renderAiMessages();
   }
+}
+
+function regenerateLastAiAnswer() {
+  if (isAiGenerating) return;
+  let lastUserIndex = -1;
+  for (let i = state.aiDrawer.messages.length - 1; i >= 0; i--) {
+    if (state.aiDrawer.messages[i].role === "user") {
+      lastUserIndex = i;
+      break;
+    }
+  }
+  if (lastUserIndex === -1) return;
+  const prompt = state.aiDrawer.messages[lastUserIndex].text;
+  state.aiDrawer.messages = state.aiDrawer.messages.slice(0, lastUserIndex + 1);
+  saveAiConversation();
+  renderAiMessages();
+  void executeAiChatTurn(prompt);
+  setStatus("正在重新生成回答...");
+}
+
+async function submitAiPrompt() {
+  if (isAiGenerating) {
+    if (aiChatAbortController) {
+      aiChatAbortController.abort();
+    }
+    return;
+  }
+  const prompt = aiPromptInput?.value.trim() || "";
+  if (!prompt) {
+    aiPromptInput?.focus();
+    syncAiPromptSendState();
+    return;
+  }
+  state.aiDrawer.messages.push({ role: "user", text: prompt });
+  saveAiConversation();
+  if (aiPromptInput) {
+    aiPromptInput.value = "";
+    autoResizeAiPromptInput();
+  }
+  syncAiPromptSendState();
+  await executeAiChatTurn(prompt);
 }
 
 function renderAccessInfo(data) {
