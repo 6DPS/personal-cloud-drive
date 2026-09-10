@@ -173,6 +173,7 @@ const aiPromptInput = $("#aiPromptInput");
 const aiPromptHint = $("#aiPromptHint");
 const aiPromptSendBtn = $("#aiPromptSendBtn");
 const aiHistoryPanel = $("#aiHistoryPanel");
+const aiHistoryTitleText = $("#aiHistoryTitleText");
 const aiHistoryCount = $("#aiHistoryCount");
 const aiHistoryList = $("#aiHistoryList");
 const aiClearAllHistoryBtn = $("#aiClearAllHistoryBtn");
@@ -521,6 +522,24 @@ function formatAiSessionTime(ts) {
   return `${m}-${day} ${h}:${min}`;
 }
 
+function getCurrentAiScope() {
+  const isItem = state.aiDrawer.mode === "item" && Boolean(state.aiDrawer.item);
+  if (isItem) {
+    return {
+      type: "item",
+      key: `item:${state.aiDrawer.item.path}`,
+      label: state.aiDrawer.item.name || "单个文件",
+      itemPath: state.aiDrawer.item.path,
+    };
+  }
+  return {
+    type: "global",
+    key: "global",
+    label: "全局资料库",
+    itemPath: "",
+  };
+}
+
 function archiveCurrentAiSession() {
   const messages = state.aiDrawer.messages || [];
   const userMessages = messages.filter((m) => m.role === "user" && m.text && !m.pending);
@@ -528,9 +547,7 @@ function archiveCurrentAiSession() {
 
   const firstUserText = userMessages[0].text.trim();
   const sessionTitle = firstUserText.length > 28 ? firstUserText.slice(0, 26) + "..." : firstUserText;
-  const targetLabel = state.aiDrawer.mode === "item" && state.aiDrawer.item
-    ? (state.aiDrawer.item.name || "单个文件")
-    : (state.path ? (state.path.split("/").filter(Boolean).pop() || "当前目录") : "全局资料库");
+  const scope = getCurrentAiScope();
 
   const sessions = loadStoredAiSessions();
   const now = Date.now();
@@ -539,12 +556,24 @@ function archiveCurrentAiSession() {
     ? sessions.findIndex((s) => s.id === state.currentAiSessionId)
     : -1;
 
+  // STRICT ISOLATION: If the existing session belongs to another scope, disconnect so we never overwrite across scopes!
+  if (existingIdx >= 0) {
+    const existingScopeKey = sessions[existingIdx].scopeKey || (sessions[existingIdx].mode === "item" ? `item:${sessions[existingIdx].itemPath || sessions[existingIdx].targetLabel}` : "global");
+    if (existingScopeKey !== scope.key) {
+      existingIdx = -1;
+      state.currentAiSessionId = null;
+    }
+  }
+
   const validMessages = cloneAiMessages(messages.filter((m) => !m.pending));
 
   if (existingIdx >= 0) {
     sessions[existingIdx].messages = validMessages;
     sessions[existingIdx].updatedAt = now;
-    sessions[existingIdx].targetLabel = targetLabel;
+    sessions[existingIdx].scopeKey = scope.key;
+    sessions[existingIdx].scopeType = scope.type;
+    sessions[existingIdx].targetLabel = scope.label;
+    sessions[existingIdx].itemPath = scope.itemPath;
     if (!sessions[existingIdx].customTitle && (!sessions[existingIdx].title || sessions[existingIdx].title === "新对话")) {
       sessions[existingIdx].title = sessionTitle;
     }
@@ -556,8 +585,11 @@ function archiveCurrentAiSession() {
       title: sessionTitle || "新对话",
       createdAt: now,
       updatedAt: now,
-      mode: state.aiDrawer.mode,
-      targetLabel: targetLabel,
+      mode: scope.type,
+      scopeType: scope.type,
+      scopeKey: scope.key,
+      targetLabel: scope.label,
+      itemPath: scope.itemPath,
       messages: validMessages,
     });
   }
@@ -607,7 +639,26 @@ function closeAiHistoryPanel() {
 
 function renderAiHistoryPanel() {
   if (!aiHistoryList) return;
-  const sessions = loadStoredAiSessions();
+  const currentScope = getCurrentAiScope();
+  const allSessions = loadStoredAiSessions();
+
+  // STRICT ISOLATION: Only show sessions belonging to the CURRENT scope!
+  const sessions = allSessions.filter((s) => {
+    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
+    return sKey === currentScope.key;
+  });
+
+  if (aiHistoryTitleText) {
+    aiHistoryTitleText.textContent = currentScope.type === "item"
+      ? `文件历史 (${currentScope.label})`
+      : "全库问答历史";
+    aiHistoryTitleText.title = currentScope.label;
+  }
+
+  if (aiClearAllHistoryBtn) {
+    aiClearAllHistoryBtn.textContent = currentScope.type === "item" ? "清空本文件记录" : "清空全库记录";
+  }
+
   if (aiHistoryCount) {
     aiHistoryCount.textContent = `${sessions.length} 条`;
   }
@@ -616,8 +667,8 @@ function renderAiHistoryPanel() {
     aiHistoryList.innerHTML = `
       <div class="ai-history-empty">
         <div class="ai-history-empty-icon">💬</div>
-        <div class="ai-history-empty-text">暂无历史对话记录</div>
-        <p class="ai-history-empty-hint">提问或开启新对话时将自动归档在此</p>
+        <div class="ai-history-empty-text">当前${currentScope.type === "item" ? "文件" : "全库问答"}暂无历史记录</div>
+        <p class="ai-history-empty-hint">发送提问或开启新对话时将自动归档在此</p>
       </div>
     `;
     return;
@@ -654,7 +705,7 @@ function renderAiHistoryPanel() {
       </div>
       <div class="ai-history-card-meta">
         <span class="ai-history-card-time">${timeStr}</span>
-        <span class="ai-history-card-scope">${escapeHtml(session.targetLabel || "全局")}</span>
+        <span class="ai-history-card-scope">${escapeHtml(session.targetLabel || (currentScope.type === "item" ? currentScope.label : "全局资料库"))}</span>
         <span class="ai-history-card-turns">${turnCount} 轮问答</span>
       </div>
     `;
@@ -735,9 +786,8 @@ function switchAiSession(sessionId) {
   if (!target) return;
 
   state.currentAiSessionId = target.id;
-  state.aiDrawer.mode = target.mode || "global";
-  state.aiDrawer.item = null;
   state.aiDrawer.messages = cloneAiMessages(target.messages || []);
+  saveAiConversation();
   renderAiDrawer();
   closeAiHistoryPanel();
   setStatus(`已载入历史对话: ${target.title}`);
@@ -771,24 +821,42 @@ async function deleteAiSession(sessionId) {
 }
 
 async function clearAllAiSessions() {
-  const sessions = loadStoredAiSessions();
-  if (!sessions.length) {
-    setStatus("暂无历史记录可清空");
+  const currentScope = getCurrentAiScope();
+  let allSessions = loadStoredAiSessions();
+  const targetSessions = allSessions.filter((s) => {
+    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
+    return sKey === currentScope.key;
+  });
+
+  if (!targetSessions.length) {
+    setStatus("当前范围暂无历史记录可清空");
     return;
   }
+
+  const isItem = currentScope.type === "item";
   const confirmed = await openDialog({
     eyebrow: "会话管理",
-    title: "清空全部历史会话",
-    description: "确定要清空全部历史会话记录吗？清空后无法撤销，所有已保存的历史对话都将被彻底移除。",
+    title: isItem ? "清空本文件历史记录" : "清空全库历史会话",
+    description: isItem
+      ? `确定要清空关于“${currentScope.label}”的 ${targetSessions.length} 条历史会话吗？（其他文件与全库历史不受影响）`
+      : `确定要清空全库问答的 ${targetSessions.length} 条历史会话吗？（各文件对应的历史会话不受影响）`,
     confirmText: "确认清空",
     danger: true,
   });
   if (!confirmed) return;
 
-  saveStoredAiSessions([]);
+  // STRICT ISOLATION: Only delete sessions matching current scope! Keep all others untouched!
+  allSessions = allSessions.filter((s) => {
+    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
+    return sKey !== currentScope.key;
+  });
+
+  saveStoredAiSessions(allSessions);
   state.currentAiSessionId = null;
+  state.aiDrawer.messages = aiInitialMessages(state.aiDrawer.mode, state.aiDrawer.item);
+  renderAiDrawer();
   renderAiHistoryPanel();
-  setStatus("已清空全部历史会话记录");
+  setStatus(isItem ? "已清空本文件的历史会话记录" : "已清空全库问答历史记录");
 }
 
 function startNewAiChat() {
@@ -797,7 +865,7 @@ function startNewAiChat() {
   }
   archiveCurrentAiSession();
   state.currentAiSessionId = null;
-  state.aiDrawer.messages = [];
+  state.aiDrawer.messages = aiInitialMessages(state.aiDrawer.mode, state.aiDrawer.item);
   saveAiConversation();
   renderAiDrawer();
   closeAiHistoryPanel();
@@ -842,6 +910,20 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
   state.aiDrawer.item = state.aiDrawer.mode === "item" ? item : null;
   state.aiDrawer.key = aiConversationKey(state.aiDrawer.mode, state.aiDrawer.item, state.path);
+
+  // Synchronize state.currentAiSessionId to match the new scope
+  const currentScope = getCurrentAiScope();
+  const sessions = loadStoredAiSessions();
+  const activeSess = sessions.find((s) => s.id === state.currentAiSessionId);
+  const activeScopeKey = activeSess ? (activeSess.scopeKey || (activeSess.mode === "item" ? `item:${activeSess.itemPath || activeSess.targetLabel}` : "global")) : null;
+  if (activeScopeKey !== currentScope.key) {
+    const latestForScope = sessions.find((s) => {
+      const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
+      return sKey === currentScope.key;
+    });
+    state.currentAiSessionId = latestForScope ? latestForScope.id : null;
+  }
+
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
   renderAiDrawer();
@@ -867,6 +949,20 @@ function returnToAiGlobalDrawer() {
   state.aiDrawer.mode = "global";
   state.aiDrawer.item = null;
   state.aiDrawer.key = target.key || aiConversationKey("global", null, state.path);
+
+  // Synchronize state.currentAiSessionId to match global scope
+  const currentScope = getCurrentAiScope();
+  const sessions = loadStoredAiSessions();
+  const activeSess = sessions.find((s) => s.id === state.currentAiSessionId);
+  const activeScopeKey = activeSess ? (activeSess.scopeKey || (activeSess.mode === "item" ? `item:${activeSess.itemPath || activeSess.targetLabel}` : "global")) : null;
+  if (activeScopeKey !== currentScope.key) {
+    const latestForScope = sessions.find((s) => {
+      const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
+      return sKey === currentScope.key;
+    });
+    state.currentAiSessionId = latestForScope ? latestForScope.id : null;
+  }
+
   state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
   state.aiDrawer.returnTo = null;
   renderAiDrawer();
