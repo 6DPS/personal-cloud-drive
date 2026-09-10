@@ -823,7 +823,6 @@ select {
 .search-box {
   order: 1;
   flex: 1 1 auto;
-  max-width: 480px;
   margin-top: 0;
   display: flex;
   align-items: center;
@@ -892,7 +891,6 @@ select {
 
 .ai-mode-toggle {
   order: 4;
-  margin-left: auto;
   flex: 0 0 auto;
   min-width: 96px;
   width: auto;
