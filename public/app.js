@@ -545,7 +545,7 @@ function archiveCurrentAiSession() {
     sessions[existingIdx].messages = validMessages;
     sessions[existingIdx].updatedAt = now;
     sessions[existingIdx].targetLabel = targetLabel;
-    if (!sessions[existingIdx].title || sessions[existingIdx].title === "新对话") {
+    if (!sessions[existingIdx].customTitle && (!sessions[existingIdx].title || sessions[existingIdx].title === "新对话")) {
       sessions[existingIdx].title = sessionTitle;
     }
   } else {
@@ -564,6 +564,20 @@ function archiveCurrentAiSession() {
 
   sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   saveStoredAiSessions(sessions);
+}
+
+function renameAiSession(sessionId, newTitle) {
+  const trimmed = (newTitle || "").trim();
+  if (!trimmed) return;
+  const sessions = loadStoredAiSessions();
+  const target = sessions.find((s) => s.id === sessionId);
+  if (!target) return;
+  target.title = trimmed.length > 50 ? trimmed.slice(0, 48) + "..." : trimmed;
+  target.updatedAt = Date.now();
+  target.customTitle = true;
+  saveStoredAiSessions(sessions);
+  renderAiHistoryPanel();
+  setStatus(`会话已重命名为：“${target.title}”`);
 }
 
 function toggleAiHistoryPanel() {
@@ -622,14 +636,21 @@ function renderAiHistoryPanel() {
     card.innerHTML = `
       <div class="ai-history-card-header">
         <div class="ai-history-card-title-row">
-          <strong class="ai-history-card-title" title="${escapeHtml(session.title)}">${escapeHtml(session.title)}</strong>
+          <strong class="ai-history-card-title" title="${escapeHtml(session.title)} (双击或点击铅笔可修改名称)">${escapeHtml(session.title)}</strong>
           ${isCurrent ? '<span class="ai-history-card-badge current">当前</span>' : ""}
         </div>
-        <button class="ai-history-card-del-btn" type="button" title="删除此条记录" aria-label="删除此条记录" data-del-id="${session.id}">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M4 6h12M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2m2 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6h10z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="ai-history-card-actions">
+          <button class="ai-history-card-edit-btn" type="button" title="修改会话名称" aria-label="修改会话名称" data-edit-id="${session.id}">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12.5 3.5l4 4L6 18H2v-4L12.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="ai-history-card-del-btn" type="button" title="删除此条记录" aria-label="删除此条记录" data-del-id="${session.id}">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M4 6h12M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2m2 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6h10z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="ai-history-card-meta">
         <span class="ai-history-card-time">${timeStr}</span>
@@ -638,15 +659,69 @@ function renderAiHistoryPanel() {
       </div>
     `;
 
+    const startEditing = () => {
+      const titleRow = card.querySelector(".ai-history-card-title-row");
+      const titleEl = card.querySelector(".ai-history-card-title");
+      if (!titleRow || !titleEl || titleRow.querySelector(".ai-history-title-input")) return;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "ai-history-title-input";
+      input.value = session.title;
+      input.maxLength = 50;
+      input.placeholder = "输入会话标题...";
+
+      let finished = false;
+      const finishEdit = (save) => {
+        if (finished) return;
+        finished = true;
+        const newTitle = input.value.trim();
+        if (save && newTitle && newTitle !== session.title) {
+          renameAiSession(session.id, newTitle);
+        } else {
+          renderAiHistoryPanel();
+        }
+      };
+
+      input.addEventListener("click", (e) => e.stopPropagation());
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          finishEdit(true);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          finishEdit(false);
+        }
+      });
+      input.addEventListener("blur", () => finishEdit(true));
+
+      titleEl.style.display = "none";
+      titleRow.insertBefore(input, titleEl);
+      input.focus();
+      input.select();
+    };
+
+    const editBtn = card.querySelector(".ai-history-card-edit-btn");
+    editBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      startEditing();
+    });
+
+    const titleEl = card.querySelector(".ai-history-card-title");
+    titleEl?.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      startEditing();
+    });
+
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".ai-history-card-del-btn")) return;
+      if (e.target.closest(".ai-history-card-actions") || e.target.closest(".ai-history-title-input")) return;
       switchAiSession(session.id);
     });
 
     const delBtn = card.querySelector(".ai-history-card-del-btn");
-    delBtn?.addEventListener("click", (e) => {
+    delBtn?.addEventListener("click", async (e) => {
       e.stopPropagation();
-      deleteAiSession(session.id);
+      await deleteAiSession(session.id);
     });
 
     aiHistoryList.appendChild(card);
@@ -668,8 +743,20 @@ function switchAiSession(sessionId) {
   setStatus(`已载入历史对话: ${target.title}`);
 }
 
-function deleteAiSession(sessionId) {
+async function deleteAiSession(sessionId) {
   let sessions = loadStoredAiSessions();
+  const target = sessions.find((s) => s.id === sessionId);
+  if (!target) return;
+
+  const confirmed = await openDialog({
+    eyebrow: "会话管理",
+    title: "删除历史会话",
+    description: `确定要删除“${target.title}”这条历史会话记录吗？`,
+    confirmText: "删除",
+    danger: true,
+  });
+  if (!confirmed) return;
+
   sessions = sessions.filter((s) => s.id !== sessionId);
   saveStoredAiSessions(sessions);
 
@@ -683,15 +770,21 @@ function deleteAiSession(sessionId) {
   setStatus("已删除该条历史会话");
 }
 
-function clearAllAiSessions() {
+async function clearAllAiSessions() {
   const sessions = loadStoredAiSessions();
   if (!sessions.length) {
     setStatus("暂无历史记录可清空");
     return;
   }
-  if (!confirm("确定要清空全部历史会话记录吗？清空后无法撤销。")) {
-    return;
-  }
+  const confirmed = await openDialog({
+    eyebrow: "会话管理",
+    title: "清空全部历史会话",
+    description: "确定要清空全部历史会话记录吗？清空后无法撤销，所有已保存的历史对话都将被彻底移除。",
+    confirmText: "确认清空",
+    danger: true,
+  });
+  if (!confirmed) return;
+
   saveStoredAiSessions([]);
   state.currentAiSessionId = null;
   renderAiHistoryPanel();
@@ -3269,6 +3362,8 @@ function closeFolderPasswordModal() {
 
 function closeDialogModal() {
   closeFolderDropdown(dialogSelect);
+  confirmDialogBtn.classList.remove("danger");
+  confirmDialogBtn.textContent = "确定";
   dialogModal.classList.add("hidden");
   dialogModal.setAttribute("aria-hidden", "true");
   dialogError.textContent = "";
@@ -3280,6 +3375,12 @@ function openDialog(config) {
   dialogEyebrow.textContent = config.eyebrow || "操作";
   dialogTitle.textContent = config.title || "确认";
   dialogDescription.textContent = config.description || "";
+  confirmDialogBtn.textContent = config.confirmText || "确定";
+  if (config.danger) {
+    confirmDialogBtn.classList.add("danger");
+  } else {
+    confirmDialogBtn.classList.remove("danger");
+  }
   dialogError.textContent = "";
 
   dialogInputField.classList.toggle("hidden", !config.input);

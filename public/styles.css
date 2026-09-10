@@ -3117,6 +3117,18 @@ td:nth-child(5) {
 .dialog-modal-card {
   width: min(520px, 100%);
   padding: 24px;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(200, 215, 235, 0.95) !important;
+  box-shadow: 0 24px 60px rgba(15, 30, 60, 0.22), 0 4px 16px rgba(15, 30, 60, 0.08) !important;
+}
+
+.dialog-modal-card h2 {
+  color: #0f172a !important;
+}
+
+.dialog-modal-card .modal-description {
+  color: #475569 !important;
 }
 
 .registration-keys-card {
@@ -6194,6 +6206,14 @@ select:focus {
   color: #ffffff;
 }
 
+.ai-history-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.ai-history-card-edit-btn,
 .ai-history-card-del-btn {
   flex: 0 0 auto;
   width: 26px;
@@ -6209,6 +6229,17 @@ select:focus {
   transition: all 140ms ease;
 }
 
+.ai-history-card-edit-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ai-history-card-edit-btn:hover {
+  color: #1473e6;
+  background: rgba(20, 115, 230, 0.1);
+  transform: scale(1.1);
+}
+
 .ai-history-card-del-btn svg {
   width: 15px;
   height: 15px;
@@ -6218,6 +6249,21 @@ select:focus {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
   transform: scale(1.1);
+}
+
+.ai-history-title-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 2px 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #1473e6;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px rgba(20, 115, 230, 0.18);
+  outline: none;
 }
 
 .ai-history-card-meta {
