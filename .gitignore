@@ -1,8 +1,10 @@
-﻿node_modules/
+node_modules/
 logs/
 tmp/
 *.traineddata
 .cloudflared/
 backup_golden_stable_20260909/
+backup_v1.1_ai_modal_20260910/
+恢复至*.bat
 report-output/
 output/
