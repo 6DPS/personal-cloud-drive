@@ -11,6 +11,7 @@ const { once } = require("events");
 const { pipeline } = require("stream/promises");
 
 const archiver = require("archiver");
+const compression = require("compression");
 const express = require("express");
 const { XMLParser } = require("fast-xml-parser");
 const JSZip = require("jszip");
@@ -203,6 +204,18 @@ const chunkUpload = multer({
   },
 });
 
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers["accept"] === "text/event-stream" || req.path === "/api/events") {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  }),
+);
+
 app.use(express.json({ limit: "1mb" }));
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -349,20 +362,22 @@ self.addEventListener("fetch", () => {});
 `);
 });
 
-app.use("/vendor/marked", express.static(path.join(__dirname, "node_modules", "marked")));
-app.use("/vendor/dompurify", express.static(path.join(__dirname, "node_modules", "dompurify", "dist")));
-app.use("/vendor/katex", express.static(path.join(__dirname, "node_modules", "katex", "dist")));
+app.use("/vendor/marked", express.static(path.join(__dirname, "node_modules", "marked"), { maxAge: "7d" }));
+app.use("/vendor/dompurify", express.static(path.join(__dirname, "node_modules", "dompurify", "dist"), { maxAge: "7d" }));
+app.use("/vendor/katex", express.static(path.join(__dirname, "node_modules", "katex", "dist"), { maxAge: "7d" }));
 
 app.use(
   express.static(PUBLIC_ROOT, {
     index: false,
     setHeaders(res, filePath) {
-      if (/\.(html|css|js)$/i.test(filePath)) {
+      if (/\.html$/i.test(filePath)) {
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
         res.setHeader("CDN-Cache-Control", "no-store");
         res.setHeader("Cloudflare-CDN-Cache-Control", "no-store");
+      } else if (/\.(css|js|woff2?|ttf|svg|png|jpg|jpeg|gif|ico|webp)$/i.test(filePath)) {
+        res.setHeader("Cache-Control", "public, max-age=86400");
       }
     },
   }),
@@ -3796,6 +3811,7 @@ app.get("/api/events", requireAuth, (req, res) => {
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
   res.write(`data: ${JSON.stringify({ type: "connected", at: Date.now() })}\n\n`);
 
