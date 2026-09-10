@@ -1015,6 +1015,7 @@ function closeAiDrawer() {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
   }, 280);
+  setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
 }
 
 function aiSuggestionButton(label, prompt) {
@@ -4813,7 +4814,7 @@ function applyFolderData(data, options = {}) {
   if (!state.selectedPaths.size) state.selectionMode = false;
   storageRoot.textContent = compactStoragePath(data.storageRoot);
   storageRoot.title = data.storageRoot;
-  currentFolderLabel.textContent = displayFolder(state.path);
+  if (currentFolderLabel) currentFolderLabel.textContent = displayFolder(state.path);
   updateSearchScopeLabel();
   backBtn.disabled = !state.path;
   renderBreadcrumb();
@@ -4886,7 +4887,7 @@ function applySearchData(data) {
   state.selectionMode = false;
   updateSearchVisibleItems();
   updateSearchScopeLabel();
-  currentFolderLabel.textContent = `搜索：${state.searchQuery}`;
+  if (currentFolderLabel) currentFolderLabel.textContent = `搜索：${state.searchQuery}`;
   backBtn.disabled = !state.path;
   renderRows({ noAnimation: true });
   if (aiDrawer && !aiDrawer.classList.contains("hidden")) renderAiDrawer();
@@ -6231,7 +6232,7 @@ async function loadTrash(options = {}) {
     trashClearBtn.classList.remove("hidden");
   }
 
-  currentFolderLabel.textContent = "🗑️ 回收站";
+  if (currentFolderLabel) currentFolderLabel.textContent = "🗑️ 回收站";
   backBtn.disabled = false;
   renderBreadcrumb();
   if (!options?.silent) setStatus("正在加载回收站...");

@@ -734,19 +734,7 @@ select {
 }
 
 .upload-target {
-  flex: 0 1 auto;
-  display: grid;
-  gap: 2px;
-  text-align: right;
-  min-width: 0;
-}
-
-.upload-target strong {
-  color: #008d7f;
-  max-width: min(240px, 25vw);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: none !important;
 }
 
 .actions {
