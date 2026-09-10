@@ -660,6 +660,7 @@ select {
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 16px 36px rgba(35, 52, 76, 0.09);
+  overflow: hidden;
 }
 
 .path-controls {
@@ -667,6 +668,13 @@ select {
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1;
+}
+
+.path-controls > div {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .icon-button {
@@ -692,6 +700,9 @@ select {
   min-height: 30px;
   color: #283852;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .breadcrumb button {
@@ -707,6 +718,10 @@ select {
   color: #69778d;
   font-size: 13px;
   line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .upload-target {
@@ -725,6 +740,7 @@ select {
 }
 
 .actions {
+  flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2198,20 +2214,18 @@ td:nth-child(5) {
 }
 
 .ai-message.initial-greeting {
+  border-radius: 14px;
   background: rgba(244, 249, 255, 0.82);
-  border-color: rgba(20, 187, 176, 0.18);
+  border-color: rgba(20, 187, 176, 0.22);
   color: #556782;
   font-size: 13px;
   line-height: 1.5;
-  padding: 9px 15px;
+  padding: 10px 16px;
   box-shadow: none;
 }
 
 .ai-message.initial-greeting::before {
-  opacity: 0.45;
-  top: 9px;
-  bottom: 9px;
-  width: 3px;
+  display: none;
 }
 
 .ai-message-meta {

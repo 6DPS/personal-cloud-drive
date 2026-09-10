@@ -283,6 +283,7 @@ const HEALTH_REFRESH_MS = 60000;
 
 function setStatus(message) {
   statusLine.textContent = message;
+  statusLine.title = message || "";
 }
 
 function syncAiModeUi() {
