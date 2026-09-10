@@ -156,6 +156,7 @@ const aiGlobalSearchBtn = $("#aiGlobalSearchBtn");
 const aiDrawer = $("#aiDrawer");
 const aiDrawerBackdrop = $("#aiDrawerBackdrop");
 const aiDrawerBackBtn = $("#aiDrawerBackBtn");
+const aiNewChatBtn = $("#aiNewChatBtn");
 const aiDrawerCloseBtn = $("#aiDrawerCloseBtn");
 const aiDrawerTitle = $("#aiDrawerTitle");
 const aiDrawerSubtitle = $("#aiDrawerSubtitle");
@@ -458,14 +459,48 @@ function aiDrawerSnapshot() {
   };
 }
 
+let aiChatAbortController = null;
+let isAiGenerating = false;
+
+function autoResizeAiPromptInput() {
+  if (!aiPromptInput) return;
+  aiPromptInput.style.height = "auto";
+  const scrollH = aiPromptInput.scrollHeight;
+  const targetH = Math.min(Math.max(scrollH, 24), 140);
+  aiPromptInput.style.height = `${targetH}px`;
+  aiPromptInput.style.overflowY = scrollH > 140 ? "auto" : "hidden";
+}
+
+function startNewAiChat() {
+  if (isAiGenerating && aiChatAbortController) {
+    aiChatAbortController.abort();
+  }
+  state.aiDrawer.messages = [];
+  saveAiConversation();
+  renderAiDrawer();
+  if (aiPromptInput) {
+    aiPromptInput.value = "";
+    autoResizeAiPromptInput();
+    aiPromptInput.focus();
+  }
+  syncAiPromptSendState();
+  setStatus("已开启新对话，上下文已重置");
+}
+
 function syncAiPromptSendState() {
+  if (isAiGenerating) {
+    aiPromptForm?.classList.add("has-text");
+    aiPromptSendBtn?.setAttribute("aria-disabled", "false");
+    aiPromptSendBtn?.removeAttribute("disabled");
+    return;
+  }
   const hasText = Boolean(aiPromptInput?.value.trim());
   aiPromptForm?.classList.toggle("has-text", hasText);
   aiPromptSendBtn?.setAttribute("aria-disabled", hasText ? "false" : "true");
 }
 
 function pulseAiSendButton() {
-  if (!aiPromptSendBtn || !aiPromptInput?.value.trim()) return;
+  if (!aiPromptSendBtn || (!isAiGenerating && !aiPromptInput?.value.trim())) return;
   window.clearTimeout(aiPromptPressTimer);
   aiPromptSendBtn.classList.remove("is-pressing");
   void aiPromptSendBtn.offsetWidth;
@@ -491,6 +526,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
+  autoResizeAiPromptInput();
   window.setTimeout(() => aiPromptInput?.focus(), 80);
   setStatus(state.aiDrawer.mode === "item" && item
     ? `已打开“${itemName(item)}”的 AI 对话`
@@ -508,6 +544,7 @@ function returnToAiGlobalDrawer() {
   state.aiDrawer.returnTo = null;
   renderAiDrawer();
   syncAiPromptSendState();
+  autoResizeAiPromptInput();
   window.setTimeout(() => aiPromptInput?.focus(), 60);
   setStatus("已返回 AI 全库问答");
 }
@@ -531,7 +568,10 @@ function aiSuggestionButton(label, prompt) {
   button.type = "button";
   button.textContent = label;
   button.addEventListener("click", () => {
-    if (aiPromptInput) aiPromptInput.value = prompt || label;
+    if (aiPromptInput) {
+      aiPromptInput.value = prompt || label;
+      autoResizeAiPromptInput();
+    }
     syncAiPromptSendState();
     pulseAiSendButton();
     submitAiPrompt();
@@ -1591,7 +1631,7 @@ function renderAiDrawer() {
   renderAiMessages();
 }
 
-async function requestAiAssistant({ mode, item, prompt }) {
+async function requestAiAssistant({ mode, item, prompt, signal }) {
   const path = mode === "item" ? item?.path || "" : state.path || "";
   const messages = state.aiDrawer.messages
     .slice(-10)
@@ -1600,6 +1640,7 @@ async function requestAiAssistant({ mode, item, prompt }) {
     .filter((message) => message.text);
   return api("/api/ai/chat", {
     method: "POST",
+    signal,
     body: JSON.stringify({
       mode,
       model: "reasoner",
@@ -1612,6 +1653,12 @@ async function requestAiAssistant({ mode, item, prompt }) {
 }
 
 async function submitAiPrompt() {
+  if (isAiGenerating) {
+    if (aiChatAbortController) {
+      aiChatAbortController.abort();
+    }
+    return;
+  }
   const prompt = aiPromptInput?.value.trim() || "";
   if (!prompt) {
     aiPromptInput?.focus();
@@ -1620,7 +1667,10 @@ async function submitAiPrompt() {
   }
   state.aiDrawer.messages.push({ role: "user", text: prompt });
   saveAiConversation();
-  if (aiPromptInput) aiPromptInput.value = "";
+  if (aiPromptInput) {
+    aiPromptInput.value = "";
+    autoResizeAiPromptInput();
+  }
   syncAiPromptSendState();
   const pendingMessage = {
     role: "assistant",
@@ -1631,17 +1681,24 @@ async function submitAiPrompt() {
   state.aiDrawer.messages.push(pendingMessage);
   renderAiMessages();
   scheduleAiPendingStages(pendingMessage, prompt, state.aiDrawer.mode, state.aiWebSearchEnabled);
-  aiPromptSendBtn?.setAttribute("disabled", "true");
+
+  isAiGenerating = true;
+  aiChatAbortController = new AbortController();
+  aiPromptSendBtn?.removeAttribute("disabled");
+  aiPromptSendBtn?.classList.add("is-generating");
   if (aiPromptSendBtn) {
-    const sendText = aiPromptSendBtn.querySelector(".send-text");
-    if (sendText) sendText.textContent = "分析中";
-    else aiPromptSendBtn.textContent = "分析中";
+    aiPromptSendBtn.setAttribute("aria-label", "停止生成");
+    aiPromptSendBtn.title = "点击停止生成当前回答";
+    aiPromptSendBtn.innerHTML = '<span class="stop-icon" aria-hidden="true">■</span><span class="send-text">停止</span>';
   }
+  syncAiPromptSendState();
+
   try {
     const response = await requestAiAssistant({
       mode: state.aiDrawer.mode,
       item: state.aiDrawer.item,
       prompt,
+      signal: aiChatAbortController.signal,
     });
     clearAiPendingTimers(pendingMessage);
     state.aiDrawer.messages = state.aiDrawer.messages.filter((message) => message !== pendingMessage);
@@ -1658,17 +1715,29 @@ async function submitAiPrompt() {
   } catch (error) {
     clearAiPendingTimers(pendingMessage);
     state.aiDrawer.messages = state.aiDrawer.messages.filter((message) => message !== pendingMessage);
-    state.aiDrawer.messages.push({ role: "assistant", text: error.message || "AI 回复失败，请稍后再试。" });
+    if (isAbortError(error)) {
+      state.aiDrawer.messages.push({
+        role: "assistant",
+        text: "已停止生成当前回答。",
+      });
+      setStatus("已停止生成");
+    } else {
+      state.aiDrawer.messages.push({ role: "assistant", text: error.message || "AI 回复失败，请稍后再试。" });
+    }
     saveAiConversation();
   } finally {
     clearAiPendingTimers(pendingMessage);
-    aiPromptSendBtn?.removeAttribute("disabled");
+    isAiGenerating = false;
+    aiChatAbortController = null;
+    aiPromptSendBtn?.classList.remove("is-generating");
     if (aiPromptSendBtn) {
-      const sendText = aiPromptSendBtn.querySelector(".send-text");
-      if (sendText) sendText.textContent = "发送";
-      else aiPromptSendBtn.textContent = "发送";
+      aiPromptSendBtn.removeAttribute("disabled");
+      aiPromptSendBtn.setAttribute("aria-label", "发送");
+      aiPromptSendBtn.title = "发送提问 (Enter 发送，Shift+Enter 换行)";
+      aiPromptSendBtn.innerHTML = '<span class="send-text">发送</span>';
     }
     syncAiPromptSendState();
+    autoResizeAiPromptInput();
     renderAiMessages();
   }
 }
@@ -5225,6 +5294,7 @@ backBtn.addEventListener("click", () => {
 $("#uploadBtn").addEventListener("click", openUploadModal);
 aiModeToggleBtn?.addEventListener("click", () => setAiModeEnabled(!state.aiModeEnabled));
 aiGlobalSearchBtn?.addEventListener("click", openAiGlobalSearchPlaceholder);
+aiNewChatBtn?.addEventListener("click", startNewAiChat);
 aiDrawerCloseBtn?.addEventListener("click", closeAiDrawer);
 aiDrawerBackdrop?.addEventListener("click", closeAiDrawer);
 aiDrawerBackBtn?.addEventListener("click", returnToAiGlobalDrawer);
@@ -5235,7 +5305,10 @@ aiPromptForm?.addEventListener("submit", (event) => {
   pulseAiSendButton();
   void submitAiPrompt();
 });
-aiPromptInput?.addEventListener("input", syncAiPromptSendState);
+aiPromptInput?.addEventListener("input", () => {
+  syncAiPromptSendState();
+  autoResizeAiPromptInput();
+});
 aiPromptInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
   event.preventDefault();

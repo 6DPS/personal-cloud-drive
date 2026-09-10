@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
     <meta name="theme-color" content="#1473e6" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
-    <link rel="stylesheet" href="/styles.css?v=20260910_dock_v8" />
+    <link rel="stylesheet" href="/styles.css?v=20260910_dock_v9" />
   </head>
   <body>
     <main id="app">
@@ -308,11 +308,18 @@
                 <p id="aiDrawerSubtitle">选择一个入口开始</p>
               </div>
             </div>
-            <button id="aiDrawerCloseBtn" class="ai-drawer-close-btn" type="button" aria-label="关闭">
-              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
+            <div class="ai-drawer-header-actions">
+              <button id="aiNewChatBtn" class="ai-drawer-header-btn" type="button" aria-label="开启新对话" title="开启新对话 / 清空上下文">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button id="aiDrawerCloseBtn" class="ai-drawer-close-btn ai-drawer-header-btn" type="button" aria-label="关闭" title="收起抽屉">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
           </header>
 
           <div class="ai-drawer-toolbar">
@@ -616,7 +623,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260910_dock_v7"></script>
+    <script src="/app.js?v=20260910_dock_v9"></script>
     <script src="/login-fx.js"></script>
   </body>
 </html>

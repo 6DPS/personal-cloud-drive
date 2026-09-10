@@ -1787,9 +1787,17 @@ td:nth-child(5) {
   white-space: nowrap;
 }
 
+.ai-drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.ai-drawer-header-btn,
 .ai-drawer-close-btn {
   flex: 0 0 auto;
-  margin-left: auto;
   width: 38px;
   height: 38px;
   min-width: 38px;
@@ -1811,6 +1819,7 @@ td:nth-child(5) {
     transform 160ms ease;
 }
 
+.ai-drawer-header-btn svg,
 .ai-drawer-close-btn svg {
   width: 17px;
   height: 17px;
@@ -1822,6 +1831,14 @@ td:nth-child(5) {
   border-color: rgba(239, 63, 55, 0.35);
   color: #d32f2f;
   box-shadow: 0 4px 14px rgba(239, 63, 55, 0.16);
+  transform: scale(1.08);
+}
+
+#aiNewChatBtn:hover {
+  background: rgba(235, 252, 250, 0.98);
+  border-color: rgba(20, 187, 176, 0.45);
+  color: #00897b;
+  box-shadow: 0 4px 14px rgba(20, 187, 176, 0.2);
   transform: scale(1.08);
 }
 
@@ -2520,7 +2537,7 @@ td:nth-child(5) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: center;
+  align-items: flex-end;
   padding: 8px 10px 8px 16px;
   border: 1px solid rgba(20, 187, 176, 0.2);
   border-radius: 24px;
@@ -2543,6 +2560,7 @@ td:nth-child(5) {
   display: grid;
   gap: 5px;
   margin: 0;
+  min-width: 0;
 }
 
 .ai-prompt-box span {
@@ -2554,10 +2572,12 @@ td:nth-child(5) {
 
 .ai-prompt-box textarea {
   width: 100%;
-  min-height: 36px;
-  max-height: 96px;
+  min-height: 24px;
+  height: 24px;
+  max-height: 140px;
+  box-sizing: border-box;
   resize: none;
-  padding: 6px 0;
+  padding: 2px 0 4px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -2565,10 +2585,21 @@ td:nth-child(5) {
   font: inherit;
   font-size: 14px;
   line-height: 20px;
-  overflow-y: auto;
+  overflow-y: hidden;
   outline: none;
   box-shadow: none;
-  transition: none;
+  transition: height 70ms ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 187, 176, 0.3) transparent;
+}
+
+.ai-prompt-box textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ai-prompt-box textarea::-webkit-scrollbar-thumb {
+  background: rgba(20, 187, 176, 0.3);
+  border-radius: 4px;
 }
 
 .ai-prompt-box textarea::placeholder {
@@ -2667,6 +2698,43 @@ td:nth-child(5) {
   filter: saturate(0.84);
   cursor: wait;
   animation: aiSendWorking 1.15s ease-in-out infinite;
+}
+
+/* 停止生成按钮状态 */
+.ai-send-btn.is-generating {
+  opacity: 1 !important;
+  cursor: pointer !important;
+  animation: aiStopPulse 1.4s infinite ease-in-out !important;
+  background: linear-gradient(135deg, #ff4d4f 0%, #d9363e 100%) !important;
+  box-shadow:
+    0 8px 20px rgba(217, 54, 62, 0.32),
+    0 0 14px rgba(255, 77, 79, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset !important;
+}
+
+.ai-send-btn.is-generating:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  filter: saturate(1.2) brightness(1.06) !important;
+  background: linear-gradient(135deg, #ff7875 0%, #e03137 100%) !important;
+}
+
+.ai-send-btn.is-generating .stop-icon {
+  display: inline-block;
+  font-size: 11px;
+  margin-right: 4px;
+  vertical-align: 1px;
+  line-height: 1;
+}
+
+@keyframes aiStopPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 20px rgba(217, 54, 62, 0.32), 0 0 14px rgba(255, 77, 79, 0.35);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 10px 24px rgba(217, 54, 62, 0.48), 0 0 20px rgba(255, 77, 79, 0.55);
+  }
 }
 
 @keyframes aiDrawerIn {
@@ -4482,6 +4550,7 @@ tbody tr.drop-target-row {
 .modal-close-btn,
 #closePreviewBtn,
 #closeZipArchiveBtn,
+.ai-drawer-header-btn,
 .ai-drawer-close-btn {
   flex: 0 0 38px !important;
   width: 38px !important;
@@ -4512,6 +4581,7 @@ tbody tr.drop-target-row {
 .modal-close-btn svg,
 #closePreviewBtn svg,
 #closeZipArchiveBtn svg,
+.ai-drawer-header-btn svg,
 .ai-drawer-close-btn svg {
   width: 17px !important;
   height: 17px !important;
@@ -4529,6 +4599,14 @@ tbody tr.drop-target-row {
   border-color: rgba(239, 63, 55, 0.35) !important;
   color: #d32f2f !important;
   box-shadow: 0 4px 14px rgba(239, 63, 55, 0.16) !important;
+  transform: scale(1.08) !important;
+}
+
+#aiNewChatBtn:hover {
+  background: rgba(235, 252, 250, 0.98) !important;
+  border-color: rgba(20, 187, 176, 0.45) !important;
+  color: #00897b !important;
+  box-shadow: 0 4px 14px rgba(20, 187, 176, 0.2) !important;
   transform: scale(1.08) !important;
 }
 
