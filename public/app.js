@@ -1014,7 +1014,7 @@ function closeAiDrawer() {
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
-  }, 280);
+  }, 420);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
 }
 

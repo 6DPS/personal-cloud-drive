@@ -1669,11 +1669,11 @@ td:nth-child(5) {
     0 0 0 1px rgba(255, 255, 255, 0.68) inset;
   overflow: hidden;
   pointer-events: auto;
-  animation: aiDrawerIn 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  animation: aiDrawerIn 380ms cubic-bezier(0.25, 1, 0.35, 1) both;
 }
 
 .ai-drawer-shell.closing .ai-drawer {
-  animation: aiDrawerOut 220ms cubic-bezier(0.4, 0, 0.8, 0.1) both;
+  animation: aiDrawerOut 380ms cubic-bezier(0.25, 1, 0.35, 1) both;
 }
 
 .ai-drawer-shell.closing .ai-drawer-backdrop {
@@ -2841,12 +2841,12 @@ td:nth-child(5) {
 @keyframes aiDrawerIn {
   from {
     opacity: 0;
-    transform: translateX(26px) scale(0.98);
+    transform: translate3d(36px, 0, 0) scale(0.985);
   }
 
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -2870,12 +2870,12 @@ td:nth-child(5) {
 @keyframes aiDrawerOut {
   from {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 
   to {
     opacity: 0;
-    transform: translateX(32px) scale(0.98);
+    transform: translate3d(36px, 0, 0) scale(0.985);
   }
 }
 
@@ -5478,16 +5478,18 @@ select:focus {
 }
 
 @media (min-width: 901px) {
-  /* 平滑挤压过渡：进入与退出均保持 280ms 弹性过渡 */
+  /* 平滑挤压过渡：进入与退出均保持 420ms 柔和优雅流体过渡 */
   .drive-shell {
-    transition: grid-template-columns 280ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: grid-template-columns 420ms cubic-bezier(0.25, 1, 0.35, 1);
   }
 
   .content {
     transition:
-      margin-right 280ms cubic-bezier(0.16, 1, 0.3, 1),
-      padding-left 280ms cubic-bezier(0.16, 1, 0.3, 1),
-      padding-right 280ms cubic-bezier(0.16, 1, 0.3, 1);
+      margin-right 420ms cubic-bezier(0.25, 1, 0.35, 1),
+      padding-left 420ms cubic-bezier(0.25, 1, 0.35, 1),
+      padding-right 420ms cubic-bezier(0.25, 1, 0.35, 1);
+    will-change: margin-right;
+    contain: layout style;
   }
 
   .drive-shell.ai-drawer-docked .content {
@@ -5510,7 +5512,7 @@ select:focus {
     display: none !important;
   }
 
-  /* 抽屉自身吸附在右侧，高度贴合，从右向左挤压滑入 */
+  /* 抽屉自身吸附在右侧，高度贴合，从右向左柔和推入 */
   body.ai-drawer-open .ai-drawer,
   .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer {
     top: 8px;
@@ -5524,10 +5526,11 @@ select:focus {
     box-shadow:
       0 4px 20px rgba(24, 44, 76, 0.08),
       0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: aiDrawerDockIn 420ms cubic-bezier(0.25, 1, 0.35, 1) both;
+    will-change: transform, opacity;
   }
 
-  /* 退出动画：无论何时关闭，抽屉均保持 docked 尺寸与圆角，向右平滑滑出屏幕（与文件列表向右挤压回弹完全同步） */
+  /* 退出动画：无论何时关闭，抽屉均保持 docked 尺寸与圆角，向右柔和滑出屏幕（与文件列表回弹完全同步） */
   .ai-drawer-shell.closing .ai-drawer {
     top: 8px !important;
     right: 8px !important;
@@ -5540,7 +5543,8 @@ select:focus {
     box-shadow:
       0 4px 20px rgba(24, 44, 76, 0.08),
       0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockOut 280ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: aiDrawerDockOut 420ms cubic-bezier(0.25, 1, 0.35, 1) both !important;
+    will-change: transform, opacity;
   }
 
   /* 抽屉打开时顶部与搜索栏自适应防拥挤 */
@@ -6021,24 +6025,27 @@ select:focus {
 }
 
 @keyframes aiDrawerDockIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translateX(calc(100% + 24px));
+    transform: translate3d(calc(100% + 28px), 0, 0) scale(0.99);
   }
-  to {
+  35% {
+    opacity: 0.85;
+  }
+  100% {
     opacity: 1;
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes aiDrawerDockOut {
-  from {
+  0% {
     opacity: 1;
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
-  to {
+  100% {
     opacity: 0;
-    transform: translateX(calc(100% + 24px));
+    transform: translate3d(calc(100% + 28px), 0, 0) scale(0.99);
   }
 }
 
