@@ -287,6 +287,9 @@ function syncAiModeUi() {
 
 function setAiModeEnabled(enabled, { render = true } = {}) {
   state.aiModeEnabled = Boolean(enabled);
+  if (!state.aiModeEnabled) {
+    closeAiDrawer();
+  }
   syncAiModeUi();
   setStatus(state.aiModeEnabled ? "AI 模式已开启：每个项目都可以显示 AI 对话入口" : "AI 模式已关闭");
   if (render) {
@@ -482,6 +485,8 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
   renderAiDrawer();
+  driveView?.classList.add("ai-drawer-docked");
+  document.body.classList.add("ai-drawer-open");
   aiDrawer?.classList.remove("closing");
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
@@ -510,13 +515,15 @@ function returnToAiGlobalDrawer() {
 function closeAiDrawer() {
   saveAiConversation();
   if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
+  driveView?.classList.remove("ai-drawer-docked");
+  document.body.classList.remove("ai-drawer-open");
   window.clearTimeout(aiDrawerCloseTimer);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
-  }, 230);
+  }, 280);
 }
 
 function aiSuggestionButton(label, prompt) {
@@ -3241,12 +3248,39 @@ function positionRowActionMenu(trigger, menu, bridge = null) {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
-  let left = rect.right + gap;
-  if (left + menuWidth > viewportWidth - 12) {
-    left = Math.max(12, viewportWidth - menuWidth - 12);
+  // 边界约束：不能超出文件面板区域或视口
+  const filePanel = document.querySelector(".file-panel");
+  const panelRect = filePanel?.getBoundingClientRect();
+  const maxRight = panelRect ? Math.min(viewportWidth - 12, panelRect.right - 8) : (viewportWidth - 12);
+  const minLeft = panelRect ? Math.max(12, panelRect.left + 8) : 12;
+
+  let left;
+  let top;
+  let placement = "bottom-end";
+
+  // 优先采用标准的垂直右对齐展开（右边缘对齐“更多”按钮），避免向左弹出时遮挡本行操作按钮
+  left = Math.min(maxRight - menuWidth, Math.max(minLeft, rect.right - menuWidth));
+
+  const bottomSpace = viewportHeight - (rect.bottom + gap);
+  if (bottomSpace >= menuHeight + 8) {
+    top = rect.bottom + gap;
+    placement = "bottom-end";
+  } else if (rect.top - gap >= menuHeight + 8) {
+    top = rect.top - gap - menuHeight;
+    placement = "top-end";
+  } else {
+    // 垂直空间极端紧张时备用侧向
+    if (rect.right + gap + menuWidth <= maxRight) {
+      left = rect.right + gap;
+      top = rect.top + (rect.height - menuHeight) / 2;
+      placement = "right";
+    } else {
+      left = Math.max(minLeft, rect.left - gap - menuWidth);
+      top = rect.top + (rect.height - menuHeight) / 2;
+      placement = "left";
+    }
   }
 
-  let top = rect.top + (rect.height - menuHeight) / 2;
   if (top + menuHeight > viewportHeight - 12) {
     top = viewportHeight - menuHeight - 12;
   }
@@ -3254,7 +3288,7 @@ function positionRowActionMenu(trigger, menu, bridge = null) {
 
   menu.style.left = `${Math.round(left)}px`;
   menu.style.top = `${Math.round(top)}px`;
-  menu.dataset.placement = "right";
+  menu.dataset.placement = placement;
 
   if (bridge) {
     const padding = 6;
@@ -3305,6 +3339,8 @@ function moreActionsMenu(items = []) {
     if (!menu.classList.contains("hidden") && !isInsideHoverBounds(event)) hideMenu();
   }
 
+  let openedByPointerAt = 0;
+
   function showMenu() {
     closeRowActionMenus(menu);
     menu.classList.remove("hidden");
@@ -3312,11 +3348,15 @@ function moreActionsMenu(items = []) {
     hoverBounds = positionRowActionMenu(trigger, menu, bridge);
     if (!useClickMode) document.addEventListener("pointermove", handlePointerMove);
     trigger.setAttribute("aria-expanded", "true");
+    openedByPointerAt = Date.now();
   }
 
   function toggleMenu(event) {
     event.stopPropagation();
     event.preventDefault();
+    if (!menu.classList.contains("hidden") && Date.now() - openedByPointerAt < 400) {
+      return;
+    }
     if (menu.classList.contains("hidden")) {
       showMenu();
     } else {
@@ -3325,7 +3365,7 @@ function moreActionsMenu(items = []) {
   }
 
   const menuId = `row-action-menu-${Math.random().toString(36).slice(2, 10)}`;
-  const trigger = actionButton("更多", "ghost row-actions-more", useClickMode ? toggleMenu : () => {});
+  const trigger = actionButton("更多", "ghost row-actions-more", toggleMenu);
   trigger.type = "button";
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
