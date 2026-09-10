@@ -6003,4 +6003,284 @@ select:focus {
   }
 }
 
+/* =========================================================================
+   Phase 3: AI 历史会话管理面板与多轮会话持久化
+   ========================================================================= */
+
+#aiHistoryBtn {
+  color: #52637d;
+  transition: all 160ms ease;
+}
+
+#aiHistoryBtn:hover {
+  background: rgba(235, 245, 255, 0.98);
+  border-color: rgba(20, 115, 230, 0.45);
+  color: #1473e6;
+  box-shadow: 0 4px 14px rgba(20, 115, 230, 0.2);
+  transform: scale(1.08);
+}
+
+#aiHistoryBtn.active {
+  background: rgba(20, 115, 230, 0.12);
+  border-color: rgba(20, 115, 230, 0.6);
+  color: #1473e6;
+  box-shadow: inset 0 0 0 1px rgba(20, 115, 230, 0.3);
+}
+
+.ai-history-panel {
+  position: absolute;
+  top: 66px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 0 0 inherit inherit;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+  animation: aiHistoryPanelIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 -8px 24px rgba(20, 40, 70, 0.04);
+}
+
+.ai-history-panel.hidden {
+  display: none !important;
+}
+
+@keyframes aiHistoryPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(215, 228, 245, 0.7);
+}
+
+.ai-history-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #1a2538;
+}
+
+.ai-history-icon {
+  font-size: 16px;
+}
+
+.ai-history-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1473e6;
+  background: #edf5ff;
+  border: 1px solid rgba(20, 115, 230, 0.25);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.ai-history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-history-header-actions button {
+  min-height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.ai-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.ai-history-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ai-history-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+.ai-history-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 16px;
+  background: #fbfdff;
+  border: 1px solid rgba(212, 226, 244, 0.95);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(35, 52, 76, 0.03);
+}
+
+.ai-history-card:hover {
+  background: #ffffff;
+  border-color: rgba(20, 115, 230, 0.45);
+  box-shadow: 0 6px 18px rgba(20, 115, 230, 0.1);
+  transform: translateY(-1px);
+}
+
+.ai-history-card.active {
+  background: #f0f7ff;
+  border-color: #1473e6;
+  box-shadow: 0 0 0 1px #1473e6, 0 6px 18px rgba(20, 115, 230, 0.12);
+}
+
+.ai-history-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-history-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ai-history-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-history-card:hover .ai-history-card-title {
+  color: #1473e6;
+}
+
+.ai-history-card-badge {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.ai-history-card-badge.current {
+  background: #1473e6;
+  color: #ffffff;
+}
+
+.ai-history-card-del-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.ai-history-card-del-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ai-history-card-del-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  transform: scale(1.1);
+}
+
+.ai-history-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ai-history-card-time {
+  color: #64748b;
+}
+
+.ai-history-card-scope {
+  display: inline-flex;
+  align-items: center;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  padding: 1px 7px;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 11px;
+}
+
+.ai-history-card-turns {
+  font-weight: 600;
+  color: #0d9488;
+}
+
+.ai-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
+.ai-history-empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.ai-history-empty-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.ai-history-empty-hint {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+
 

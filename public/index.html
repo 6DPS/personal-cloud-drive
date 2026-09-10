@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="DPSir 智云盘" />
     <meta name="theme-color" content="#1473e6" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
-    <link rel="stylesheet" href="/styles.css?v=20260910_dock_v11" />
+    <link rel="stylesheet" href="/styles.css?v=20260910_dock_v12" />
   </head>
   <body>
     <main id="app">
@@ -309,6 +309,12 @@
               </div>
             </div>
             <div class="ai-drawer-header-actions">
+              <button id="aiHistoryBtn" class="ai-drawer-header-btn" type="button" aria-label="历史会话" title="历史会话记录">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="10" cy="10" r="6.8" stroke="currentColor" stroke-width="2"/>
+                  <polyline points="10 5.8 10 10 13.2 11.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
               <button id="aiNewChatBtn" class="ai-drawer-header-btn" type="button" aria-label="开启新对话" title="开启新对话 / 清空上下文">
                 <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
@@ -316,7 +322,7 @@
               </button>
               <button id="aiDrawerCloseBtn" class="ai-drawer-close-btn ai-drawer-header-btn" type="button" aria-label="关闭" title="收起抽屉">
                 <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
                 </svg>
               </button>
             </div>
@@ -349,6 +355,21 @@
               </button>
             </div>
           </form>
+
+          <div id="aiHistoryPanel" class="ai-history-panel hidden" aria-hidden="true">
+            <div class="ai-history-header">
+              <div class="ai-history-title">
+                <span class="ai-history-icon">🕒</span>
+                <strong>历史会话记录</strong>
+                <span id="aiHistoryCount" class="ai-history-count">0 条</span>
+              </div>
+              <div class="ai-history-header-actions">
+                <button id="aiClearAllHistoryBtn" class="ghost danger" type="button" title="清空全部历史会话">清空全部</button>
+                <button id="aiCloseHistoryBtn" class="ghost" type="button" title="返回当前对话">返回对话</button>
+              </div>
+            </div>
+            <div id="aiHistoryList" class="ai-history-list"></div>
+          </div>
         </aside>
       </section>
 
@@ -623,7 +644,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260910_dock_v11"></script>
+    <script src="/app.js?v=20260910_dock_v12"></script>
     <script src="/login-fx.js"></script>
   </body>
 </html>

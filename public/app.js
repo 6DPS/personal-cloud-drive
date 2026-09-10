@@ -51,6 +51,7 @@ const state = {
     key: "",
     returnTo: null,
   },
+  currentAiSessionId: null,
   aiConversations: new Map(),
   trashMode: false,
 };
@@ -156,6 +157,7 @@ const aiGlobalSearchBtn = $("#aiGlobalSearchBtn");
 const aiDrawer = $("#aiDrawer");
 const aiDrawerBackdrop = $("#aiDrawerBackdrop");
 const aiDrawerBackBtn = $("#aiDrawerBackBtn");
+const aiHistoryBtn = $("#aiHistoryBtn");
 const aiNewChatBtn = $("#aiNewChatBtn");
 const aiDrawerCloseBtn = $("#aiDrawerCloseBtn");
 const aiDrawerTitle = $("#aiDrawerTitle");
@@ -170,6 +172,11 @@ const aiPromptForm = $("#aiPromptForm");
 const aiPromptInput = $("#aiPromptInput");
 const aiPromptHint = $("#aiPromptHint");
 const aiPromptSendBtn = $("#aiPromptSendBtn");
+const aiHistoryPanel = $("#aiHistoryPanel");
+const aiHistoryCount = $("#aiHistoryCount");
+const aiHistoryList = $("#aiHistoryList");
+const aiClearAllHistoryBtn = $("#aiClearAllHistoryBtn");
+const aiCloseHistoryBtn = $("#aiCloseHistoryBtn");
 const searchBtn = $("#searchBtn");
 const clearSearchBtn = $("#clearSearchBtn");
 const searchSummary = $("#searchSummary");
@@ -473,13 +480,234 @@ function autoResizeAiPromptInput() {
   aiPromptInput.style.overflowY = scrollH > 140 ? "auto" : "hidden";
 }
 
+function getAiSessionsStorageKey() {
+  const username = state.currentUser?.username || "admin";
+  return `pcd.aiSessions.${username}`;
+}
+
+function loadStoredAiSessions() {
+  try {
+    const raw = localStorage.getItem(getAiSessionsStorageKey());
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    console.warn("Failed to load AI sessions from localStorage:", err);
+    return [];
+  }
+}
+
+function saveStoredAiSessions(sessions) {
+  try {
+    const trimmed = Array.isArray(sessions) ? sessions.slice(0, 50) : [];
+    localStorage.setItem(getAiSessionsStorageKey(), JSON.stringify(trimmed));
+  } catch (err) {
+    console.warn("Failed to save AI sessions to localStorage:", err);
+  }
+}
+
+function formatAiSessionTime(ts) {
+  if (!ts) return "";
+  const now = Date.now();
+  const diffSec = Math.floor((now - ts) / 1000);
+  if (diffSec < 60) return "刚刚";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} 分钟前`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} 小时前`;
+  const d = new Date(ts);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${m}-${day} ${h}:${min}`;
+}
+
+function archiveCurrentAiSession() {
+  const messages = state.aiDrawer.messages || [];
+  const userMessages = messages.filter((m) => m.role === "user" && m.text && !m.pending);
+  if (!userMessages.length) return;
+
+  const firstUserText = userMessages[0].text.trim();
+  const sessionTitle = firstUserText.length > 28 ? firstUserText.slice(0, 26) + "..." : firstUserText;
+  const targetLabel = state.aiDrawer.mode === "item" && state.aiDrawer.item
+    ? (state.aiDrawer.item.name || "单个文件")
+    : (state.path ? (state.path.split("/").filter(Boolean).pop() || "当前目录") : "全局资料库");
+
+  const sessions = loadStoredAiSessions();
+  const now = Date.now();
+
+  let existingIdx = state.currentAiSessionId
+    ? sessions.findIndex((s) => s.id === state.currentAiSessionId)
+    : -1;
+
+  const validMessages = cloneAiMessages(messages.filter((m) => !m.pending));
+
+  if (existingIdx >= 0) {
+    sessions[existingIdx].messages = validMessages;
+    sessions[existingIdx].updatedAt = now;
+    sessions[existingIdx].targetLabel = targetLabel;
+    if (!sessions[existingIdx].title || sessions[existingIdx].title === "新对话") {
+      sessions[existingIdx].title = sessionTitle;
+    }
+  } else {
+    const newSessionId = state.currentAiSessionId || ("ai_sess_" + now + "_" + Math.random().toString(36).slice(2, 7));
+    state.currentAiSessionId = newSessionId;
+    sessions.unshift({
+      id: newSessionId,
+      title: sessionTitle || "新对话",
+      createdAt: now,
+      updatedAt: now,
+      mode: state.aiDrawer.mode,
+      targetLabel: targetLabel,
+      messages: validMessages,
+    });
+  }
+
+  sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  saveStoredAiSessions(sessions);
+}
+
+function toggleAiHistoryPanel() {
+  if (!aiHistoryPanel) return;
+  if (aiHistoryPanel.classList.contains("hidden")) {
+    archiveCurrentAiSession();
+    openAiHistoryPanel();
+  } else {
+    closeAiHistoryPanel();
+  }
+}
+
+function openAiHistoryPanel() {
+  if (!aiHistoryPanel) return;
+  aiHistoryPanel.classList.remove("hidden");
+  aiHistoryPanel.setAttribute("aria-hidden", "false");
+  aiHistoryBtn?.classList.add("active");
+  renderAiHistoryPanel();
+}
+
+function closeAiHistoryPanel() {
+  if (!aiHistoryPanel) return;
+  aiHistoryPanel.classList.add("hidden");
+  aiHistoryPanel.setAttribute("aria-hidden", "true");
+  aiHistoryBtn?.classList.remove("active");
+}
+
+function renderAiHistoryPanel() {
+  if (!aiHistoryList) return;
+  const sessions = loadStoredAiSessions();
+  if (aiHistoryCount) {
+    aiHistoryCount.textContent = `${sessions.length} 条`;
+  }
+
+  if (!sessions.length) {
+    aiHistoryList.innerHTML = `
+      <div class="ai-history-empty">
+        <div class="ai-history-empty-icon">💬</div>
+        <div class="ai-history-empty-text">暂无历史对话记录</div>
+        <p class="ai-history-empty-hint">提问或开启新对话时将自动归档在此</p>
+      </div>
+    `;
+    return;
+  }
+
+  aiHistoryList.innerHTML = "";
+  sessions.forEach((session) => {
+    const isCurrent = session.id === state.currentAiSessionId;
+    const timeStr = formatAiSessionTime(session.updatedAt);
+    const turnCount = (session.messages || []).filter((m) => m.role === "user").length;
+
+    const card = document.createElement("div");
+    card.className = `ai-history-card${isCurrent ? " active" : ""}`;
+    card.dataset.id = session.id;
+
+    card.innerHTML = `
+      <div class="ai-history-card-header">
+        <div class="ai-history-card-title-row">
+          <strong class="ai-history-card-title" title="${escapeHtml(session.title)}">${escapeHtml(session.title)}</strong>
+          ${isCurrent ? '<span class="ai-history-card-badge current">当前</span>' : ""}
+        </div>
+        <button class="ai-history-card-del-btn" type="button" title="删除此条记录" aria-label="删除此条记录" data-del-id="${session.id}">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 6h12M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2m2 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6h10z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="ai-history-card-meta">
+        <span class="ai-history-card-time">${timeStr}</span>
+        <span class="ai-history-card-scope">${escapeHtml(session.targetLabel || "全局")}</span>
+        <span class="ai-history-card-turns">${turnCount} 轮问答</span>
+      </div>
+    `;
+
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".ai-history-card-del-btn")) return;
+      switchAiSession(session.id);
+    });
+
+    const delBtn = card.querySelector(".ai-history-card-del-btn");
+    delBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteAiSession(session.id);
+    });
+
+    aiHistoryList.appendChild(card);
+  });
+}
+
+function switchAiSession(sessionId) {
+  archiveCurrentAiSession();
+  const sessions = loadStoredAiSessions();
+  const target = sessions.find((s) => s.id === sessionId);
+  if (!target) return;
+
+  state.currentAiSessionId = target.id;
+  state.aiDrawer.mode = target.mode || "global";
+  state.aiDrawer.item = null;
+  state.aiDrawer.messages = cloneAiMessages(target.messages || []);
+  renderAiDrawer();
+  closeAiHistoryPanel();
+  setStatus(`已载入历史对话: ${target.title}`);
+}
+
+function deleteAiSession(sessionId) {
+  let sessions = loadStoredAiSessions();
+  sessions = sessions.filter((s) => s.id !== sessionId);
+  saveStoredAiSessions(sessions);
+
+  if (state.currentAiSessionId === sessionId) {
+    state.currentAiSessionId = null;
+    state.aiDrawer.messages = aiInitialMessages(state.aiDrawer.mode, state.aiDrawer.item);
+    renderAiDrawer();
+  }
+
+  renderAiHistoryPanel();
+  setStatus("已删除该条历史会话");
+}
+
+function clearAllAiSessions() {
+  const sessions = loadStoredAiSessions();
+  if (!sessions.length) {
+    setStatus("暂无历史记录可清空");
+    return;
+  }
+  if (!confirm("确定要清空全部历史会话记录吗？清空后无法撤销。")) {
+    return;
+  }
+  saveStoredAiSessions([]);
+  state.currentAiSessionId = null;
+  renderAiHistoryPanel();
+  setStatus("已清空全部历史会话记录");
+}
+
 function startNewAiChat() {
   if (isAiGenerating && aiChatAbortController) {
     aiChatAbortController.abort();
   }
+  archiveCurrentAiSession();
+  state.currentAiSessionId = null;
   state.aiDrawer.messages = [];
   saveAiConversation();
   renderAiDrawer();
+  closeAiHistoryPanel();
   if (aiPromptInput) {
     aiPromptInput.value = "";
     autoResizeAiPromptInput();
@@ -513,7 +741,9 @@ function pulseAiSendButton() {
 }
 
 function openAiDrawer(mode = "global", item = null, options = {}) {
+  archiveCurrentAiSession();
   saveAiConversation();
+  closeAiHistoryPanel();
   window.clearTimeout(aiDrawerCloseTimer);
   const previous = options.returnToCurrent ? aiDrawerSnapshot() : null;
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
@@ -538,7 +768,9 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
 function returnToAiGlobalDrawer() {
   const target = state.aiDrawer.returnTo;
   if (!target) return;
+  archiveCurrentAiSession();
   saveAiConversation();
+  closeAiHistoryPanel();
   state.aiDrawer.mode = "global";
   state.aiDrawer.item = null;
   state.aiDrawer.key = target.key || aiConversationKey("global", null, state.path);
@@ -552,7 +784,9 @@ function returnToAiGlobalDrawer() {
 }
 
 function closeAiDrawer() {
+  archiveCurrentAiSession();
   saveAiConversation();
+  closeAiHistoryPanel();
   if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
   driveView?.classList.remove("ai-drawer-docked");
   document.body.classList.remove("ai-drawer-open");
@@ -1804,6 +2038,7 @@ async function executeAiChatTurn(prompt) {
       webSearch: response.webSearch || null,
     });
     saveAiConversation();
+    archiveCurrentAiSession();
   } catch (error) {
     clearAiPendingTimers(pendingMessage);
     state.aiDrawer.messages = state.aiDrawer.messages.filter((message) => message !== pendingMessage);
@@ -1817,6 +2052,7 @@ async function executeAiChatTurn(prompt) {
       state.aiDrawer.messages.push({ role: "assistant", text: error.message || "AI 回复失败，请稍后再试。" });
     }
     saveAiConversation();
+    archiveCurrentAiSession();
   } finally {
     clearAiPendingTimers(pendingMessage);
     isAiGenerating = false;
@@ -1847,6 +2083,7 @@ function regenerateLastAiAnswer() {
   const prompt = state.aiDrawer.messages[lastUserIndex].text;
   state.aiDrawer.messages = state.aiDrawer.messages.slice(0, lastUserIndex + 1);
   saveAiConversation();
+  archiveCurrentAiSession();
   renderAiMessages();
   void executeAiChatTurn(prompt);
   setStatus("正在重新生成回答...");
@@ -1865,8 +2102,10 @@ async function submitAiPrompt() {
     syncAiPromptSendState();
     return;
   }
+  closeAiHistoryPanel();
   state.aiDrawer.messages.push({ role: "user", text: prompt });
   saveAiConversation();
+  archiveCurrentAiSession();
   if (aiPromptInput) {
     aiPromptInput.value = "";
     autoResizeAiPromptInput();
@@ -5427,7 +5666,10 @@ backBtn.addEventListener("click", () => {
 $("#uploadBtn").addEventListener("click", openUploadModal);
 aiModeToggleBtn?.addEventListener("click", () => setAiModeEnabled(!state.aiModeEnabled));
 aiGlobalSearchBtn?.addEventListener("click", openAiGlobalSearchPlaceholder);
+aiHistoryBtn?.addEventListener("click", toggleAiHistoryPanel);
 aiNewChatBtn?.addEventListener("click", startNewAiChat);
+aiCloseHistoryBtn?.addEventListener("click", closeAiHistoryPanel);
+aiClearAllHistoryBtn?.addEventListener("click", clearAllAiSessions);
 aiDrawerCloseBtn?.addEventListener("click", closeAiDrawer);
 aiDrawerBackdrop?.addEventListener("click", closeAiDrawer);
 aiDrawerBackBtn?.addEventListener("click", returnToAiGlobalDrawer);
