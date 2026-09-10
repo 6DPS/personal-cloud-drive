@@ -522,22 +522,56 @@ function formatAiSessionTime(ts) {
   return `${m}-${day} ${h}:${min}`;
 }
 
+function getSessionScopeKey(session) {
+  if (!session) return "global";
+  if (session.scopeKey) return session.scopeKey;
+  if (session.mode === "item") return `item:${session.itemPath || session.targetLabel}`;
+  if (session.mode === "folder") return `folder:${session.itemPath || session.targetLabel}`;
+  return "global";
+}
+
 function getCurrentAiScope() {
   const isItem = state.aiDrawer.mode === "item" && Boolean(state.aiDrawer.item);
   if (isItem) {
+    const item = state.aiDrawer.item;
+    const isFolder = item.type === "folder";
     return {
-      type: "item",
-      key: `item:${state.aiDrawer.item.path}`,
-      label: state.aiDrawer.item.name || "单个文件",
-      itemPath: state.aiDrawer.item.path,
+      type: isFolder ? "folder" : "item",
+      key: `item:${item.path}`,
+      label: item.name || (isFolder ? "文件夹" : "单个文件"),
+      itemPath: item.path,
     };
   }
+
+  // mode === "global": differentiate folder-level vs root global scope
+  const currentPath = (state.path || "").trim();
+  if (currentPath) {
+    const folderName = currentPath.split("/").filter(Boolean).pop() || displayFolder(currentPath) || "当前目录";
+    return {
+      type: "folder",
+      key: `folder:${currentPath}`,
+      label: folderName,
+      itemPath: currentPath,
+    };
+  }
+
   return {
     type: "global",
     key: "global",
     label: "全局资料库",
     itemPath: "",
   };
+}
+
+function syncCurrentAiSessionScope() {
+  const currentScope = getCurrentAiScope();
+  const sessions = loadStoredAiSessions();
+  const activeSess = sessions.find((s) => s.id === state.currentAiSessionId);
+  const activeScopeKey = activeSess ? getSessionScopeKey(activeSess) : null;
+  if (activeScopeKey !== currentScope.key) {
+    const latestForScope = sessions.find((s) => getSessionScopeKey(s) === currentScope.key);
+    state.currentAiSessionId = latestForScope ? latestForScope.id : null;
+  }
 }
 
 function archiveCurrentAiSession() {
@@ -558,7 +592,7 @@ function archiveCurrentAiSession() {
 
   // STRICT ISOLATION: If the existing session belongs to another scope, disconnect so we never overwrite across scopes!
   if (existingIdx >= 0) {
-    const existingScopeKey = sessions[existingIdx].scopeKey || (sessions[existingIdx].mode === "item" ? `item:${sessions[existingIdx].itemPath || sessions[existingIdx].targetLabel}` : "global");
+    const existingScopeKey = getSessionScopeKey(sessions[existingIdx]);
     if (existingScopeKey !== scope.key) {
       existingIdx = -1;
       state.currentAiSessionId = null;
@@ -643,20 +677,27 @@ function renderAiHistoryPanel() {
   const allSessions = loadStoredAiSessions();
 
   // STRICT ISOLATION: Only show sessions belonging to the CURRENT scope!
-  const sessions = allSessions.filter((s) => {
-    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
-    return sKey === currentScope.key;
-  });
+  const sessions = allSessions.filter((s) => getSessionScopeKey(s) === currentScope.key);
 
   if (aiHistoryTitleText) {
-    aiHistoryTitleText.textContent = currentScope.type === "item"
-      ? `文件历史 (${currentScope.label})`
-      : "全库问答历史";
+    if (currentScope.type === "item") {
+      aiHistoryTitleText.textContent = `文件历史 (${currentScope.label})`;
+    } else if (currentScope.type === "folder") {
+      aiHistoryTitleText.textContent = `目录历史 (${currentScope.label})`;
+    } else {
+      aiHistoryTitleText.textContent = "全库问答历史";
+    }
     aiHistoryTitleText.title = currentScope.label;
   }
 
   if (aiClearAllHistoryBtn) {
-    aiClearAllHistoryBtn.textContent = currentScope.type === "item" ? "清空本文件记录" : "清空全库记录";
+    if (currentScope.type === "item") {
+      aiClearAllHistoryBtn.textContent = "清空本文件记录";
+    } else if (currentScope.type === "folder") {
+      aiClearAllHistoryBtn.textContent = "清空本目录记录";
+    } else {
+      aiClearAllHistoryBtn.textContent = "清空全库记录";
+    }
   }
 
   if (aiHistoryCount) {
@@ -664,10 +705,11 @@ function renderAiHistoryPanel() {
   }
 
   if (!sessions.length) {
+    const typeLabel = currentScope.type === "item" ? "文件" : (currentScope.type === "folder" ? "目录" : "全库问答");
     aiHistoryList.innerHTML = `
       <div class="ai-history-empty">
         <div class="ai-history-empty-icon">💬</div>
-        <div class="ai-history-empty-text">当前${currentScope.type === "item" ? "文件" : "全库问答"}暂无历史记录</div>
+        <div class="ai-history-empty-text">当前${typeLabel}暂无历史记录</div>
         <p class="ai-history-empty-hint">发送提问或开启新对话时将自动归档在此</p>
       </div>
     `;
@@ -679,6 +721,7 @@ function renderAiHistoryPanel() {
     const isCurrent = session.id === state.currentAiSessionId;
     const timeStr = formatAiSessionTime(session.updatedAt);
     const turnCount = (session.messages || []).filter((m) => m.role === "user").length;
+    const scopeBadgeLabel = session.targetLabel || (currentScope.type === "item" ? currentScope.label : (currentScope.type === "folder" ? `目录: ${currentScope.label}` : "全局资料库"));
 
     const card = document.createElement("div");
     card.className = `ai-history-card${isCurrent ? " active" : ""}`;
@@ -705,7 +748,7 @@ function renderAiHistoryPanel() {
       </div>
       <div class="ai-history-card-meta">
         <span class="ai-history-card-time">${timeStr}</span>
-        <span class="ai-history-card-scope">${escapeHtml(session.targetLabel || (currentScope.type === "item" ? currentScope.label : "全局资料库"))}</span>
+        <span class="ai-history-card-scope">${escapeHtml(scopeBadgeLabel)}</span>
         <span class="ai-history-card-turns">${turnCount} 轮问答</span>
       </div>
     `;
@@ -823,10 +866,7 @@ async function deleteAiSession(sessionId) {
 async function clearAllAiSessions() {
   const currentScope = getCurrentAiScope();
   let allSessions = loadStoredAiSessions();
-  const targetSessions = allSessions.filter((s) => {
-    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
-    return sKey === currentScope.key;
-  });
+  const targetSessions = allSessions.filter((s) => getSessionScopeKey(s) === currentScope.key);
 
   if (!targetSessions.length) {
     setStatus("当前范围暂无历史记录可清空");
@@ -834,29 +874,35 @@ async function clearAllAiSessions() {
   }
 
   const isItem = currentScope.type === "item";
+  const isFolder = currentScope.type === "folder";
+  const title = isItem ? "清空本文件历史记录" : (isFolder ? "清空本目录历史记录" : "清空全库历史会话");
+  const description = isItem
+    ? `确定要清空关于“${currentScope.label}”的 ${targetSessions.length} 条历史会话吗？（其他文件、目录与全库历史不受影响）`
+    : (isFolder
+      ? `确定要清空关于“${currentScope.label}”目录的 ${targetSessions.length} 条历史会话吗？（其他目录、文件与全库历史不受影响）`
+      : `确定要清空全库问答的 ${targetSessions.length} 条历史会话吗？（各文件与各目录的历史会话不受影响）`);
+
   const confirmed = await openDialog({
     eyebrow: "会话管理",
-    title: isItem ? "清空本文件历史记录" : "清空全库历史会话",
-    description: isItem
-      ? `确定要清空关于“${currentScope.label}”的 ${targetSessions.length} 条历史会话吗？（其他文件与全库历史不受影响）`
-      : `确定要清空全库问答的 ${targetSessions.length} 条历史会话吗？（各文件对应的历史会话不受影响）`,
+    title,
+    description,
     confirmText: "确认清空",
     danger: true,
   });
   if (!confirmed) return;
 
   // STRICT ISOLATION: Only delete sessions matching current scope! Keep all others untouched!
-  allSessions = allSessions.filter((s) => {
-    const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
-    return sKey !== currentScope.key;
-  });
+  allSessions = allSessions.filter((s) => getSessionScopeKey(s) !== currentScope.key);
 
   saveStoredAiSessions(allSessions);
   state.currentAiSessionId = null;
   state.aiDrawer.messages = aiInitialMessages(state.aiDrawer.mode, state.aiDrawer.item);
   renderAiDrawer();
   renderAiHistoryPanel();
-  setStatus(isItem ? "已清空本文件的历史会话记录" : "已清空全库问答历史记录");
+  const statusMsg = isItem
+    ? "已清空本文件的历史会话记录"
+    : (isFolder ? "已清空本目录的历史会话记录" : "已清空全库问答历史记录");
+  setStatus(statusMsg);
 }
 
 function startNewAiChat() {
@@ -912,17 +958,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.key = aiConversationKey(state.aiDrawer.mode, state.aiDrawer.item, state.path);
 
   // Synchronize state.currentAiSessionId to match the new scope
-  const currentScope = getCurrentAiScope();
-  const sessions = loadStoredAiSessions();
-  const activeSess = sessions.find((s) => s.id === state.currentAiSessionId);
-  const activeScopeKey = activeSess ? (activeSess.scopeKey || (activeSess.mode === "item" ? `item:${activeSess.itemPath || activeSess.targetLabel}` : "global")) : null;
-  if (activeScopeKey !== currentScope.key) {
-    const latestForScope = sessions.find((s) => {
-      const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
-      return sKey === currentScope.key;
-    });
-    state.currentAiSessionId = latestForScope ? latestForScope.id : null;
-  }
+  syncCurrentAiSessionScope();
 
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
@@ -935,9 +971,10 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   syncAiPromptSendState();
   autoResizeAiPromptInput();
   window.setTimeout(() => aiPromptInput?.focus(), 80);
+  const currentScope = getCurrentAiScope();
   setStatus(state.aiDrawer.mode === "item" && item
     ? `已打开“${itemName(item)}”的 AI 对话`
-    : "已打开 AI 全库问答");
+    : (currentScope.type === "folder" ? `已打开“${currentScope.label}”的 AI 问答` : "已打开 AI 全库问答"));
 }
 
 function returnToAiGlobalDrawer() {
@@ -950,18 +987,8 @@ function returnToAiGlobalDrawer() {
   state.aiDrawer.item = null;
   state.aiDrawer.key = target.key || aiConversationKey("global", null, state.path);
 
-  // Synchronize state.currentAiSessionId to match global scope
-  const currentScope = getCurrentAiScope();
-  const sessions = loadStoredAiSessions();
-  const activeSess = sessions.find((s) => s.id === state.currentAiSessionId);
-  const activeScopeKey = activeSess ? (activeSess.scopeKey || (activeSess.mode === "item" ? `item:${activeSess.itemPath || activeSess.targetLabel}` : "global")) : null;
-  if (activeScopeKey !== currentScope.key) {
-    const latestForScope = sessions.find((s) => {
-      const sKey = s.scopeKey || (s.mode === "item" ? `item:${s.itemPath || s.targetLabel}` : "global");
-      return sKey === currentScope.key;
-    });
-    state.currentAiSessionId = latestForScope ? latestForScope.id : null;
-  }
+  // Synchronize state.currentAiSessionId to match global/folder scope
+  syncCurrentAiSessionScope();
 
   state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
   state.aiDrawer.returnTo = null;
@@ -969,7 +996,8 @@ function returnToAiGlobalDrawer() {
   syncAiPromptSendState();
   autoResizeAiPromptInput();
   window.setTimeout(() => aiPromptInput?.focus(), 60);
-  setStatus("已返回 AI 全库问答");
+  const currentScope = getCurrentAiScope();
+  setStatus(currentScope.type === "folder" ? `已返回“${currentScope.label}”的 AI 问答` : "已返回 AI 全库问答");
 }
 
 function closeAiDrawer() {
@@ -2138,27 +2166,38 @@ function renderAiSuggestionsDynamic() {
 function renderAiDrawer() {
   const isItemMode = state.aiDrawer.mode === "item";
   const item = state.aiDrawer.item;
-  if (aiDrawerTitle) aiDrawerTitle.textContent = isItemMode ? "AI文件对话" : "AI全库问答";
+  const currentScope = getCurrentAiScope();
+  if (aiDrawerTitle) {
+    if (isItemMode) {
+      aiDrawerTitle.textContent = item?.type === "folder" ? "AI文件夹对话" : "AI文件对话";
+    } else {
+      aiDrawerTitle.textContent = currentScope.type === "folder" ? "AI目录问答" : "AI全库问答";
+    }
+  }
   if (aiDrawerSubtitle) {
     aiDrawerSubtitle.textContent = isItemMode && item
       ? `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 对象：${itemName(item)}`
-      : `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 范围：${displayFolder(state.path || "")}`;
+      : `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 范围：${displayFolder(state.path || "") || "全部文件"}`;
   }
   state.aiDrawer.model = "reasoner";
   aiModelReasonerBtn?.classList.add("active");
   syncAiWebSearchUi();
   aiDrawerBackBtn?.classList.toggle("hidden", !(isItemMode && state.aiDrawer.returnTo));
   if (aiScopeBtn) {
-    const scopeLabel = isItemMode ? "当前文件" : "当前范围";
+    const scopeLabel = isItemMode ? "当前文件" : (currentScope.type === "folder" ? "当前目录" : "当前范围");
     const labelEl = aiScopeBtn.querySelector(".pill-label");
     if (labelEl) labelEl.textContent = scopeLabel;
     else aiScopeBtn.textContent = scopeLabel;
   }
-  if (aiPromptHint) aiPromptHint.textContent = isItemMode ? "围绕这个文件提问" : "问问整个网盘";
+  if (aiPromptHint) {
+    aiPromptHint.textContent = isItemMode
+      ? "围绕这个文件提问"
+      : (currentScope.type === "folder" ? "围绕当前目录提问" : "问问整个网盘");
+  }
   if (aiPromptInput) {
     aiPromptInput.placeholder = isItemMode
       ? "例如：总结这个文件的重点"
-      : "例如：帮我找毕业设计相关资料";
+      : (currentScope.type === "folder" ? "例如：梳理当前目录下的资料" : "例如：帮我找毕业设计相关资料");
   }
   renderAiContextCard();
   renderAiSuggestionsDynamic();
@@ -4740,6 +4779,13 @@ function applyFolderData(data, options = {}) {
   state.searchCategory = "all";
   state.searchSort = searchSort?.value || "relevance";
   state.searchTokens = [];
+
+  const pathChanged = state.path !== data.path;
+  if (pathChanged && aiDrawer && !aiDrawer.classList.contains("hidden") && state.aiDrawer.mode === "global") {
+    archiveCurrentAiSession();
+    saveAiConversation();
+  }
+
   state.path = data.path;
   state.items = data.items;
   for (const item of state.items) {
@@ -4768,8 +4814,18 @@ function applyFolderData(data, options = {}) {
   renderBreadcrumb();
   updateSelectionUi();
   renderRows({ noAnimation: options.noAnimation });
-  if (aiDrawer && !aiDrawer.classList.contains("hidden")) renderAiDrawer();
   scheduleStorageUsageRefresh();
+  if (aiDrawer && !aiDrawer.classList.contains("hidden")) {
+    if (state.aiDrawer.mode === "global" && pathChanged) {
+      state.aiDrawer.key = aiConversationKey("global", null, state.path);
+      syncCurrentAiSessionScope();
+      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+    }
+    renderAiDrawer();
+    if (aiHistoryPanel && !aiHistoryPanel.classList.contains("hidden")) {
+      renderAiHistoryPanel();
+    }
+  }
   if (!options.silent) setStatus(`${state.items.length} items. Uploads will save to the selected folder.`);
   if (!options.skipHistory) updateLocation(state.path, options.replaceHistory);
 }
