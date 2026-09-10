@@ -344,6 +344,7 @@ function aiInitialMessages(mode, item = null) {
     : `当前文库“${displayFolder(state.path || "") || "全部文件"}”`;
   return [{
     role: "assistant",
+    isInitial: true,
     text: `我会围绕${targetLabel}回答。`,
   }];
 }
@@ -358,6 +359,7 @@ function cloneAiMessages(messages = []) {
     .filter((message) => !message.pending)
     .map((message) => ({
       role: message.role,
+      isInitial: Boolean(message.isInitial),
       text: message.text,
       reasoning: message.reasoning || "",
       results: Array.isArray(message.results) ? message.results.map((item) => ({ ...item })) : [],
@@ -1361,7 +1363,9 @@ function renderAiMessages() {
 
   state.aiDrawer.messages.forEach((message, index) => {
     const bubble = document.createElement("div");
-    bubble.className = `ai-message ${message.role === "user" ? "user" : "assistant"}${message.pending ? " pending" : ""}`;
+    const hasUserBefore = state.aiDrawer.messages.slice(0, index).some((m) => m.role === "user");
+    const isInitialGreeting = Boolean(message.isInitial || (!hasUserBefore && message.role === "assistant"));
+    bubble.className = `ai-message ${message.role === "user" ? "user" : "assistant"}${message.pending ? " pending" : ""}${isInitialGreeting ? " initial-greeting" : ""}`;
     if (message.role === "assistant" && message.webSearch) {
       const webBadge = document.createElement("div");
       webBadge.className = `ai-web-search-badge ${message.webSearch.enabled ? "used" : "off"}${message.webSearch.error ? " error" : ""}`;
@@ -1398,7 +1402,7 @@ function renderAiMessages() {
       }
       bubble.append(resultList);
     }
-    if (message.role === "assistant" && !message.pending && message.text) {
+    if (message.role === "assistant" && !message.pending && !isInitialGreeting && message.text) {
       const isLast = index === lastCompletedAssistantIndex;
       bubble.append(renderAiMessageActions(message, isLast));
     }

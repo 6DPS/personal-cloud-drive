@@ -2202,6 +2202,23 @@ td:nth-child(5) {
   opacity: 0.4;
 }
 
+.ai-message.initial-greeting {
+  background: rgba(244, 249, 255, 0.82);
+  border-color: rgba(20, 187, 176, 0.18);
+  color: #556782;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 15px;
+  box-shadow: none;
+}
+
+.ai-message.initial-greeting::before {
+  opacity: 0.45;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+}
+
 .ai-message-meta {
   display: flex;
   align-items: center;
