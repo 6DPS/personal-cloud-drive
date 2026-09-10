@@ -2617,9 +2617,11 @@ function startAccessInfoRefresh() {
   state.storageUsageTimer = window.setInterval(() => {
     refreshStorageUsage();
   }, STORAGE_USAGE_REFRESH_MS);
-  state.healthTimer = window.setInterval(() => {
-    refreshHealthStatus();
-  }, HEALTH_REFRESH_MS);
+  if (healthStatus) {
+    state.healthTimer = window.setInterval(() => {
+      refreshHealthStatus();
+    }, HEALTH_REFRESH_MS);
+  }
 }
 
 function sessionToken() {

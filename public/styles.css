@@ -611,18 +611,13 @@ select {
 }
 
 .sidebar .wide {
-  margin-top: auto;
   min-height: 42px;
   font-size: 15px;
   font-weight: 700;
 }
 
-.sidebar .admin-action {
+#recycleBinBtn {
   margin-top: auto;
-}
-
-.sidebar .admin-action:not(.hidden) + #logoutBtn {
-  margin-top: 0;
 }
 
 .content {
