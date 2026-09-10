@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const currentScript = document.currentScript;
   let serverVer = "";
   if (currentScript && currentScript.src) {
@@ -25,12 +25,6 @@
       const localVer = localStorage.getItem(STORAGE_KEY);
       if (localVer !== serverVer) {
         localStorage.setItem(STORAGE_KEY, serverVer);
-        // Force refresh all CSS links immediately
-        document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
-          const raw = link.getAttribute("href") || "";
-          const base = raw.split("?")[0];
-          link.setAttribute("href", `${base}?v=${serverVer}`);
-        });
       }
     } catch {}
   }
