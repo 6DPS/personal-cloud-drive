@@ -949,10 +949,8 @@ function pulseAiSendButton() {
 }
 
 function openAiDrawer(mode = "global", item = null, options = {}) {
-  archiveCurrentAiSession();
-  saveAiConversation();
-  closeAiHistoryPanel();
   window.clearTimeout(aiDrawerCloseTimer);
+  closeAiHistoryPanel();
   const previous = options.returnToCurrent ? aiDrawerSnapshot() : null;
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
   state.aiDrawer.item = state.aiDrawer.mode === "item" ? item : null;
@@ -970,19 +968,28 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
-  autoResizeAiPromptInput();
-  window.setTimeout(() => aiPromptInput?.focus(), 80);
+
+  // Schedule auto-resize and focus AFTER the 380ms GPU animation completes smoothly!
+  window.setTimeout(() => {
+    autoResizeAiPromptInput();
+    aiPromptInput?.focus({ preventScroll: true });
+  }, 380);
+
   const currentScope = getCurrentAiScope();
   setStatus(state.aiDrawer.mode === "item" && item
     ? `已打开“${itemName(item)}”的 AI 对话`
     : (currentScope.type === "folder" ? `已打开“${currentScope.label}”的 AI 问答` : "已打开 AI 全库问答"));
+
+  // Defer session storage persistence until animation completes smoothly
+  window.setTimeout(() => {
+    archiveCurrentAiSession();
+    saveAiConversation();
+  }, 400);
 }
 
 function returnToAiGlobalDrawer() {
   const target = state.aiDrawer.returnTo;
   if (!target) return;
-  archiveCurrentAiSession();
-  saveAiConversation();
   closeAiHistoryPanel();
   state.aiDrawer.mode = "global";
   state.aiDrawer.item = null;
@@ -995,17 +1002,22 @@ function returnToAiGlobalDrawer() {
   state.aiDrawer.returnTo = null;
   renderAiDrawer();
   syncAiPromptSendState();
-  autoResizeAiPromptInput();
-  window.setTimeout(() => aiPromptInput?.focus(), 60);
+  window.setTimeout(() => {
+    autoResizeAiPromptInput();
+    aiPromptInput?.focus({ preventScroll: true });
+  }, 100);
   const currentScope = getCurrentAiScope();
   setStatus(currentScope.type === "folder" ? `已返回“${currentScope.label}”的 AI 问答` : "已返回 AI 全库问答");
+  window.setTimeout(() => {
+    archiveCurrentAiSession();
+    saveAiConversation();
+  }, 400);
 }
 
 function closeAiDrawer() {
-  archiveCurrentAiSession();
-  saveAiConversation();
   closeAiHistoryPanel();
   if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
+  aiPromptInput?.blur();
   driveView?.classList.remove("ai-drawer-docked");
   document.body.classList.remove("ai-drawer-open");
   window.clearTimeout(aiDrawerCloseTimer);
@@ -1014,8 +1026,12 @@ function closeAiDrawer() {
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
-  }, 420);
+  }, 380);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
+  window.setTimeout(() => {
+    archiveCurrentAiSession();
+    saveAiConversation();
+  }, 400);
 }
 
 function aiSuggestionButton(label, prompt) {
@@ -5847,6 +5863,20 @@ async function enterDrive(user = state.currentUser) {
   await refreshHealthStatus();
   startAccessInfoRefresh();
   startRealtimeRefresh();
+  // Idle pre-warm of AI drawer DOM so first click opens with zero hitch
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(() => {
+      state.aiDrawer.key = aiConversationKey("global", null, state.path);
+      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+      renderAiDrawer();
+    });
+  } else {
+    window.setTimeout(() => {
+      state.aiDrawer.key = aiConversationKey("global", null, state.path);
+      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+      renderAiDrawer();
+    }, 600);
+  }
 }
 
 loginForm.addEventListener("submit", async (event) => {

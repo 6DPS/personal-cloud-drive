@@ -1168,6 +1168,8 @@ select {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
   scroll-padding-top: 44px;
+  transform: translateZ(0);
+  contain: layout paint;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
     0 16px 36px rgba(35, 52, 76, 0.08),
@@ -1679,11 +1681,11 @@ td:nth-child(5) {
     0 0 0 1px rgba(255, 255, 255, 0.68) inset;
   overflow: hidden;
   pointer-events: auto;
-  animation: aiDrawerIn 380ms cubic-bezier(0.25, 1, 0.35, 1) both;
+  animation: aiDrawerIn 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .ai-drawer-shell.closing .ai-drawer {
-  animation: aiDrawerOut 380ms cubic-bezier(0.25, 1, 0.35, 1) both;
+  animation: aiDrawerOut 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .ai-drawer-shell.closing .ai-drawer-backdrop {
@@ -2851,12 +2853,12 @@ td:nth-child(5) {
 @keyframes aiDrawerIn {
   from {
     opacity: 0;
-    transform: translate3d(36px, 0, 0) scale(0.985);
+    transform: translate3d(36px, 0, 0);
   }
 
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -2880,12 +2882,12 @@ td:nth-child(5) {
 @keyframes aiDrawerOut {
   from {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 
   to {
     opacity: 0;
-    transform: translate3d(36px, 0, 0) scale(0.985);
+    transform: translate3d(36px, 0, 0);
   }
 }
 
@@ -5489,23 +5491,14 @@ select:focus {
 }
 
 @media (min-width: 901px) {
-  /* 平滑挤压过渡：进入与退出均保持 420ms 柔和优雅流体过渡 */
-  .drive-shell {
-    transition: grid-template-columns 420ms cubic-bezier(0.25, 1, 0.35, 1);
-  }
-
+  /* 平滑流体过渡：使用统一硬件加速曲线 cubic-bezier(0.22, 1, 0.36, 1) */
   .content {
-    transition:
-      margin-right 420ms cubic-bezier(0.25, 1, 0.35, 1),
-      padding-left 420ms cubic-bezier(0.25, 1, 0.35, 1),
-      padding-right 420ms cubic-bezier(0.25, 1, 0.35, 1);
+    transition: margin-right 380ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: margin-right;
     contain: layout style;
   }
 
   .drive-shell.ai-drawer-docked .content {
-    padding-left: var(--ai-dock-gap) !important;
-    padding-right: var(--ai-dock-gap) !important;
     margin-right: calc(var(--ai-dock-width) + 8px) !important;
     overflow: hidden !important;
   }
@@ -5523,7 +5516,7 @@ select:focus {
     display: none !important;
   }
 
-  /* 抽屉自身吸附在右侧，高度贴合，从右向左柔和推入 */
+  /* 抽屉自身吸附在右侧，高度贴合，纯 GPU translate3d 流畅推入 */
   body.ai-drawer-open .ai-drawer,
   .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer {
     top: 8px;
@@ -5537,11 +5530,14 @@ select:focus {
     box-shadow:
       0 4px 20px rgba(24, 44, 76, 0.08),
       0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockIn 420ms cubic-bezier(0.25, 1, 0.35, 1) both;
+    animation: aiDrawerDockIn 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
     will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 
-  /* 退出动画：无论何时关闭，抽屉均保持 docked 尺寸与圆角，向右柔和滑出屏幕（与文件列表回弹完全同步） */
+  /* 退出动画：无论何时关闭，抽屉均保持 docked 尺寸与圆角，向右纯 GPU 滑出屏幕 */
   .ai-drawer-shell.closing .ai-drawer {
     top: 8px !important;
     right: 8px !important;
@@ -5554,8 +5550,11 @@ select:focus {
     box-shadow:
       0 4px 20px rgba(24, 44, 76, 0.08),
       0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockOut 420ms cubic-bezier(0.25, 1, 0.35, 1) both !important;
+    animation: aiDrawerDockOut 380ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
     will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 
   /* 抽屉打开时顶部与搜索栏自适应防拥挤 */
@@ -5792,11 +5791,11 @@ select:focus {
     --ai-dock-width: 480px;
   }
 
-  .drive-shell.ai-drawer-docked {
-    grid-template-columns: 280px 1fr;
+  .drive-shell {
+    grid-template-columns: 300px 1fr;
   }
 
-  .drive-shell.ai-drawer-docked .sidebar {
+  .sidebar {
     padding: 20px 16px;
     gap: 16px;
   }
@@ -5909,11 +5908,11 @@ select:focus {
     --ai-dock-width: 420px;
   }
 
-  .drive-shell.ai-drawer-docked {
-    grid-template-columns: 230px 1fr;
+  .drive-shell {
+    grid-template-columns: 260px 1fr;
   }
 
-  .drive-shell.ai-drawer-docked .sidebar {
+  .sidebar {
     padding: 16px 12px;
     gap: 12px;
   }
@@ -6023,8 +6022,8 @@ select:focus {
     --ai-dock-width: 380px;
   }
 
-  .drive-shell.ai-drawer-docked {
-    grid-template-columns: 210px 1fr;
+  .drive-shell {
+    grid-template-columns: 220px 1fr;
   }
 
   .drive-shell.ai-drawer-docked th:nth-child(3),
@@ -6038,25 +6037,22 @@ select:focus {
 @keyframes aiDrawerDockIn {
   0% {
     opacity: 0;
-    transform: translate3d(calc(100% + 28px), 0, 0) scale(0.99);
-  }
-  35% {
-    opacity: 0.85;
+    transform: translate3d(calc(100% + 24px), 0, 0);
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes aiDrawerDockOut {
   0% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
   100% {
     opacity: 0;
-    transform: translate3d(calc(100% + 28px), 0, 0) scale(0.99);
+    transform: translate3d(calc(100% + 24px), 0, 0);
   }
 }
 
