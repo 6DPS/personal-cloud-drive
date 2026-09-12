@@ -647,12 +647,14 @@ async function moveToTrash(userId, relPath, sourceFullPath, stat) {
   const targetTrashPath = path.join(trashDir, id);
   await fsp.rename(sourceFullPath, targetTrashPath);
 
+  const isDirectory = stat.isDirectory();
   const meta = {
     id,
     originalRelPath: relPath,
     name: path.basename(sourceFullPath),
-    isDirectory: stat.isDirectory(),
-    size: stat.isDirectory() ? 0 : stat.size,
+    type: isDirectory ? "folder" : "file",
+    isDirectory,
+    size: isDirectory ? null : stat.size,
     deletedAt: new Date().toISOString(),
   };
 
@@ -683,7 +685,8 @@ async function restoreFromTrash(userId, trashId) {
   if (fs.existsSync(destFull)) {
     const parsed = path.parse(meta.name);
     const ts = new Date().toISOString().slice(11, 19).replace(/:/g, "");
-    const newName = meta.isDirectory ? `${parsed.name}_恢复_${ts}` : `${parsed.name}_恢复_${ts}${parsed.ext}`;
+    const isDir = Boolean(meta.isDirectory || meta.type === "folder");
+    const newName = isDir ? `${parsed.name}_恢复_${ts}` : `${parsed.name}_恢复_${ts}${parsed.ext}`;
     destRel = webPath(parentWebPath(meta.originalRelPath), newName);
     destFull = resolveDrivePathForUser(userId, destRel);
   }
@@ -4532,8 +4535,12 @@ app.get("/api/trash", requireAuth, async (req, res, next) => {
       const deletedTime = new Date(item.deletedAt).getTime();
       const ageMs = now - deletedTime;
       const expireDaysLeft = Math.max(0, 30 - Math.floor(ageMs / (24 * 3600 * 1000)));
+      const isDir = Boolean(item.isDirectory || item.type === "folder");
       return {
         ...item,
+        type: isDir ? "folder" : "file",
+        isDirectory: isDir,
+        size: isDir ? null : (item.size == null ? null : item.size),
         path: item.id,
         trashId: item.id,
         originalPath: item.originalRelPath || item.originalPath || "",

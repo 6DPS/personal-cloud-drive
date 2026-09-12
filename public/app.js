@@ -1208,23 +1208,7 @@ function renderAiContextCard() {
 
   const item = state.aiDrawer.item;
   if (!item) return;
-  const icon = document.createElement("span");
-  const iconMeta = fileMeta(item);
-  icon.className = `ai-context-icon ${iconMeta.className}`;
-  icon.textContent = item.type === "folder" ? "" : iconMeta.label;
-  icon.setAttribute("aria-hidden", "true");
-  if (iconMeta.lockState) {
-    const badge = document.createElement("span");
-    badge.className = `lock-badge ${iconMeta.lockState}`;
-    badge.setAttribute("aria-hidden", "true");
-    icon.append(badge);
-  }
-  if (iconMeta.className === "archive") {
-    const zipper = document.createElement("span");
-    zipper.className = "zip-zipper";
-    zipper.setAttribute("aria-hidden", "true");
-    icon.append(zipper);
-  }
+  const icon = renderFileIcon(item, { baseClass: "ai-context-icon" });
   const info = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = itemName(item);
@@ -4249,7 +4233,8 @@ async function promptDownloadPassword(folderPath) {
 }
 
 function fileMeta(item) {
-  if (item.type === "folder") {
+  const isDir = Boolean(item && (item.type === "folder" || item.isDirectory));
+  if (isDir) {
     const lockState = item.locked ? (isFolderUnlocked(item.path) ? "unlocked" : "locked") : "";
     return {
       label: lockLabel(item),
@@ -4257,17 +4242,41 @@ function fileMeta(item) {
       lockState,
     };
   }
-  const ext = fileExt(item.name);
+  const ext = fileExt(item?.name || "");
   if (ext === "pdf") return { label: "PDF", className: "pdf", lockState: "" };
-  if (["doc", "docx"].includes(ext)) return { label: "DOC", className: "word", lockState: "" };
-  if (["ppt", "pptx"].includes(ext)) return { label: "PPT", className: "ppt", lockState: "" };
-  if (["xls", "xlsx", "csv"].includes(ext)) return { label: "XLS", className: "excel", lockState: "" };
-  if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return { label: "", className: "archive", lockState: "" };
-  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)) return { label: "IMG", className: "image", lockState: "" };
-  if (["mp4", "mov", "mkv", "webm"].includes(ext)) return { label: "VID", className: "media", lockState: "" };
-  if (["mp3", "wav", "flac", "ogg"].includes(ext)) return { label: "AUD", className: "audio", lockState: "" };
-  if (["txt", "md", "json", "js", "css", "html", "xml", "log"].includes(ext)) return { label: "TXT", className: "text", lockState: "" };
+  if (["doc", "docx", "wps", "dot", "dotx", "odt", "rtf"].includes(ext)) return { label: "DOC", className: "word", lockState: "" };
+  if (["ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp"].includes(ext)) return { label: "PPT", className: "ppt", lockState: "" };
+  if (["xls", "xlsx", "xlsm", "xltx", "csv", "tsv", "ods"].includes(ext)) return { label: "XLS", className: "excel", lockState: "" };
+  if (["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "iso"].includes(ext)) return { label: "", className: "archive", lockState: "" };
+  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico", "tif", "tiff"].includes(ext)) return { label: "IMG", className: "image", lockState: "" };
+  if (["mp4", "mov", "mkv", "webm", "avi", "flv", "wmv", "m4v", "3gp"].includes(ext)) return { label: "VID", className: "media", lockState: "" };
+  if (["mp3", "wav", "flac", "ogg", "m4a", "aac", "wma"].includes(ext)) return { label: "AUD", className: "audio", lockState: "" };
+  if (["txt", "md", "markdown", "json", "js", "jsx", "ts", "tsx", "css", "html", "xml", "log", "py", "c", "cpp", "h", "java", "sh", "bat", "sql", "yaml", "yml"].includes(ext)) {
+    return { label: "TXT", className: "text", lockState: "" };
+  }
   return { label: ext ? ext.slice(0, 3).toUpperCase() : "FILE", className: "file", lockState: "" };
+}
+
+function renderFileIcon(item, { baseClass = "file-icon" } = {}) {
+  const icon = document.createElement("span");
+  const meta = fileMeta(item);
+  icon.className = `${baseClass} ${meta.className}`;
+  const isDir = Boolean(item && (item.type === "folder" || item.isDirectory));
+  icon.textContent = isDir ? "" : meta.label;
+  icon.setAttribute("aria-hidden", "true");
+  if (meta.lockState) {
+    const badge = document.createElement("span");
+    badge.className = `lock-badge ${meta.lockState}`;
+    badge.setAttribute("aria-hidden", "true");
+    icon.append(badge);
+  }
+  if (meta.className === "archive") {
+    const zipper = document.createElement("span");
+    zipper.className = "zip-zipper";
+    zipper.setAttribute("aria-hidden", "true");
+    icon.append(zipper);
+  }
+  return icon;
 }
 
 const SEARCH_CATEGORIES = [
@@ -4321,11 +4330,11 @@ function appendHighlightedText(target, text, tokens = []) {
 }
 
 function searchItemCategory(item) {
-  if (item.type === "folder") return "folder";
+  if (item.type === "folder" || item.isDirectory) return "folder";
   const ext = fileExt(item.name);
-  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)) return "image";
-  if (["mp4", "mov", "mkv", "webm"].includes(ext)) return "video";
-  if (["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "csv", "txt", "md", "json", "html", "xml", "log"].includes(ext)) return "document";
+  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico", "tif", "tiff"].includes(ext)) return "image";
+  if (["mp4", "mov", "mkv", "webm", "avi", "flv", "wmv", "m4v", "3gp"].includes(ext)) return "video";
+  if (["pdf", "doc", "docx", "wps", "dot", "dotx", "odt", "rtf", "ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp", "xls", "xlsx", "xlsm", "xltx", "csv", "tsv", "ods", "txt", "md", "markdown", "json", "js", "jsx", "ts", "tsx", "html", "xml", "log", "py", "c", "cpp", "h", "java", "sh", "bat", "sql", "yaml", "yml"].includes(ext)) return "document";
   return "other";
 }
 
@@ -4440,7 +4449,7 @@ function renderRows(options = {}) {
     if (emptyText) emptyText.textContent = "点击上传文件，或把文件拖到这里";
   }
 
-  const folders = state.trashMode ? 0 : state.items.filter((item) => item.type === "folder").length;
+  const folders = state.items.filter((item) => item.type === "folder" || item.isDirectory).length;
   const files = state.items.length - folders;
   folderCount.textContent = folders;
   fileCount.textContent = files;
@@ -4479,11 +4488,7 @@ function renderRows(options = {}) {
       const nameTd = document.createElement("td");
       const nameCell = document.createElement("div");
       nameCell.className = "name-cell";
-      const icon = document.createElement("span");
-      const meta = fileMeta(item);
-      icon.className = `file-icon ${meta.className}`;
-      icon.textContent = meta.label;
-      icon.setAttribute("aria-hidden", "true");
+      const icon = renderFileIcon(item);
 
       const nameLabel = document.createElement("span");
       nameLabel.style.fontWeight = "500";
@@ -4501,8 +4506,9 @@ function renderRows(options = {}) {
       nameCell.append(pathMeta);
       nameTd.append(nameCell);
 
+      const isDir = Boolean(item && (item.type === "folder" || item.isDirectory));
       const sizeTd = document.createElement("td");
-      sizeTd.textContent = formatSize(item.size);
+      sizeTd.textContent = isDir ? "-" : formatSize(item.size);
 
       const timeTd = document.createElement("td");
       timeTd.textContent = formatTime(item.deletedAt);
@@ -4584,23 +4590,7 @@ function renderRows(options = {}) {
     const nameTd = document.createElement("td");
     const nameCell = document.createElement("div");
     nameCell.className = "name-cell";
-    const icon = document.createElement("span");
-    const meta = fileMeta(item);
-    icon.className = `file-icon ${meta.className}`;
-    icon.textContent = meta.label;
-    icon.setAttribute("aria-hidden", "true");
-    if (meta.lockState) {
-      const badge = document.createElement("span");
-      badge.className = `lock-badge ${meta.lockState}`;
-      badge.setAttribute("aria-hidden", "true");
-      icon.append(badge);
-    }
-    if (meta.className === "archive") {
-      const zipper = document.createElement("span");
-      zipper.className = "zip-zipper";
-      zipper.setAttribute("aria-hidden", "true");
-      icon.append(zipper);
-    }
+    const icon = renderFileIcon(item);
     const nameBtn = document.createElement("button");
     if (state.searchActive) {
       appendHighlightedText(nameBtn, itemName(item), state.searchTokens);
@@ -6438,10 +6428,16 @@ async function loadTrash(options = {}) {
 
   try {
     const res = await api("/api/trash");
-    state.items = (res.items || []).map((item) => ({
-      ...item,
-      path: item.id || item.trashId,
-    }));
+    state.items = (res.items || []).map((item) => {
+      const isDir = Boolean(item.isDirectory || item.type === "folder");
+      return {
+        ...item,
+        type: isDir ? "folder" : "file",
+        isDirectory: isDir,
+        size: isDir ? null : item.size,
+        path: item.id || item.trashId,
+      };
+    });
     if (trashClearBtn) trashClearBtn.disabled = state.items.length === 0;
     renderRows({ noAnimation: true });
     if (!options?.silent) setStatus(`回收站共有 ${state.items.length} 个项目，将在30天后自动清除。`);
