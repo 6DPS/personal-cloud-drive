@@ -3809,7 +3809,9 @@ async function submitFolderPasswordDialog(remove = false) {
 }
 
 function isExternalFileDrag(event) {
-  return [...event.dataTransfer.types].includes("Files") && !state.draggedItemPath;
+  const types = event?.dataTransfer?.types;
+  if (!types) return false;
+  return Array.from(types).includes("Files") && !state.draggedItemPath;
 }
 
 function previewKind(name) {
@@ -6178,6 +6180,141 @@ document.addEventListener("click", (event) => {
   closeAllFolderDropdowns();
 });
 
+async function extractDroppedItems(dataTransfer) {
+  const items = dataTransfer?.items;
+  if (!items || !items.length) {
+    return {
+      files: [...(dataTransfer?.files || [])],
+      emptyDirs: [],
+    };
+  }
+
+  const entries = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item && (item.kind === "file" || !item.kind)) {
+      try {
+        const entry = typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : null;
+        if (entry) {
+          entries.push(entry);
+        }
+      } catch (err) {
+        console.warn("Could not get entry for dropped item", err);
+      }
+    }
+  }
+
+  // If no entries could be extracted, fall back to dataTransfer.files
+  if (!entries.length) {
+    return {
+      files: [...(dataTransfer?.files || [])],
+      emptyDirs: [],
+    };
+  }
+
+  const files = [];
+  const emptyDirs = [];
+
+  // Helper to read all entries from a directory reader (handles batching of up to 100 entries per call)
+  async function readAllEntriesFromReader(dirReader) {
+    const entries = [];
+    while (true) {
+      const batch = await new Promise((resolve) => {
+        dirReader.readEntries(
+          (results) => resolve(results || []),
+          () => resolve([])
+        );
+      });
+      if (!batch || batch.length === 0) break;
+      entries.push(...batch);
+    }
+    return entries;
+  }
+
+  async function traverse(entry, parentPath = "") {
+    if (!entry) return;
+    if (entry.isFile) {
+      const file = await new Promise((resolve) => {
+        entry.file(
+          (f) => resolve(f),
+          () => resolve(null)
+        );
+      });
+      if (file) {
+        const relPath = parentPath ? `${parentPath}/${file.name}` : file.name;
+        try {
+          Object.defineProperty(file, "relativePath", {
+            value: relPath,
+            writable: true,
+            configurable: true,
+          });
+        } catch {
+          file.relativePath = relPath;
+        }
+        files.push(file);
+      }
+    } else if (entry.isDirectory) {
+      const dirPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+      const reader = entry.createReader();
+      try {
+        const children = await readAllEntriesFromReader(reader);
+        if (children.length === 0) {
+          emptyDirs.push(dirPath);
+        } else {
+          for (const child of children) {
+            await traverse(child, dirPath);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to read directory entries for", dirPath, err);
+      }
+    }
+  }
+
+  for (const entry of entries) {
+    await traverse(entry, "");
+  }
+
+  return { files, emptyDirs };
+}
+
+async function ensureFolderPathExists(dirRelPath, basePath = state.path) {
+  const parts = String(dirRelPath).replaceAll("\\", "/").split("/").filter(Boolean);
+  let curPath = basePath;
+  for (const part of parts) {
+    try {
+      await api("/api/folder", {
+        method: "POST",
+        body: JSON.stringify({ path: curPath, name: part }),
+      });
+    } catch {
+      // Ignore if folder already exists or cannot be created
+    }
+    curPath = curPath ? `${curPath}/${part}` : part;
+  }
+}
+
+let dropZoneDragCounter = 0;
+
+window.addEventListener("dragover", (event) => {
+  if (isExternalFileDrag(event)) {
+    event.preventDefault();
+  }
+});
+
+window.addEventListener("drop", (event) => {
+  if (isExternalFileDrag(event)) {
+    event.preventDefault();
+  }
+});
+
+dropZone.addEventListener("dragenter", (event) => {
+  if (!isExternalFileDrag(event)) return;
+  event.preventDefault();
+  dropZoneDragCounter += 1;
+  dropZone.classList.add("dragging");
+});
+
 dropZone.addEventListener("dragover", (event) => {
   if (!isExternalFileDrag(event)) return;
   event.preventDefault();
@@ -6185,13 +6322,45 @@ dropZone.addEventListener("dragover", (event) => {
   dropZone.classList.add("dragging");
 });
 
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragging"));
+dropZone.addEventListener("dragleave", () => {
+  dropZoneDragCounter = Math.max(0, dropZoneDragCounter - 1);
+  if (dropZoneDragCounter === 0) {
+    dropZone.classList.remove("dragging");
+  }
+});
 
-dropZone.addEventListener("drop", (event) => {
+dropZone.addEventListener("drop", async (event) => {
+  dropZoneDragCounter = 0;
+  dropZone.classList.remove("dragging");
   if (!isExternalFileDrag(event)) return;
   event.preventDefault();
-  dropZone.classList.remove("dragging");
-  uploadFiles([...event.dataTransfer.files], state.path);
+
+  try {
+    setStatus("正在解析拖入的项目与目录结构...");
+    const { files, emptyDirs } = await extractDroppedItems(event.dataTransfer);
+
+    if (emptyDirs.length > 0) {
+      for (const emptyDir of emptyDirs) {
+        await ensureFolderPathExists(emptyDir, state.path);
+      }
+    }
+
+    if (files.length > 0) {
+      const hasFolders = emptyDirs.length > 0 || files.some((f) => fileRelativePath(f).includes("/"));
+      if (hasFolders) {
+        setStatus(`已解析 ${files.length} 个文件${emptyDirs.length ? `（含 ${emptyDirs.length} 个空目录）` : ""}，准备上传...`);
+      }
+      await uploadFiles(files, state.path);
+    } else if (emptyDirs.length > 0) {
+      await loadFolder(state.path, { replaceHistory: true, forceRefresh: true });
+      setStatus(`已成功创建 ${emptyDirs.length} 个空文件夹`);
+    } else {
+      setStatus("未检测到可上传的文件。");
+    }
+  } catch (error) {
+    console.error("处理拖入文件失败:", error);
+    await showErrorDialog("读取拖入文件失败：" + (error.message || "未知错误"));
+  }
 });
 
 window.addEventListener("popstate", (event) => {
