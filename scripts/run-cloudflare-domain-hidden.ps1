@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "cloudflared-common.ps1")
@@ -9,6 +9,13 @@ $logDir = Join-Path $root "logs"
 
 if (-not (Test-Path -LiteralPath $configPath)) {
   throw "Cloudflare tunnel config not found. Run setup-cloudflare-domain.bat first."
+}
+
+$localCred = Join-Path $root ".cloudflared\9a130b3a-6849-447e-b800-ed830e19e83a.json"
+if (Test-Path -LiteralPath $localCred) {
+  $cfgText = Get-Content -LiteralPath $configPath -Raw
+  $updated = $cfgText -replace "credentials-file:.*", "credentials-file: $localCred"
+  Set-Content -LiteralPath $configPath -Value $updated -Encoding UTF8
 }
 
 if (-not $env:CLOUD_DRIVE_PASSWORD) {
