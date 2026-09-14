@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # DPSir 个人网盘 - GitHub 推送向导
 # ==============================================================================
 
@@ -26,10 +26,20 @@ if ($remoteUrl) {
     Write-Host "已关联远程仓库: $remoteUrl" -ForegroundColor Green
 }
 
-Write-Host "准备将代码推送到 GitHub (分支: main)..." -ForegroundColor Yellow
-Write-Host "提示: 如果弹出网页或登录窗口，请点击【Sign in with your browser】或【Authorize】完成授权。" -ForegroundColor Gray
-Write-Host ""
+$changes = git status --porcelain
+if ($changes) {
+    Write-Host "检测到本地有代码更新，正在自动打包并记录提交..." -ForegroundColor Yellow
+    git add .
+    $nowStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    git commit -m "update: $nowStr 代码更新迭代"
+    Write-Host "  ✓ 本地更新已记录" -ForegroundColor Green
+    Write-Host ""
+} else {
+    Write-Host "本地代码已处于最新提交状态。" -ForegroundColor Green
+    Write-Host ""
+}
 
+Write-Host "准备将代码推送到 GitHub (分支: main)..." -ForegroundColor Yellow
 git branch -M main
 git push -u origin main
 
