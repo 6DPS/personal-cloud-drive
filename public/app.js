@@ -3042,7 +3042,7 @@ async function uploadChunkWithRetry(url, form, onProgress) {
     try {
       return await uploadChunkRequest(url, form, onProgress);
     } catch (error) {
-      if (isAbortError(error) || controller.signal.aborted || requestSeq !== state.previewRequestSeq) return;
+      if (isAbortError(error)) return;
       lastError = error;
       if (attempt < 3) await delay(800 * attempt);
     }
