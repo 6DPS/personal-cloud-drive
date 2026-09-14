@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 title DPSir 个人网盘 - 一键推送到 GitHub
 cd /d "%~dp0"
