@@ -885,10 +885,18 @@ function verifySessionToken(token) {
   return Boolean(sessionUser(token));
 }
 
+function safeCompare(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function sessionUser(token) {
   if (!token || !token.includes(".")) return false;
   const [body, signature] = token.split(".");
-  if (!body || !signature || sign(body) !== signature) return false;
+  if (!body || !signature || !safeCompare(sign(body), signature)) return false;
 
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
@@ -921,7 +929,7 @@ function verifyDownloadToken(token, filePath) {
 function downloadTokenUser(token, filePath) {
   if (!token || !token.includes(".")) return false;
   const [body, signature] = token.split(".");
-  if (!body || !signature || sign(`download:${body}`) !== signature) return false;
+  if (!body || !signature || !safeCompare(sign(`download:${body}`), signature)) return false;
 
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));

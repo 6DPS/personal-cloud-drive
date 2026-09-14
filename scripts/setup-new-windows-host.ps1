@@ -24,8 +24,11 @@ if (-not $nodeCmd) {
     if ($wingetCmd) {
         Write-Host "  正在执行: winget install OpenJS.NodeJS.LTS ..." -ForegroundColor Gray
         Start-Process "winget" -ArgumentList "install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -Wait
-        # 刷新当前进程 PATH
+        # 刷新当前进程 PATH 并自动适配常见安装路径
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        if (Test-Path "C:\Program Files\nodejs\node.exe") {
+            $env:Path = "C:\Program Files\nodejs;" + $env:Path
+        }
         $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
     }
     
@@ -69,7 +72,7 @@ Write-Host "  当前推荐/已设定的数据根目录: [$currentStorage]" -Fore
 Write-Host "  提示: 如果你的新主机数据放在其他盘（如 E:\PersonalCloudDrive 或外接大硬盘），请输入新路径。" -ForegroundColor Gray
 $userInputPath = Read-Host "  请输入数据目录路径 [直接按回车默认使用 $currentStorage]"
 if ($userInputPath.Trim()) {
-    $currentStorage = $userInputPath.Trim().Trim('"').Trim("'")
+    $currentStorage = $userInputPath.Trim().Trim('"').Trim("'").TrimEnd('\', '/')
 }
 
 # 确保目录存在
