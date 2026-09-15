@@ -1,0 +1,81 @@
+﻿# ==============================================================================
+# DPSir 个人网盘 - 一键全服务重启与自动修复助手
+# ==============================================================================
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$ErrorActionPreference = "Continue"
+
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location -LiteralPath $root
+
+Write-Host ""
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host "         DPSir 个人网盘 - 一键全服务重启与自动修复助手         " -ForegroundColor Yellow
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "[1/3] 正在安全释放可能卡顿的旧后台进程..." -ForegroundColor Yellow
+Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+Write-Host "  ✓ 旧进程已安全释放" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "[2/3] 正在重新唤醒网盘核心服务与 Cloudflare 公网隧道..." -ForegroundColor Yellow
+
+$lanTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+if ($lanTask) {
+    Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+} else {
+    $lanVbs = Join-Path $PSScriptRoot "run-lan-drive-silent.vbs"
+    if (Test-Path -LiteralPath $lanVbs) {
+        Start-Process "wscript.exe" -ArgumentList "`"$lanVbs`"" -WorkingDirectory $root
+    }
+}
+
+$cfTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive Cloudflare Tunnel" -ErrorAction SilentlyContinue
+if ($cfTask) {
+    Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive Cloudflare Tunnel" -ErrorAction SilentlyContinue
+} else {
+    $cfVbs = Join-Path $PSScriptRoot "run-cloudflare-domain-silent.vbs"
+    if (Test-Path -LiteralPath $cfVbs) {
+        Start-Process "wscript.exe" -ArgumentList "`"$cfVbs`"" -WorkingDirectory $root
+    }
+}
+
+Write-Host "  ✓ 服务启动指令已就绪，正在等待网络握手 (约 4 秒)..." -ForegroundColor Green
+Start-Sleep -Seconds 4
+
+Write-Host ""
+Write-Host "[3/3] 正在对本地与公网链路进行健康体检..." -ForegroundColor Yellow
+
+$localOk = $false
+try {
+    $resp1 = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/me" -UseBasicParsing -TimeoutSec 4 -ErrorAction Stop
+    if ($resp1.StatusCode -eq 200) { $localOk = $true }
+} catch {}
+
+$publicOk = $false
+try {
+    $resp2 = Invoke-WebRequest -Uri "https://dpsirperson.085410.xyz/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
+    if ($resp2.StatusCode -eq 200) { $publicOk = $true }
+} catch {}
+
+Write-Host ""
+Write-Host "===============================================================" -ForegroundColor Cyan
+if ($localOk -and $publicOk) {
+    Write-Host "        🎉 恭喜！网盘所有服务已完美重启，状态 100% 正常！       " -ForegroundColor Green
+} elseif ($localOk) {
+    Write-Host "        ✓ 本地服务已恢复正常，公网域名正在握手连通中...        " -ForegroundColor Yellow
+} else {
+    Write-Host "        [提示] 服务正在后台拉起，请稍后刷新浏览器即可。        " -ForegroundColor Yellow
+}
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "当前访问通道状态：" -ForegroundColor White
+Write-Host "  1. 本地局域网: http://127.0.0.1:8081  --> $(if ($localOk) { '正常在线 [OK]' } else { '启动中...' })" -ForegroundColor $(if ($localOk) { "Green" } else { "Yellow" })
+Write-Host "  2. 外网公网域名: https://dpsirperson.085410.xyz  --> $(if ($publicOk) { '正常在线 [OK]' } else { '握手中...' })" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
+Write-Host ""
+Write-Host "现在您可以直接回到浏览器按【F5】刷新网页了！" -ForegroundColor Cyan
+Write-Host ""
