@@ -5112,7 +5112,8 @@ ensureStorage()
     startStorageWatcher();
     const server = http.createServer(app);
     server.requestTimeout = 0;
-    server.headersTimeout = 0;
+    server.headersTimeout = 66000;
+    server.keepAliveTimeout = 65000;
     server.timeout = 0;
     server.listen(PORT, HOST, () => {
       console.log(`DPSir 智云盘已启动：http://${HOST}:${PORT}`);

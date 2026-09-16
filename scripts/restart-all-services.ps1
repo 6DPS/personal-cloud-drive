@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # DPSir 个人网盘 - 一键全服务重启与自动修复助手
 # ==============================================================================
 
@@ -8,6 +8,18 @@ $ErrorActionPreference = "Continue"
 
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
+
+$envPath = Join-Path $root ".env"
+if (Test-Path -LiteralPath $envPath) {
+    Get-Content -LiteralPath $envPath | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith("#") -and $line -match "^([^=]+)=(.*)$") {
+            $k = $matches[1].Trim()
+            $v = $matches[2].Trim().Trim('"').Trim("'")
+            [Environment]::SetEnvironmentVariable($k, $v)
+        }
+    }
+}
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan

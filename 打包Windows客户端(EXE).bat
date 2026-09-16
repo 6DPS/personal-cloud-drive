@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title DPSir 智云盘 - 打包Windows客户端(EXE)
+title DPSir 智云盘 - 打包Windows客户端(Setup.exe)
 cd /d "%~dp0"
 
 echo ======================================================
-echo       DPSir 智云盘 - 打包 Windows 独立绿色客户端
+echo       DPSir 智云盘 - 打包 Windows 官方标准安装包
 echo ======================================================
 echo.
 if not exist "node_modules\electron-builder" (
@@ -12,15 +12,16 @@ if not exist "node_modules\electron-builder" (
     call npm install
 )
 
-echo 正在执行打包流程（首次打包会自动拉取 Windows 打包核心组件）...
-echo 打包完成后，将在 dist 文件夹中生成免安装单文件绿色版 EXE！
+echo 正在执行打包流程（构建商业级 NSIS 标准安装向导）...
+echo 打包完成后，将在 dist 文件夹中生成【DPSir 智云盘 Setup.exe】！
 echo.
 call npm run electron:build
 if %errorlevel% equ 0 (
     echo.
     echo ======================================================
     echo [成功] 打包完成！生成文件位于: dist 目录
-    echo 您可以直接将 dist 中的 EXE 发给他人或随拷随用！
+    echo 产物文件: 【DPSir 智云盘 Setup.exe】
+    echo (自带安装向导、支持自选安装盘符、自动创建桌面与开始菜单图标、完美固定任务栏)
     echo ======================================================
     explorer dist
 ) else (

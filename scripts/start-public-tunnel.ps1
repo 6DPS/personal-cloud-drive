@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "cloudflared-common.ps1")
@@ -14,4 +14,4 @@ Write-Host ""
 Write-Host "Starting temporary public tunnel."
 Write-Host "When you see https://*.trycloudflare.com, share that address."
 Write-Host ""
-& $cloudflared tunnel --url http://127.0.0.1:8081
+& $cloudflared tunnel --edge-ip-version 4 --url http://127.0.0.1:8081

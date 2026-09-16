@@ -164,7 +164,17 @@ async function determineTargetUrl() {
     }
   }
 
-  // 3. 如果在别人电脑上（本地无服务且无数据盘），自动直连公网专属域名
+  // 3. 探测同 Wi-Fi 局域网主机名（亲友或自己在家里其他电脑打开，自动切局域网满速）
+  try {
+    const computerName = os.hostname();
+    const lanLocalUrl = `http://${computerName}.local:${PORT}`;
+    if (await checkUrlReady(lanLocalUrl, 800)) {
+      console.log('[Electron] 检测到同 Wi-Fi 局域网服务，自动切入局域网满速模式:', lanLocalUrl);
+      return lanLocalUrl;
+    }
+  } catch {}
+
+  // 4. 如果在异地或别人电脑上（本地无服务），自动直连公网专属域名
   console.log('[Electron] 检测为远程访客客户端，自动连接公网服务:', PUBLIC_ACCESS_URL);
   return PUBLIC_ACCESS_URL;
 }
@@ -265,6 +275,9 @@ function createMainWindow(startUrl) {
       }
     } else if (input.alt && (input.key === 'Home' || input.key === 'h' || input.key === 'H')) {
       mainWindow.loadURL(TARGET_LOCAL_URL);
+      event.preventDefault();
+    } else if (input.key === 'F5' || (input.control && (input.key === 'r' || input.key === 'R'))) {
+      mainWindow.webContents.reload();
       event.preventDefault();
     }
   });

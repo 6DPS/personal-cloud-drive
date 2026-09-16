@@ -50,13 +50,13 @@ function Start-TunnelWithRetries {
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     Start-Process `
       -FilePath $cloudflared `
-      -ArgumentList @("tunnel", "--config", $configPath, "run") `
+      -ArgumentList @("tunnel", "--edge-ip-version", "4", "--config", $configPath, "run") `
       -WorkingDirectory $root `
       -WindowStyle Hidden `
       -RedirectStandardOutput (Join-Path $logDir "cloudflared.out.log") `
       -RedirectStandardError (Join-Path $logDir "cloudflared.err.log")
 
-    Start-Sleep -Seconds 15
+    Start-Sleep -Seconds 10
 
     $started = Get-ExistingTunnelProcess
     if ($started) {
@@ -64,7 +64,7 @@ function Start-TunnelWithRetries {
     }
 
     if ($attempt -lt $maxAttempts) {
-      Start-Sleep -Seconds 10
+      Start-Sleep -Seconds 5
     }
   }
 
@@ -91,8 +91,10 @@ if ($existingRunner) {
 
 function Test-TunnelHealthy {
   try {
-    $resp = Invoke-WebRequest -Uri "http://127.0.0.1:20241/ready" -UseBasicParsing -TimeoutSec 4 -ErrorAction Stop
-    return ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 400)
+    $resp = Invoke-WebRequest -Uri "http://127.0.0.1:20241/ready" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+    if ($resp.StatusCode -lt 200 -or $resp.StatusCode -ge 400) { return $false }
+    $localResp = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/me" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+    return ($localResp.StatusCode -ge 200 -and $localResp.StatusCode -lt 400)
   } catch {
     return $false
   }
@@ -104,7 +106,7 @@ if (-not $tunnelProcess) {
 }
 
 $unhealthyCount = 0
-$maxUnhealthyBeforeRestart = 4
+$maxUnhealthyBeforeRestart = 2
 
 while ($true) {
   Ensure-Drive-Running -Root $root
@@ -113,13 +115,13 @@ while ($true) {
   if (-not $tunnelProcess) {
     $tunnelProcess = Start-TunnelWithRetries
     if (-not $tunnelProcess) {
-      Start-Sleep -Seconds 15
+      Start-Sleep -Seconds 10
       continue
     }
     $unhealthyCount = 0
   }
 
-  Start-Sleep -Seconds 20
+  Start-Sleep -Seconds 10
 
   $tunnelProcess = Get-ExistingTunnelProcess
   if (-not $tunnelProcess) {
@@ -133,7 +135,7 @@ while ($true) {
     $unhealthyCount++
     if ($unhealthyCount -ge $maxUnhealthyBeforeRestart) {
       Stop-Process -Id $tunnelProcess.ProcessId -Force -ErrorAction SilentlyContinue
-      Start-Sleep -Seconds 3
+      Start-Sleep -Seconds 2
       $tunnelProcess = Start-TunnelWithRetries
       $unhealthyCount = 0
     }
