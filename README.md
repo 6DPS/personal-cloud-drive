@@ -95,4 +95,4 @@ CLOUD_DRIVE_USER=admin
 ---
 
 ## 📄 License
-Private & Personal Use Only.
+本项目遵循 [MIT License](LICENSE) 开源协议，欢迎自由部署、修改与贡献！
