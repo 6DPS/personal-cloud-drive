@@ -4,6 +4,19 @@
 
 ---
 
+## 📸 界面预览 (UI Screenshots)
+
+| 🎨 专属视觉登录界面 | 🖥️ Windows 原生桌面客户端主界面 |
+| :---: | :---: |
+| <img src="docs/screenshots/01_login_view.png" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png" width="100%" /> |
+
+### 🤖 智能 AI 全库问答与深度检索 (DeepSeek 驱动)
+<p align="center">
+  <img src="docs/screenshots/03_ai_drawer_chat.png" width="100%" />
+</p>
+
+---
+
 ## ✨ 核心特性
 
 - **🖥️ 独立 Windows 桌面客户端（原生沉浸体验）**
