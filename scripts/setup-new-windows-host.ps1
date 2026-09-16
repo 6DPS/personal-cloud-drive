@@ -150,9 +150,5 @@ if (Test-Path -LiteralPath $showScript) {
 }
 
 Write-Host "提示: 以后开机小主机会在后台自动守护运行，无需每次手动开启。" -ForegroundColor Gray
-Write-Host ""
-Write-Host "💡 启动方式推荐：" -ForegroundColor Cyan
-Write-Host "  - 桌面独立客户端：双击 [启动桌面客户端(测试).bat]" -ForegroundColor White
-Write-Host "  - 打包生成专属EXE：双击 [打包Windows客户端(EXE).bat]" -ForegroundColor White
-Write-Host "  - 传统浏览器访问：双击 [start-lan-drive.bat]" -ForegroundColor White
+Write-Host "提示: 如需在浏览器中直接打开，请双击 [start-lan-drive.bat] 或访问上述地址。" -ForegroundColor Cyan
 Write-Host ""

@@ -3,39 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "A small personal cloud drive for local file storage.",
-  "author": "DPSir",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "start:watchdog": "node scripts/server-watchdog.js",
-    "test:smoke": "node tests/smoke.js",
-    "electron:dev": "electron electron-main.js",
-    "electron:build": "electron-builder --win"
-  },
-  "build": {
-    "appId": "com.dpsir.clouddrive",
-    "productName": "DPSir 智云盘",
-    "extraMetadata": {
-      "main": "electron-main.js"
-    },
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        "nsis"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "DPSir 智云盘",
-      "artifactName": "DPSir 智云盘 Setup.${ext}"
-    },
-    "directories": {
-      "output": "dist"
-    }
+    "test:smoke": "node tests/smoke.js"
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -51,9 +23,5 @@
     "pdf-parse": "^1.1.1",
     "tesseract.js": "^5.1.1",
     "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "electron": "^44.4.1",
-    "electron-builder": "^26.15.3"
   }
 }
