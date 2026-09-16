@@ -6371,3 +6371,33 @@ select:focus {
 
 
 
+
+/* 软件内置上传提示与拖拽优化卡片 */
+.upload-drag-tip-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  color: #0369a1;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.upload-drag-tip-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.upload-drag-tip-text {
+  flex: 1;
+}
+
+.dialog-modal-card .modal-description {
+  white-space: pre-line !important;
+  line-height: 1.65 !important;
+}

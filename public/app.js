@@ -2775,13 +2775,34 @@ function openFilePicker(input) {
   else input.click();
 }
 
-function handleFileInputChange(input) {
-  window.setTimeout(() => {
-    const files = [...input.files];
-    if (!files.length) return;
-    setStatus(`已选择 ${files.length} 个文件，准备上传...`);
-    uploadFiles(files, state.uploadTargetPath);
-  }, 0);
+async function handleFileInputChange(input) {
+  const files = [...input.files];
+  if (!files.length) return;
+
+  const isFolder = input === folderInput || files.some((f) => fileRelativePath(f).includes("/"));
+  if (isFolder) {
+    const firstRel = fileRelativePath(files[0]);
+    const rootFolder = firstRel.includes("/") ? firstRel.split("/")[0] : "所选文件夹";
+    const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
+    const targetPath = state.uploadTargetPath || state.path || "";
+    const targetDisplay = targetPath ? `「${displayFolder(targetPath)}」` : "「全部文件 (根目录)」";
+
+    const confirmed = await openDialog({
+      eyebrow: "系统文件夹上传",
+      title: `确认上传文件夹「${rootFolder}」？`,
+      description: `系统已完成文件夹结构与文件解析：\n• 📁 文件夹名称：${rootFolder}\n• 📄 包含文件：${files.length} 个文件\n• 💾 总体积：${formatBytes(totalBytes)}\n• 📍 目标保存位置：${targetDisplay}\n\n请确认是否开始批量上传？`,
+      confirmText: "立即开始上传",
+    });
+
+    if (!confirmed) {
+      input.value = "";
+      setStatus("已取消文件夹上传");
+      return;
+    }
+  }
+
+  setStatus(`已确认 ${files.length} 个文件，准备上传...`);
+  uploadFiles(files, state.uploadTargetPath);
 }
 
 function shouldUseChunkUpload(files) {
@@ -6338,7 +6359,22 @@ dropZone.addEventListener("drop", async (event) => {
     if (files.length > 0) {
       const hasFolders = emptyDirs.length > 0 || files.some((f) => fileRelativePath(f).includes("/"));
       if (hasFolders) {
-        setStatus(`已解析 ${files.length} 个文件${emptyDirs.length ? `（含 ${emptyDirs.length} 个空目录）` : ""}，准备上传...`);
+        const firstRel = fileRelativePath(files[0]);
+        const rootFolder = firstRel.includes("/") ? firstRel.split("/")[0] : (emptyDirs[0]?.split("/")[0] || "文件夹");
+        const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
+        const targetDisplay = state.path ? `「${displayFolder(state.path)}」` : "「全部文件 (根目录)」";
+
+        const confirmed = await openDialog({
+          eyebrow: "系统文件夹拖拽上传",
+          title: `确认上传文件夹「${rootFolder}」？`,
+          description: `系统已通过极速拖拽完成目录解析（0 浏览器外部弹窗）：\n• 📁 文件夹名称：${rootFolder}\n• 📄 包含文件：${files.length} 个文件${emptyDirs.length ? `（含 ${emptyDirs.length} 个空目录）` : ""}\n• 💾 文件总体积：${formatBytes(totalBytes)}\n• 📍 目标位置：${targetDisplay}\n\n请确认是否开始批量上传？`,
+          confirmText: "立即开始上传",
+        });
+
+        if (!confirmed) {
+          setStatus("已取消拖拽上传");
+          return;
+        }
       }
       await uploadFiles(files, state.path);
     } else if (emptyDirs.length > 0) {
