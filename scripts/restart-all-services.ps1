@@ -58,7 +58,7 @@ try {
 
 $publicOk = $false
 try {
-    $resp2 = Invoke-WebRequest -Uri "https://dpsirperson.085410.xyz/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
+    $publicTarget = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://pan.yourdomain.com" }; if ($env:PUBLIC_ACCESS_URL) { $resp2 = Invoke-WebRequest -Uri "$publicTarget/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction SilentlyContinue }
     if ($resp2.StatusCode -eq 200) { $publicOk = $true }
 } catch {}
 
@@ -75,7 +75,7 @@ Write-Host "===============================================================" -Fo
 Write-Host ""
 Write-Host "当前访问通道状态：" -ForegroundColor White
 Write-Host "  1. 本地局域网: http://127.0.0.1:8081  --> $(if ($localOk) { '正常在线 [OK]' } else { '启动中...' })" -ForegroundColor $(if ($localOk) { "Green" } else { "Yellow" })
-Write-Host "  2. 外网公网域名: https://dpsirperson.085410.xyz  --> $(if ($publicOk) { '正常在线 [OK]' } else { '握手中...' })" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
+Write-Host "  2. 外网公网域名: $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "未配置公网域名" })  --> $(if ($publicOk) { '正常在线 [OK]' } else { '握手中...' })" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
 Write-Host ""
 Write-Host "现在您可以直接回到浏览器按【F5】刷新网页了！" -ForegroundColor Cyan
 Write-Host ""

@@ -87,7 +87,7 @@ $envContent = @"
 STORAGE_BASE_ROOT=$currentStorage
 PORT=8081
 HOST=0.0.0.0
-PUBLIC_ACCESS_URL=https://dpsirperson.085410.xyz
+PUBLIC_ACCESS_URL=
 "@
 Set-Content -LiteralPath $envFilePath -Value $envContent -Encoding UTF8
 Write-Host "  ✓ 存储配置已锁定: $currentStorage" -ForegroundColor Green

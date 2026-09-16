@@ -121,7 +121,7 @@ HOST=0.0.0.0
 CLOUD_DRIVE_USER=admin
 
 # 公网穿透访问域名（选填，配合 Cloudflare 隧道使用）
-PUBLIC_ACCESS_URL=https://dpsirperson.085410.xyz
+PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 ```
 
 ---

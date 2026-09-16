@@ -262,7 +262,7 @@ const dialogError = $("#dialogError");
 const confirmDialogBtn = $("#confirmDialogBtn");
 const cancelDialogBtn = $("#cancelDialogBtn");
 const closeDialogModalBtn = $("#closeDialogModalBtn");
-const PUBLIC_CHUNK_HOSTS = new Set(["dpsirperson.085410.xyz"]);
+const PUBLIC_CHUNK_HOSTS = new Set([]);
 const LAN_DIRECT_UPLOAD_LIMIT = 512 * 1024 * 1024;
 const LAN_DIRECT_UPLOAD_FILE_LIMIT = 5000;
 const FALLBACK_CHUNK_BYTES = 1 * 1024 * 1024;
@@ -2471,12 +2471,12 @@ async function autoSwitchToLan(data) {
 function publicFallbackUrl() {
   const href = publicAccessLink?.getAttribute("href") || publicAccessLink?.href || "";
   try {
-    const url = new URL(href || "https://dpsirperson.085410.xyz", window.location.origin);
+    const url = new URL(href || window.location.origin, window.location.origin);
     url.pathname = "/";
     url.search = "";
     return url.toString();
   } catch {
-    return "https://dpsirperson.085410.xyz/";
+    return window.location.origin + "/";
   }
 }
 
@@ -6915,7 +6915,7 @@ async function handleCreateShare() {
       }),
     });
     const share = res.share;
-    const publicBase = (res.publicBaseUrl || "https://dpsirperson.085410.xyz").replace(/\/+$/, "");
+    const publicBase = (res.publicBaseUrl || window.location.origin).replace(/\/+$/, "");
     let lanBase = (res.lanBaseUrl || "").replace(/\/+$/, "");
     if (!lanBase && isLanHost(window.location.hostname)) {
       lanBase = `${window.location.protocol}//${window.location.host}`.replace(/\/+$/, "");
@@ -6988,7 +6988,7 @@ async function loadMyShares() {
     }
     mySharesList.innerHTML = "";
 
-    const publicBase = (res.publicBaseUrl || "https://dpsirperson.085410.xyz").replace(/\/+$/, "");
+    const publicBase = (res.publicBaseUrl || window.location.origin).replace(/\/+$/, "");
     let lanBase = (res.lanBaseUrl || "").replace(/\/+$/, "");
     if (!lanBase && isLanHost(window.location.hostname)) {
       lanBase = `${window.location.protocol}//${window.location.host}`.replace(/\/+$/, "");

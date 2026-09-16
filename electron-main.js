@@ -28,14 +28,15 @@ function loadDotEnv(envPath = path.join(__dirname, '.env')) {
 loadDotEnv();
 
 const PORT = 8081;
-const TARGET_URL = 'http://127.0.0.1:' + PORT;
-const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || 'https://dpsirperson.085410.xyz';
+const TARGET_LOCAL_URL = 'http://127.0.0.1:' + PORT;
+const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || '';
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 let hasNotifiedTray = false;
 let spawnedServerChild = null;
+let currentActiveUrl = TARGET_LOCAL_URL;
 
 // 防多开互斥锁
 const gotTheLock = app.requestSingleInstanceLock();
@@ -90,7 +91,7 @@ function isCloudDriveUrl(urlString) {
     ) {
       return true;
     }
-    // 3. 智云盘公网穿透域名（支持开源部署者自定义配置）
+    // 3. 智云盘公网穿透域名
     let publicHost = '';
     try {
       publicHost = new URL(PUBLIC_ACCESS_URL).hostname.toLowerCase();
@@ -98,8 +99,7 @@ function isCloudDriveUrl(urlString) {
 
     if (
       (publicHost && host === publicHost) ||
-      host.endsWith('085410.xyz') ||
-      host.includes('trycloudflare.com') ||
+            host.includes('trycloudflare.com') ||
       host.includes('cloudflare')
     ) {
       return true;
@@ -110,51 +110,67 @@ function isCloudDriveUrl(urlString) {
   }
 }
 
-// 检查服务是否已经在运行
-function checkServerReady(timeoutMs = 1500) {
+// 检查指定地址是否在线
+function checkUrlReady(targetUrl, timeoutMs = 1200) {
   return new Promise((resolve) => {
-    const req = http.get(TARGET_URL + '/api/me', { timeout: timeoutMs }, (res) => {
-      res.resume();
-      resolve(true);
-    });
-    req.on('timeout', () => {
-      req.destroy();
+    try {
+      const parsed = new URL(targetUrl);
+      const isHttps = parsed.protocol === 'https:';
+      const client = isHttps ? require('https') : require('http');
+      const req = client.get(targetUrl + '/api/me', { timeout: timeoutMs }, (res) => {
+        res.resume();
+        resolve(res.statusCode >= 200 && res.statusCode < 500);
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+      req.on('error', () => resolve(false));
+    } catch {
       resolve(false);
-    });
-    req.on('error', () => resolve(false));
+    }
   });
 }
 
-// 启动后台服务（若未运行）
-async function ensureServerRunning() {
-  const ready = await checkServerReady();
-  if (ready) {
-    console.log('[Electron] 后台服务已在运行，直接连接。');
-    return;
+// 智能判断启动地址（自适应：在主机自动连本机极速，在别人电脑自动连公网）
+async function determineTargetUrl() {
+  // 1. 检测本地 127.0.0.1:8081 是否在线
+  const isLocalAlive = await checkUrlReady(TARGET_LOCAL_URL, 800);
+  if (isLocalAlive) {
+    console.log('[Electron] 本机网盘服务已在线，以主机极速模式启动 (127.0.0.1)');
+    return TARGET_LOCAL_URL;
   }
 
-  console.log('[Electron] 后台服务未运行，正在唤起看门狗服务...');
-  const watchdogScript = path.join(__dirname, 'scripts', 'server-watchdog.js');
-  spawnedServerChild = spawn(process.execPath, [watchdogScript], {
-    cwd: __dirname,
-    env: { ...process.env, PORT: String(PORT), HOST: '0.0.0.0' },
-    stdio: ['ignore', 'ignore', 'ignore'],
-    windowsHide: true,
-  });
-
-  // 轮询等待服务就绪，最多 15 秒
-  const startTime = Date.now();
-  while (Date.now() - startTime < 15000) {
-    await new Promise((r) => setTimeout(r, 400));
-    if (await checkServerReady(800)) {
-      console.log('[Electron] 后台服务已就绪！');
-      return;
+  // 2. 检测本地是否存在看门狗或数据盘（识别是否在服主本机上）
+  const isHost = fs.existsSync('D:\\PersonalCloudDrive') || fs.existsSync(path.join(__dirname, 'scripts', 'server-watchdog.js'));
+  if (isHost) {
+    console.log('[Electron] 检测为服主主机，正在唤醒看门狗服务...');
+    const watchdogScript = path.join(__dirname, 'scripts', 'server-watchdog.js');
+    if (fs.existsSync(watchdogScript)) {
+      spawnedServerChild = spawn(process.execPath, [watchdogScript], {
+        cwd: __dirname,
+        env: { ...process.env, PORT: String(PORT), HOST: '0.0.0.0' },
+        stdio: ['ignore', 'ignore', 'ignore'],
+        windowsHide: true,
+      });
+      const startTime = Date.now();
+      while (Date.now() - startTime < 12000) {
+        await new Promise((r) => setTimeout(r, 400));
+        if (await checkUrlReady(TARGET_LOCAL_URL, 600)) {
+          console.log('[Electron] 本机后台服务已就绪！');
+          return TARGET_LOCAL_URL;
+        }
+      }
     }
   }
-  console.warn('[Electron] 等待后台服务启动超时，将直接尝试加载页面。');
+
+  // 3. 如果在别人电脑上（本地无服务且无数据盘），自动直连公网专属域名
+  console.log('[Electron] 检测为远程访客客户端，自动连接公网服务:', PUBLIC_ACCESS_URL);
+  return PUBLIC_ACCESS_URL;
 }
 
-function createMainWindow() {
+function createMainWindow(startUrl) {
+  currentActiveUrl = startUrl;
   const iconPath = path.join(__dirname, 'build', 'icon.ico');
   const fallbackIcon = path.join(__dirname, 'public', 'app-icon-256.png');
   const appIcon = fs.existsSync(iconPath) ? iconPath : fallbackIcon;
@@ -181,15 +197,24 @@ function createMainWindow() {
 
   mainWindow.setMenuBarVisibility(false);
 
-  // 启动默认加载本机访问
-  mainWindow.loadURL(TARGET_URL);
+  // 加载页面
+  mainWindow.loadURL(currentActiveUrl);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // 关闭窗口拦截：默认隐藏到系统托盘，保持手机端局域网服务持续工作
+  // 加载容错：如果在别人电脑上加载 127.0.0.1 失败，自动秒级重试并切换到公网
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL && validatedURL.includes('127.0.0.1') && PUBLIC_ACCESS_URL) {
+      console.log('[Electron] 本机地址未连通，自动切换到公网地址:', PUBLIC_ACCESS_URL);
+      currentActiveUrl = PUBLIC_ACCESS_URL;
+      mainWindow.loadURL(PUBLIC_ACCESS_URL);
+    }
+  });
+
+  // 关闭窗口拦截：默认隐藏到系统托盘，保持后台服务静默工作
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -206,19 +231,17 @@ function createMainWindow() {
     }
   });
 
-  // 处理窗口内链接点击：
-  // 如果是局域网地址、公网地址或本机地址，均直接在客户端窗口内打开，坚决不弹出外部浏览器！
+  // 处理窗口内链接点击：局域网、公网或本机均在客户端内直接打开
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isCloudDriveUrl(url)) {
       mainWindow.loadURL(url);
       return { action: 'deny' };
     }
-    // 外部第三方链接才调用系统默认浏览器打开
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  // 处理页面导航：本网盘内部地址直接在窗口内流转
+  // 处理页面导航
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (isCloudDriveUrl(url)) {
       return;
@@ -227,7 +250,7 @@ function createMainWindow() {
     shell.openExternal(url);
   });
 
-  // 快捷键支持：Alt+Left（后退）、Alt+Right（前进）、Alt+Home（一键回本机 127.0.0.1）
+  // 快捷键支持：Alt+Left（后退）、Alt+Right（前进）、Alt+Home（一键回本机）
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
     if (input.alt && input.key === 'ArrowLeft') {
@@ -241,7 +264,7 @@ function createMainWindow() {
         event.preventDefault();
       }
     } else if (input.alt && (input.key === 'Home' || input.key === 'h' || input.key === 'H')) {
-      mainWindow.loadURL(TARGET_URL);
+      mainWindow.loadURL(TARGET_LOCAL_URL);
       event.preventDefault();
     }
   });
@@ -278,7 +301,7 @@ function createTray() {
         label: '一键切换: 本机极速访问 (127.0.0.1)',
         click: () => {
           if (mainWindow) {
-            mainWindow.loadURL(TARGET_URL);
+            mainWindow.loadURL(TARGET_LOCAL_URL);
             mainWindow.show();
             mainWindow.focus();
           }
@@ -373,7 +396,7 @@ function createTray() {
 ipcMain.handle('get-lan-addresses', () => {
   const lanIp = getLanIp();
   return {
-    local: TARGET_URL,
+    local: TARGET_LOCAL_URL,
     lan: 'http://' + lanIp + ':' + PORT,
     public: PUBLIC_ACCESS_URL,
   };
@@ -399,13 +422,13 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(async () => {
-  await ensureServerRunning();
-  createMainWindow();
+  const startUrl = await determineTargetUrl();
+  createMainWindow(startUrl);
   createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+      createMainWindow(startUrl);
     } else if (mainWindow) {
       mainWindow.show();
       mainWindow.focus();

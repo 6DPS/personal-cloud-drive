@@ -48,7 +48,7 @@ loadDotEnv();
 const RUNTIME_LOG_DIR = path.join(__dirname, "logs");
 const PORT = Number(process.env.PORT || 8081);
 const HOST = process.env.HOST || "0.0.0.0";
-const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || "https://dpsirperson.085410.xyz";
+const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || "";
 const PUBLIC_ROOT = path.join(__dirname, "public");
 const ADMIN_USER = process.env.CLOUD_DRIVE_USER || "admin";
 const STORAGE_BASE_ROOT = path.resolve(process.env.STORAGE_BASE_ROOT || "D:\\PersonalCloudDrive");
