@@ -7,7 +7,25 @@
   "scripts": {
     "start": "node server.js",
     "start:watchdog": "node scripts/server-watchdog.js",
-    "test:smoke": "node tests/smoke.js"
+    "test:smoke": "node tests/smoke.js",
+    "electron:dev": "electron electron-main.js",
+    "electron:build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.dpsir.clouddrive",
+    "productName": "DPSir 智云盘",
+    "extraMetadata": {
+      "main": "electron-main.js"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "portable"
+      ]
+    },
+    "directories": {
+      "output": "dist"
+    }
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -23,5 +41,9 @@
     "pdf-parse": "^1.1.1",
     "tesseract.js": "^5.1.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3"
   }
 }
