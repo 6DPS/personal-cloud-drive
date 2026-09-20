@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # DPSir 个人网盘 - 一键全服务重启与自动修复助手
 # ==============================================================================
 
@@ -85,9 +85,11 @@ if ($localOk -and $publicOk) {
 }
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "当前访问通道状态：" -ForegroundColor White
-Write-Host "  1. 本地局域网: http://127.0.0.1:8081  --> $(if ($localOk) { '正常在线 [OK]' } else { '启动中...' })" -ForegroundColor $(if ($localOk) { "Green" } else { "Yellow" })
-Write-Host "  2. 外网公网域名: $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "未配置公网域名" })  --> $(if ($publicOk) { '正常在线 [OK]' } else { '握手中...' })" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
-Write-Host ""
-Write-Host "现在您可以直接回到浏览器按【F5】刷新网页了！" -ForegroundColor Cyan
-Write-Host ""
+$domainStr = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { '未配置公网域名' }
+$localStatus = if ($localOk) { '正常在线 [OK]' } else { '启动中...' }
+$publicStatus = if ($publicOk) { '正常在线 [OK]' } else { '握手中...' }
+Write-Host "  1. 本地局域网: http://127.0.0.1:8081  --> $localStatus" -ForegroundColor $(if ($localOk) { 'Green' } else { 'Yellow' })
+Write-Host "  2. 外网公网域名: $domainStr  --> $publicStatus" -ForegroundColor $(if ($publicOk) { 'Green' } else { 'Yellow' })
+Write-Host ''
+Write-Host '现在您可以直接回到浏览器按【F5】刷新网页了！' -ForegroundColor Cyan
+Write-Host ''

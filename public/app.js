@@ -6162,7 +6162,7 @@ document.addEventListener("keydown", (event) => {
   if (zipArchiveModal) zipArchiveModal.classList.add("hidden");
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");
-  if (aiDocSummaryModal) aiDocSummaryModal.classList.add("hidden");
+  if (aiDocSummaryModal) closeAiDocSummaryModal();
 });
 
 document.addEventListener("click", (event) => {
@@ -7062,43 +7062,190 @@ async function loadMyShares() {
   }
 }
 
-// --- 4. DeepSeek AI 文档智能总结 ---
+// --- 4. DeepSeek AI 文档智能总结 (SSE 极速流式打字机) ---
+let currentAiDocSummaryAbortController = null;
+
+function closeAiDocSummaryModal() {
+  if (currentAiDocSummaryAbortController) {
+    currentAiDocSummaryAbortController.abort();
+    currentAiDocSummaryAbortController = null;
+  }
+  if (aiDocSummaryModal) {
+    aiDocSummaryModal.classList.add("hidden");
+    aiDocSummaryModal.setAttribute("aria-hidden", "true");
+  }
+}
+
 async function openAiDocSummaryModal(item) {
   if (!aiDocSummaryModal) return;
+  if (currentAiDocSummaryAbortController) {
+    currentAiDocSummaryAbortController.abort();
+    currentAiDocSummaryAbortController = null;
+  }
+  const abortController = new AbortController();
+  currentAiDocSummaryAbortController = abortController;
+
   aiDocSummaryModal.classList.remove("hidden");
   aiDocSummaryModal.setAttribute("aria-hidden", "false");
-  if (aiDocSummaryTitle) aiDocSummaryTitle.textContent = `DeepSeek 满血总结：${itemName(item)}`;
+  if (aiDocSummaryTitle) {
+    aiDocSummaryTitle.textContent = `DeepSeek 智能总结：${itemName(item)}`;
+  }
   if (aiDocSummaryBody) {
     aiDocSummaryBody.innerHTML = `
-      <div class="ai-summary-loading">
-        <div style="text-align:center;">
-          <div style="font-size:24px;margin-bottom:8px;">✨</div>
-          <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4-Pro 满血旗舰大模型深度阅读并提炼核心要点...</p>
-          <small style="opacity:0.75;margin-top:6px;display:block;">完整提取文档内容与结构大纲，深度推理中，请稍候</small>
+      <div class="ai-summary-container">
+        <div class="ai-summary-statusbar" id="aiDocSummaryStatusBar">
+          <span class="ai-summary-badge" id="aiDocSummaryBadge">
+            <span class="ai-summary-pulse-dot"></span>
+            <span id="aiDocSummaryStatusText">正在提取文档并连接 DeepSeek-V4-Flash...</span>
+          </span>
+          <button class="copy-summary-btn hidden" id="copyAiDocSummaryBtn" type="button" title="复制总结全文">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span id="copyAiDocSummaryBtnText">复制总结</span>
+          </button>
+        </div>
+        <div id="aiDocSummaryStreamContent" class="ai-markdown ai-summary-content">
+          <div class="ai-summary-loading">
+            <div style="text-align:center;">
+              <div style="font-size:24px;margin-bottom:8px;">⚡</div>
+              <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4-Flash 极速分析提炼...</p>
+              <small style="opacity:0.75;margin-top:6px;display:block;">首字毫秒级响应，流式输出中，请稍候</small>
+            </div>
+          </div>
         </div>
       </div>
     `;
   }
 
-  try {
-    const res = await api("/api/ai/summarize-doc", {
-      method: "POST",
-      body: JSON.stringify({ path: item.path }),
+  const statusTextElem = document.getElementById("aiDocSummaryStatusText");
+  const badgeElem = document.getElementById("aiDocSummaryBadge");
+  const contentElem = document.getElementById("aiDocSummaryStreamContent");
+  const copyBtn = document.getElementById("copyAiDocSummaryBtn");
+  const copyBtnText = document.getElementById("copyAiDocSummaryBtnText");
+
+  let fullContent = "";
+  let fullReasoning = "";
+  let renderScheduled = false;
+
+  function scheduleRender(isFinal = false) {
+    if (renderScheduled && !isFinal) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      if (!contentElem) return;
+      if (!fullContent && !fullReasoning) return;
+      const rendered = renderAiMarkdown(fullContent, fullReasoning);
+      if (!isFinal && !fullContent && fullReasoning) {
+        const thoughtBox = rendered.querySelector(".ai-thought-box");
+        if (thoughtBox) thoughtBox.open = true;
+      }
+      contentElem.replaceChildren(...rendered.childNodes);
+      if (isFinal) {
+        renderMathInAiMessage(contentElem);
+      }
     });
-    const summary = res.summary || "未能生成有效总结。";
-    if (aiDocSummaryBody) {
-      aiDocSummaryBody.replaceChildren(renderAiMarkdown(summary, res.reasoning || ""));
+  }
+
+  try {
+    const token = sessionToken();
+    const response = await fetch("/api/ai/summarize-doc", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ path: item.path, stream: true }),
+      signal: abortController.signal,
+    });
+
+    if (!response.ok) {
+      let errMsg = `请求失败 (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (errJson.error) errMsg = errJson.error;
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+        const jsonStr = trimmed.slice(5).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const msg = JSON.parse(jsonStr);
+          if (msg.type === "start") {
+            if (statusTextElem) statusTextElem.textContent = `DeepSeek-V4-Flash 正在提炼《${msg.docName || itemName(item)}》...`;
+          } else if (msg.type === "status") {
+            if (statusTextElem) statusTextElem.textContent = msg.message || "正在生成总结...";
+          } else if (msg.type === "chunk") {
+            fullContent += msg.content || "";
+            scheduleRender(false);
+          } else if (msg.type === "reasoning") {
+            fullReasoning += msg.content || "";
+            scheduleRender(false);
+          } else if (msg.type === "done") {
+            if (msg.fullSummary && !fullContent) fullContent = msg.fullSummary;
+            if (msg.fullReasoning && !fullReasoning) fullReasoning = msg.fullReasoning;
+          } else if (msg.type === "error") {
+            throw new Error(msg.error || "AI 总结异常");
+          }
+        } catch (e) {
+          if (e.message && !e.message.startsWith("Unexpected")) {
+            throw e;
+          }
+        }
+      }
+    }
+
+    scheduleRender(true);
+
+    if (badgeElem) {
+      badgeElem.classList.add("done");
+      if (statusTextElem) statusTextElem.textContent = "✨ 总结生成完毕 (DeepSeek-V4-Flash)";
+    }
+    if (copyBtn) {
+      copyBtn.classList.remove("hidden");
+      copyBtn.onclick = async () => {
+        const textToCopy = fullContent || "";
+        const ok = await copyTextToClipboard(textToCopy);
+        if (ok && copyBtnText) {
+          const original = copyBtnText.textContent;
+          copyBtnText.textContent = "已复制 ✓";
+          setTimeout(() => { copyBtnText.textContent = original; }, 1800);
+        }
+      };
     }
   } catch (err) {
+    if (err.name === "AbortError") return;
     if (aiDocSummaryBody) {
       aiDocSummaryBody.innerHTML = `
         <div style="padding:32px 20px;text-align:center;color:var(--danger, #ff4d4f);">
-          <p style="margin-bottom:14px;font-size:15px;">AI 智能总结失败: ${escapeHtml(err.message)}</p>
-          <button class="primary" id="retryAiDocSummaryBtn" type="button">点击重试</button>
+          <p style="margin-bottom:14px;font-size:15px;font-weight:500;">AI 智能总结失败: ${escapeHtml(err.message)}</p>
+          <button class="primary" id="retryAiDocSummaryBtn" type="button" style="padding:8px 18px;border-radius:8px;cursor:pointer;">点击重试</button>
         </div>
       `;
       const retryBtn = document.getElementById("retryAiDocSummaryBtn");
       if (retryBtn) retryBtn.onclick = () => openAiDocSummaryModal(item);
+    }
+  } finally {
+    if (currentAiDocSummaryAbortController === abortController) {
+      currentAiDocSummaryAbortController = null;
     }
   }
 }
@@ -7155,13 +7302,19 @@ shareDoneBtn?.addEventListener("click", () => {
   shareModal?.setAttribute("aria-hidden", "true");
 });
 closeMySharesModalBtn?.addEventListener("click", () => mySharesModal?.classList.add("hidden"));
-closeAiDocSummaryModalBtn?.addEventListener("click", () => aiDocSummaryModal?.classList.add("hidden"));
+closeAiDocSummaryModalBtn?.addEventListener("click", closeAiDocSummaryModal);
 
 // 支持新弹窗 ESC 和背景点击关闭
 for (const modal of [zipArchiveModal, shareModal, mySharesModal, aiDocSummaryModal]) {
   if (!modal) continue;
   modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.classList.add("hidden");
+    if (event.target === modal) {
+      if (modal === aiDocSummaryModal) {
+        closeAiDocSummaryModal();
+      } else {
+        modal.classList.add("hidden");
+      }
+    }
   });
 }
 

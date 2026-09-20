@@ -172,6 +172,7 @@ const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepsee
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4-pro";
 const DEEPSEEK_ANTHROPIC_BASE_URL = (process.env.DEEPSEEK_ANTHROPIC_BASE_URL || `${DEEPSEEK_BASE_URL}/anthropic`).replace(/\/+$/, "");
 const DEEPSEEK_WEB_MODEL = process.env.DEEPSEEK_WEB_MODEL || "deepseek-v4-pro";
+const DEEPSEEK_SUMMARY_MODEL = process.env.DEEPSEEK_SUMMARY_MODEL || "deepseek-v4-flash";
 const AI_HISTORY_LIMIT = Number(process.env.AI_HISTORY_LIMIT || 10);
 const AI_CONTEXT_TEXT_CHARS = Number(process.env.AI_CONTEXT_TEXT_CHARS || 6000);
 const AI_FOLDER_ITEM_LIMIT = Number(process.env.AI_FOLDER_ITEM_LIMIT || 0);
@@ -230,7 +231,12 @@ app.use(
   compression({
     threshold: 1024,
     filter: (req, res) => {
-      if (req.headers["accept"] === "text/event-stream" || req.path === "/api/events") {
+      if (
+        req.headers["accept"] === "text/event-stream" ||
+        req.path === "/api/events" ||
+        req.path === "/api/ai/summarize-doc" ||
+        req.path.startsWith("/api/ai/")
+      ) {
         return false;
       }
       return compression.filter(req, res);
@@ -5044,53 +5050,208 @@ app.get("/s/:id", (req, res) => {
 // 5. AI 文档一键总结 API
 // ==========================================
 app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
+  const isStream = req.body.stream !== false;
+  let sseStarted = false;
+
+  const sendSse = (data) => {
+    if (res.writableEnded || res.destroyed) return;
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    res.flush?.();
+  };
+
   try {
     const rel = normalizeRelative(req.body.path || "");
     rejectHiddenDrivePath(rel);
     ensureFolderAccess(req, rel);
     const target = resolveDrivePathForUser(req.user.id, rel);
-    if (!fs.existsSync(target)) return res.status(404).json({ error: "文档不存在" });
+    if (!fs.existsSync(target)) {
+      if (isStream) {
+        res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "文档不存在" }));
+      }
+      return res.status(404).json({ error: "文档不存在" });
+    }
     const stat = await fsp.stat(target);
-    if (!stat.isFile()) return res.status(400).json({ error: "仅支持总结单文档文件" });
-
-    const content = await extractSearchableContent(target, stat);
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: "未能从该文档中提取到可读文本内容" });
+    if (!stat.isFile()) {
+      if (isStream) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        return res.end(JSON.stringify({ error: "仅支持总结单文档文件" }));
+      }
+      return res.status(400).json({ error: "仅支持总结单文档文件" });
     }
 
     const docName = path.basename(target);
-    // 满血大模型支持超大上下文，扩大提取正文上限至 64000 字符，支持长文档完整深度分析
+    const summaryModel = req.body.model || DEEPSEEK_SUMMARY_MODEL;
+
+    if (isStream) {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      res.flushHeaders?.();
+      sseStarted = true;
+      sendSse({ type: "start", docName, model: summaryModel, message: "正在提取文档内容..." });
+    }
+
+    const content = await extractSearchableContent(target, stat);
+    if (!content || !content.trim()) {
+      if (sseStarted) {
+        sendSse({ type: "error", error: "未能从该文档中提取到可读文本内容" });
+        return res.end();
+      }
+      return res.status(400).json({ error: "未能从该文档中提取到可读文本内容" });
+    }
+
     const docSample = content.trim().slice(0, 64000);
 
     const systemPrompt = [
-      "你是一位高效专业的云网盘智能分析专家，正在使用满血旗舰大模型对用户文档进行深度、系统、高保真的提炼与总结。",
+      "你是一位高效专业的云网盘智能分析专家，正在使用旗舰大模型对用户文档进行深度、系统、高保真的提炼与总结。",
       "请输出结构严谨、排版优美清晰的 Markdown 格式，包含以下模块：",
       "1. 【核心主题与概要】：用精炼语言高度概括文档核心主旨与背景；",
       "2. 【章节架构与脉络】：梳理文档主要结构和逻辑主线；",
       "3. 【重点要点与数据】：分点详述核心观点、关键数据、重要结论或技术细节；",
       "4. 【核心启示与建议】：提炼关键收获、实用启示或后续行动建议。",
-      "如果文档中包含专业术语、公式或数字，请准确保留并使用标准 Markdown 输出。",
+      "如果文档中包含专业术语、公式或数字，请准确保留并使用标准 Markdown 输出（数学公式使用标准 LaTeX 格式：行内公式用 $...$ 或 \\(...\\)，独立公式用 $$...$$ 或 \\[...\\]）。",
     ].join("\n");
     const userPrompt = `文档名称：《${docName}》\n文件大小：${stat.size} 字节\n文档正文内容：\n\n${docSample}`;
 
-    const message = await callDeepSeekOnce({
-      apiMessages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ]
-    });
+    if (isStream) {
+      sendSse({ type: "status", message: `AI 正在极速生成总结 (${summaryModel})...` });
 
-    const summary = aiFinalTextFromMessage(message);
-    const reasoning = stripAiToolCallMarkup(message.reasoning_content || "");
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+      req.on("close", () => {
+        clearTimeout(timer);
+        controller.abort();
+      });
 
-    res.json({
-      ok: true,
-      docName,
-      summary,
-      reasoning,
-      model: message.model || DEEPSEEK_MODEL
-    });
+      try {
+        const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${YUNPAN_DEEPSEEK_KEY}`,
+          },
+          body: JSON.stringify({
+            model: summaryModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            stream: true,
+            max_tokens: 8192,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const rawErr = await response.text();
+          let errData = null;
+          try { errData = JSON.parse(rawErr); } catch {}
+          const detail = errData?.error?.message || errData?.message || rawErr || "DeepSeek API 调用失败";
+          sendSse({ type: "error", error: `AI 调用失败 (${response.status})：${detail}` });
+          return res.end();
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let fullSummary = "";
+        let fullReasoning = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data:")) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === "[DONE]") continue;
+
+            try {
+              const json = JSON.parse(dataStr);
+              const delta = json.choices?.[0]?.delta;
+              if (delta) {
+                if (delta.content) {
+                  fullSummary += delta.content;
+                  sendSse({ type: "chunk", content: delta.content });
+                }
+                if (delta.reasoning_content) {
+                  fullReasoning += delta.reasoning_content;
+                  sendSse({ type: "reasoning", content: delta.reasoning_content });
+                }
+              }
+            } catch {}
+          }
+        }
+
+        sendSse({
+          type: "done",
+          docName,
+          model: summaryModel,
+          fullSummary,
+          fullReasoning,
+        });
+        return res.end();
+      } finally {
+        clearTimeout(timer);
+      }
+    } else {
+      // 非流式兼容调用
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+      try {
+        const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${YUNPAN_DEEPSEEK_KEY}`,
+          },
+          body: JSON.stringify({
+            model: summaryModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            stream: false,
+            max_tokens: 8192,
+          }),
+          signal: controller.signal,
+        });
+
+        const raw = await response.text();
+        let data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch {}
+        if (!response.ok) {
+          const detail = data?.error?.message || data?.message || raw || "DeepSeek API 调用失败";
+          return res.status(response.status).json({ error: `DeepSeek API 调用失败：${detail}` });
+        }
+        const message = data?.choices?.[0]?.message || {};
+        const summary = aiFinalTextFromMessage(message);
+        const reasoning = stripAiToolCallMarkup(message.reasoning_content || "");
+
+        return res.json({
+          ok: true,
+          docName,
+          summary,
+          reasoning,
+          model: data?.model || summaryModel,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
   } catch (err) {
+    if (sseStarted) {
+      sendSse({ type: "error", error: err.message || "文档总结失败" });
+      return res.end();
+    }
     next(err);
   }
 });
