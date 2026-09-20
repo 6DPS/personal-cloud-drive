@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const loginView = document.getElementById("loginView");
   const loginForm = document.getElementById("loginForm");
   const canvas = document.getElementById("loginFxCanvas");
@@ -167,22 +167,39 @@
   }
 
   // 3. Card Parallax & Continuous Subtle Float
+  let isHoveringForm = false;
+  let isFormFocused = false;
+  let formDampFactor = 1;
+
   function updateCardMotion(elapsed) {
-    if (!loginForm) return;
+    if (!loginForm || prefersReduced) return;
+
+    const isInteracting = isHoveringForm || isFormFocused;
+    if (isInteracting) {
+      formDampFactor += (0 - formDampFactor) * 0.25;
+    } else {
+      formDampFactor += (1 - formDampFactor) * 0.08;
+    }
+
+    if (formDampFactor < 0.01) {
+      formDampFactor = 0;
+      if (loginForm.style.transform !== "none") {
+        loginForm.style.transform = "none";
+      }
+      return;
+    }
 
     // Continuous breathing float
-    const floatY = Math.sin(elapsed * 1.4) * 6.5;
-    const floatRotZ = Math.sin(elapsed * 1.1) * 0.5;
+    const floatY = Math.sin(elapsed * 1.4) * 6.5 * formDampFactor;
+    const floatRotZ = Math.sin(elapsed * 1.1) * 0.5 * formDampFactor;
 
     // Mouse 3D Tilt
-    const tiltY = currentX * 4.8;
-    const tiltX = -currentY * 4.8;
-    const transX = currentX * 12;
-    const transY = currentY * 12 + floatY;
+    const tiltY = currentX * 4.8 * formDampFactor;
+    const tiltX = -currentY * 4.8 * formDampFactor;
+    const transX = currentX * 12 * formDampFactor;
+    const transY = currentY * 12 * formDampFactor + floatY;
 
-    if (!prefersReduced) {
-      loginForm.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) rotateZ(${floatRotZ.toFixed(2)}deg) translate3d(${transX.toFixed(1)}px, ${transY.toFixed(1)}px, 0)`;
-    }
+    loginForm.style.transform = `perspective(1000px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) rotateZ(${floatRotZ.toFixed(2)}deg) translate3d(${transX.toFixed(1)}px, ${transY.toFixed(1)}px, 0)`;
   }
 
   function loop() {
@@ -218,6 +235,29 @@
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
     }
+  }
+
+  // Stabilize card when interacting
+  if (loginForm) {
+    loginForm.addEventListener("mouseenter", () => {
+      isHoveringForm = true;
+    });
+    loginForm.addEventListener("mouseleave", () => {
+      isHoveringForm = false;
+    });
+    loginForm.addEventListener("focusin", () => {
+      isFormFocused = true;
+    });
+    loginForm.addEventListener("focusout", () => {
+      isFormFocused = loginForm.contains(document.activeElement);
+    });
+    loginForm.addEventListener("pointerdown", () => {
+      isHoveringForm = true;
+      formDampFactor = 0;
+      if (loginForm.style.transform !== "none") {
+        loginForm.style.transform = "none";
+      }
+    });
   }
 
   // Event Listeners

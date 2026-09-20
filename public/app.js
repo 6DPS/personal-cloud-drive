@@ -5871,9 +5871,23 @@ async function enterDrive(user = state.currentUser) {
   }
 }
 
-loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+let isSubmittingAuth = false;
+
+async function handleLoginSubmit(event) {
+  if (event && typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
+  if (isSubmittingAuth) return;
+
+  const originalBtnText = loginSubmitBtn ? loginSubmitBtn.textContent : "";
+  isSubmittingAuth = true;
   loginError.textContent = "";
+
+  if (loginSubmitBtn) {
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = state.authMode === "register" ? "正在注册..." : "正在登录...";
+  }
+
   try {
     const body = { username: username.value.trim(), password: password.value };
     if (state.authMode === "register") body.registrationKey = registrationKeyInput?.value || "";
@@ -5885,8 +5899,17 @@ loginForm.addEventListener("submit", async (event) => {
     await enterDrive(result?.user || null);
   } catch (error) {
     loginError.textContent = error.message;
+  } finally {
+    isSubmittingAuth = false;
+    if (loginSubmitBtn) {
+      loginSubmitBtn.disabled = false;
+      loginSubmitBtn.textContent = state.authMode === "register" ? "注册并登录" : "登录";
+    }
   }
-});
+}
+
+loginForm.addEventListener("submit", handleLoginSubmit);
+loginSubmitBtn?.addEventListener("click", handleLoginSubmit);
 
 authModeToggle.addEventListener("click", () => {
   setAuthMode(state.authMode === "register" ? "login" : "register");

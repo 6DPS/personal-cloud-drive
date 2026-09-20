@@ -248,6 +248,15 @@ select {
     0 0 0 1px rgba(255, 255, 255, 0.14) inset;
 }
 
+#loginSubmitBtn {
+  position: relative;
+  z-index: 5;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
 #loginSubmitBtn:hover,
 #loginSubmitBtn:focus-visible {
   transform: translateY(-1px);
@@ -262,6 +271,13 @@ select {
   box-shadow:
     0 8px 16px rgba(23, 105, 224, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.16) inset;
+}
+
+#loginSubmitBtn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 12px rgba(23, 105, 224, 0.15);
 }
 
 .login-secondary-actions {
