@@ -7096,7 +7096,7 @@ async function openAiDocSummaryModal(item) {
         <div class="ai-summary-statusbar" id="aiDocSummaryStatusBar">
           <span class="ai-summary-badge" id="aiDocSummaryBadge">
             <span class="ai-summary-pulse-dot"></span>
-            <span id="aiDocSummaryStatusText">正在提取文档并连接 DeepSeek-V4-Flash...</span>
+            <span id="aiDocSummaryStatusText">正在提取文档并连接 DeepSeek-V4.1-Flash...</span>
           </span>
           <button class="copy-summary-btn hidden" id="copyAiDocSummaryBtn" type="button" title="复制总结全文">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -7110,7 +7110,7 @@ async function openAiDocSummaryModal(item) {
           <div class="ai-summary-loading">
             <div style="text-align:center;">
               <div style="font-size:24px;margin-bottom:8px;">⚡</div>
-              <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4-Flash 极速分析提炼...</p>
+              <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4.1-Flash 极速分析提炼...</p>
               <small style="opacity:0.75;margin-top:6px;display:block;">首字毫秒级响应，流式输出中，请稍候</small>
             </div>
           </div>
@@ -7207,7 +7207,7 @@ async function openAiDocSummaryModal(item) {
         try {
           const msg = JSON.parse(jsonStr);
           if (msg.type === "start") {
-            if (statusTextElem) statusTextElem.textContent = `DeepSeek-V4-Flash 正在提炼《${msg.docName || itemName(item)}》...`;
+            if (statusTextElem) statusTextElem.textContent = `DeepSeek-V4.1-Flash 正在提炼《${msg.docName || itemName(item)}》...`;
           } else if (msg.type === "status") {
             if (statusTextElem) statusTextElem.textContent = msg.message || "正在生成总结...";
           } else if (msg.type === "chunk") {
@@ -7234,7 +7234,7 @@ async function openAiDocSummaryModal(item) {
 
     if (badgeElem) {
       badgeElem.classList.add("done");
-      if (statusTextElem) statusTextElem.textContent = "✨ 总结生成完毕 (DeepSeek-V4-Flash)";
+      if (statusTextElem) statusTextElem.textContent = "✨ 总结生成完毕 (DeepSeek-V4.1-Flash)";
     }
     if (copyBtn) {
       copyBtn.classList.remove("hidden");
