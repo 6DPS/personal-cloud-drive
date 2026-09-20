@@ -7136,12 +7136,29 @@ async function openAiDocSummaryModal(item) {
       renderScheduled = false;
       if (!contentElem) return;
       if (!fullContent && !fullReasoning) return;
+
+      const existingThoughtBox = contentElem.querySelector(".ai-thought-box");
+      const wasUserOpened = existingThoughtBox ? existingThoughtBox.open : false;
+
       const rendered = renderAiMarkdown(fullContent, fullReasoning);
-      if (!isFinal && !fullContent && fullReasoning) {
-        const thoughtBox = rendered.querySelector(".ai-thought-box");
-        if (thoughtBox) thoughtBox.open = true;
+      const thoughtBox = rendered.querySelector(".ai-thought-box");
+      if (thoughtBox) {
+        // 与 AI 全库问答保持完全一致：默认折叠，保留用户手动点击开关状态
+        thoughtBox.open = wasUserOpened;
       }
+
       contentElem.replaceChildren(...rendered.childNodes);
+
+      if (!fullContent && fullReasoning) {
+        const waitingNode = document.createElement("div");
+        waitingNode.className = "ai-summary-thinking-placeholder";
+        waitingNode.style.padding = "14px 4px";
+        waitingNode.style.color = "#94a3b8";
+        waitingNode.style.fontSize = "13px";
+        waitingNode.innerHTML = `<span class="ai-summary-pulse-dot" style="display:inline-block;vertical-align:middle;margin-right:6px;"></span> 思考完毕，正在生成总结结果...`;
+        contentElem.append(waitingNode);
+      }
+
       if (isFinal) {
         renderMathInAiMessage(contentElem);
       }
