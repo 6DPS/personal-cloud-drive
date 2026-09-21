@@ -62,21 +62,77 @@ npm start
 
 ---
 
-## 🖥️ 别人如何部署本项目？
+## 🖥️ 新主机 / 新用户 极速部署指南 (Quick Deployment)
 
-如果其他人在她自己的电脑上部署使用本网盘：
+如果你在另一台新电脑（如 Windows 小主机、家庭服务器或闲置电脑）上全新部署本项目：
 
-1. **克隆或下载代码**：
-   ```bash
-   git clone https://github.com/6DPS/personal-cloud-drive.git
-   ```
-2. **一键初始化部署**：
-   - 双击运行 **`一键部署新电脑(Windows).bat`**；
-   - 脚本会自动检测 Node.js 环境、安装依赖、配置本地存储路径（默认 `D:\PersonalCloudDrive`）并配置防火墙。
-3. **启动服务**：
-   - 双击 **`start-lan-drive.bat`** 即可在浏览器畅快使用。
+### 1. 克隆或下载代码
+```bash
+git clone https://github.com/6DPS/personal-cloud-drive.git
+cd personal-cloud-drive
+```
+*(或者点击 GitHub 绿色按钮 Code ➔ Download ZIP 解压)*
 
-详细主机迁移与部署教程请参阅：👉 **[Windows小主机部署与迁移指南.md](./Windows小主机部署与迁移指南.md)**
+---
+
+### 2. 个性化环境配置 (`.env`)
+在项目根目录下复制一份 `.env.example`，命名为 **`.env`**：
+
+```env
+# 1. 真实数据存储盘符（支持任意硬盘或移动硬盘，首次启动会自动初始化）
+STORAGE_BASE_ROOT=D:\PersonalCloudDrive
+
+# 2. 超级管理员初始账号与密码（首次部署的超级管理员凭据）
+CLOUD_DRIVE_USER=admin
+CLOUD_DRIVE_PASSWORD=admin123456
+
+# 3. DeepSeek AI 引擎 API Key（启用 AI 全库问答与文档一键极速总结）
+# 可在 DeepSeek 开放平台 (https://platform.deepseek.com/) 申请
+# 填好保存后，网盘全自动调用，网页前端零配置！
+DEEPSEEK_API_KEY=sk-your_deepseek_api_key_here
+
+# 4. 服务监听端口与地址（默认无需修改）
+PORT=8081
+HOST=0.0.0.0
+
+# 5. 公网域名（选填，若配置了 Cloudflare 等公网加密隧道）
+PUBLIC_ACCESS_URL=https://pan.yourdomain.com
+```
+
+> 💡 **提示**：若未手动创建 `.env`，直接启动系统也会自动采用开箱即用默认值（超级管理员账号 `admin` / 初始密码 `admin123456`，存储路径 `D:\PersonalCloudDrive`）。
+
+---
+
+### 3. 一键初始化与启动
+直接在项目根目录下双击运行：  
+👉 **`一键部署新电脑(Windows).bat`**
+
+向导会自动完成以下工作：
+* ✓ 自动检测并安装 Node.js LTS 运行环境（若电脑未安装，会自动静默安装）；
+* ✓ 自动安装项目运行依赖包（`npm install`）；
+* ✓ 智能绑定数据盘路径并初始化数据库；
+* ✓ 自动放行 Windows 防火墙 8081 端口（支持全家局域网设备互联）；
+* ✓ 可选自动安装 Windows 开机静默自启守护任务。
+
+部署完成后，在浏览器中打开：
+* **本机访问**：`http://127.0.0.1:8081`
+* **局域网设备（手机/平板/电脑）**：`http://你的电脑IP:8081`（如 `http://192.168.1.xxx:8081`）
+
+详细两台电脑无缝换机与数据迁移教程请参阅：👉 **[Windows小主机部署与迁移指南.md](./Windows小主机部署与迁移指南.md)**
+
+---
+
+## 🔑 账号权限与新用户注册体系
+
+* **超级管理员身份识别**：
+  * 使用上面设定的管理员账号（默认 `admin` / `admin123456`）登录；
+  * 登录成功后，左侧导航栏会**独占显示【🔑 注册密钥管理】按钮**，代表最高管理权限。
+* **安全防刷注册体系**：
+  * 本系统默认防止外网陌生人随意注册，新用户注册必须提供有效密钥；
+  * 管理员进入【注册密钥管理】，可一键生成 15 分钟临时有效的一次性注册密钥，并发放给家人或朋友；
+  * 家人/朋友凭借密钥即可注册独立的云盘账户，数据物理隔离，互不干扰。
+* **全自动 AI 深度赋能**：
+  * 只要在 `.env`（或 Windows 系统用户环境变量）中配置了 `DEEPSEEK_API_KEY`，网盘所有用户即可随时使用 **AI 知识库全库对话** 与 **文档一键深度提炼总结**，全自动流式打字输出，无需任何前端二次设置。
 
 ---
 
@@ -92,27 +148,6 @@ npm start
    双击运行 `上传到GitHub.bat`，自动暂存所有修改并安全推送到 GitHub 远程仓库（自动过滤 130MB 大体积 EXE 与个人隐私数据）。
 2. **在服务器 / 小主机上升效**：
    双击运行 `一键云端同步更新.bat`，自动拉取最新更新并热重启，数据零影响。
-
----
-
-## ⚙️ 核心配置说明 (`.env`)
-
-复制 `.env.example` 为 `.env` 可进行自定义配置：
-
-```env
-# 网盘主数据存放根路径（支持任意盘符或移动硬盘）
-STORAGE_BASE_ROOT=D:\PersonalCloudDrive
-
-# 监听端口与地址
-PORT=8081
-HOST=0.0.0.0
-
-# 管理员默认账号
-CLOUD_DRIVE_USER=admin
-
-# 公网穿透访问域名（选填，配合 Cloudflare 隧道使用）
-PUBLIC_ACCESS_URL=https://pan.yourdomain.com
-```
 
 ---
 
