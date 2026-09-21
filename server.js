@@ -167,7 +167,7 @@ const SEARCH_TEXT_MAX_BYTES = Number(process.env.SEARCH_TEXT_MAX_BYTES || 512 * 
 const SEARCH_OFFICE_MAX_BYTES = Number(process.env.SEARCH_OFFICE_MAX_BYTES || 25 * 1024 * 1024);
 const SEARCH_IMAGE_OCR_MAX_BYTES = Number(process.env.SEARCH_IMAGE_OCR_MAX_BYTES || 8 * 1024 * 1024);
 const SEARCH_UNKNOWN_TEXT_MAX_BYTES = Number(process.env.SEARCH_UNKNOWN_TEXT_MAX_BYTES || 256 * 1024);
-const YUNPAN_DEEPSEEK_KEY = process.env.YUNPAN_DEEPSEEK_KEY || "";
+const YUNPAN_DEEPSEEK_KEY = process.env.YUNPAN_DEEPSEEK_KEY || process.env.DEEPSEEK_API_KEY || "";
 const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/+$/, "");
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-v4-pro";
 const DEEPSEEK_ANTHROPIC_BASE_URL = (process.env.DEEPSEEK_ANTHROPIC_BASE_URL || `${DEEPSEEK_BASE_URL}/anthropic`).replace(/\/+$/, "");
@@ -3395,7 +3395,7 @@ async function callDeepSeekOfficialWebSearch({ mode, context, messages }) {
 async function callDeepSeek({ mode, context, messages, webSearchEnabled = false }) {
   if (isPlaceholderDeepSeekApiKey(YUNPAN_DEEPSEEK_KEY)) {
     throw Object.assign(
-      new Error("DeepSeek API Key 还没有配置成真实值。请去 DeepSeek Platform 复制你的真实 API Key，写入服务器环境变量 YUNPAN_DEEPSEEK_KEY 后重启网盘。"),
+      new Error("DeepSeek API Key 尚未配置。请在 .env 文件中设置 DEEPSEEK_API_KEY 或 YUNPAN_DEEPSEEK_KEY 后重启网盘。"),
       { status: 503, code: "AI_KEY_MISSING" }
     );
   }

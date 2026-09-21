@@ -82,14 +82,34 @@ if (-not (Test-Path -LiteralPath $currentStorage)) {
 }
 
 # 写入/更新 .env 文件
-$envContent = @"
+if (Test-Path -LiteralPath $envFilePath) {
+    $existingContent = Get-Content -LiteralPath $envFilePath -Raw -Encoding UTF8
+    if ($existingContent -match "(?m)^\s*STORAGE_BASE_ROOT\s*=.*$") {
+        $newContent = $existingContent -replace "(?m)^\s*STORAGE_BASE_ROOT\s*=.*$", "STORAGE_BASE_ROOT=$currentStorage"
+    } else {
+        $newContent = "STORAGE_BASE_ROOT=$currentStorage`r`n" + $existingContent
+    }
+    Set-Content -LiteralPath $envFilePath -Value $newContent -Encoding UTF8
+} else {
+    $exampleFile = Join-Path $root ".env.example"
+    if (Test-Path -LiteralPath $exampleFile) {
+        $exampleContent = Get-Content -LiteralPath $exampleFile -Raw -Encoding UTF8
+        $newContent = $exampleContent -replace "(?m)^\s*STORAGE_BASE_ROOT\s*=.*$", "STORAGE_BASE_ROOT=$currentStorage"
+        Set-Content -LiteralPath $envFilePath -Value $newContent -Encoding UTF8
+    } else {
+        $envContent = @"
 # DPSir 个人网盘配置文件
 STORAGE_BASE_ROOT=$currentStorage
 PORT=8081
 HOST=0.0.0.0
+CLOUD_DRIVE_USER=admin
+# CLOUD_DRIVE_PASSWORD=
+# DEEPSEEK_API_KEY=
 PUBLIC_ACCESS_URL=
 "@
-Set-Content -LiteralPath $envFilePath -Value $envContent -Encoding UTF8
+        Set-Content -LiteralPath $envFilePath -Value $envContent -Encoding UTF8
+    }
+}
 Write-Host "  ✓ 存储配置已锁定: $currentStorage" -ForegroundColor Green
 
 # 3. 检查依赖项 (node_modules)
