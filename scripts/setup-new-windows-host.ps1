@@ -17,6 +17,18 @@ Write-Host ""
 
 # 1. 检查 Node.js 环境
 Write-Host "[1/5] 正在检查 Node.js 运行环境..." -ForegroundColor Green
+$commonNodeDirs = @(
+    "C:\Program Files\nodejs",
+    "C:\Program Files (x86)\nodejs",
+    "$env:LOCALAPPDATA\Programs\nodejs",
+    "$env:APPDATA\nvm"
+)
+foreach ($dir in $commonNodeDirs) {
+    if ((Test-Path -LiteralPath (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
+        $env:Path = "$dir;" + $env:Path
+    }
+}
+
 $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
     Write-Host "  未检测到 Node.js，正在尝试通过 Windows 自带的 winget 自动安装 LTS 版本..." -ForegroundColor Yellow
@@ -26,8 +38,10 @@ if (-not $nodeCmd) {
         Start-Process "winget" -ArgumentList "install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -Wait
         # 刷新当前进程 PATH 并自动适配常见安装路径
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        if (Test-Path "C:\Program Files\nodejs\node.exe") {
-            $env:Path = "C:\Program Files\nodejs;" + $env:Path
+        foreach ($dir in $commonNodeDirs) {
+            if ((Test-Path -LiteralPath (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
+                $env:Path = "$dir;" + $env:Path
+            }
         }
         $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
     }
@@ -59,12 +73,16 @@ if (Test-Path -LiteralPath $envFilePath) {
 }
 
 if (-not $currentStorage) {
-    if (Test-Path "D:\PersonalCloudDrive") {
+    if (Test-Path -LiteralPath "D:\PersonalCloudDrive") {
         $currentStorage = "D:\PersonalCloudDrive"
-    } elseif (Test-Path "E:\PersonalCloudDrive") {
+    } elseif (Test-Path -LiteralPath "D:\") {
+        $currentStorage = "D:\PersonalCloudDrive"
+    } elseif (Test-Path -LiteralPath "E:\PersonalCloudDrive") {
+        $currentStorage = "E:\PersonalCloudDrive"
+    } elseif (Test-Path -LiteralPath "E:\") {
         $currentStorage = "E:\PersonalCloudDrive"
     } else {
-        $currentStorage = "D:\PersonalCloudDrive"
+        $currentStorage = "C:\PersonalCloudDrive"
     }
 }
 
@@ -157,18 +175,66 @@ try {
     Write-Host "  [提示] 自动注册自启遇到限制，您可以随时手动双击 install-lan-autostart.bat" -ForegroundColor Yellow
 }
 
+# 6. 验证服务启动状态（确保新用户部署后立马可用）
 Write-Host ""
-Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "              🎉 恭喜！网盘服务已在新主机成功部署！            " -ForegroundColor Green
-Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host ""
-
-# 打印访问地址
-$showScript = Join-Path $PSScriptRoot "show-addresses.ps1"
-if (Test-Path -LiteralPath $showScript) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $showScript
+Write-Host "正在验证网盘核心服务就绪状态..." -ForegroundColor Cyan
+$serviceReady = $false
+for ($i = 0; $i -lt 5; $i++) {
+    try {
+        $res = Invoke-RestMethod -Uri "http://127.0.0.1:8081/api/me" -TimeoutSec 2 -ErrorAction SilentlyContinue
+        if ($null -ne $res) {
+            $serviceReady = $true
+            break
+        }
+    } catch {}
+    Start-Sleep -Seconds 1
 }
 
+if (-not $serviceReady) {
+    Write-Host "  正在为您直接拉起网盘后台服务..." -ForegroundColor Yellow
+    $runScript = Join-Path $PSScriptRoot "run-lan-drive-hidden.ps1"
+    if (Test-Path -LiteralPath $runScript) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runScript
+    }
+    for ($i = 0; $i -lt 6; $i++) {
+        try {
+            $res = Invoke-RestMethod -Uri "http://127.0.0.1:8081/api/me" -TimeoutSec 2 -ErrorAction SilentlyContinue
+            if ($null -ne $res) {
+                $serviceReady = $true
+                break
+            }
+        } catch {}
+        Start-Sleep -Seconds 1
+    }
+}
+
+if ($serviceReady) {
+    Write-Host "  ✓ 网盘核心服务已成功就绪并正常监听 8081 端口！" -ForegroundColor Green
+} else {
+    Write-Host "  [提示] 后台服务正在启动中，可随时双击 start-lan-drive.bat 查看控制台输出。" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host "              🎉 恭喜！网盘服务已在您的电脑成功就绪！          " -ForegroundColor Green
+Write-Host "===============================================================" -ForegroundColor Cyan
+
+# 打印访问地址（不单独暂停，统一向导流）
+$showScript = Join-Path $PSScriptRoot "show-addresses.ps1"
+if (Test-Path -LiteralPath $showScript) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $showScript -NoPause
+}
+
+Write-Host ""
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host "  • 浏览器访问地址: http://127.0.0.1:8081" -ForegroundColor Yellow
+Write-Host "  • 超级管理员账号: admin" -ForegroundColor Yellow
+Write-Host "  • 超级管理员密码: admin123456 (或在 .env 中自定义的密码)" -ForegroundColor Yellow
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host ""
 Write-Host "提示: 以后开机小主机会在后台自动守护运行，无需每次手动开启。" -ForegroundColor Gray
-Write-Host "提示: 如需在浏览器中直接打开，请双击 [start-lan-drive.bat] 或访问上述地址。" -ForegroundColor Cyan
+Write-Host "正在为您在默认浏览器中自动打开网盘登录页..." -ForegroundColor Green
+try {
+    Start-Process "http://127.0.0.1:8081"
+} catch {}
 Write-Host ""
