@@ -136,7 +136,10 @@ const newRegistrationKeyPanel = $("#newRegistrationKeyPanel");
 const newRegistrationKeyValue = $("#newRegistrationKeyValue");
 const copyRegistrationKeyBtn = $("#copyRegistrationKeyBtn");
 const newKeyQuotaSelect = $("#newKeyQuotaSelect");
+const newKeyQuotaStepper = $("#newKeyQuotaStepper");
 const newKeyQuotaCustomInput = $("#newKeyQuotaCustomInput");
+const newKeyQuotaStepUp = $("#newKeyQuotaStepUp");
+const newKeyQuotaStepDown = $("#newKeyQuotaStepDown");
 
 const userQuotasBtn = $("#userQuotasBtn");
 const userQuotasModal = $("#userQuotasModal");
@@ -5757,10 +5760,8 @@ async function openRegistrationKeysModal() {
   newRegistrationKeyPanel?.classList.add("hidden");
   if (newRegistrationKeyValue) newRegistrationKeyValue.textContent = "";
   if (newKeyQuotaSelect) newKeyQuotaSelect.value = "20";
-  if (newKeyQuotaCustomInput) {
-    newKeyQuotaCustomInput.classList.add("hidden");
-    newKeyQuotaCustomInput.value = "";
-  }
+  if (newKeyQuotaStepper) newKeyQuotaStepper.classList.add("hidden");
+  if (newKeyQuotaCustomInput) newKeyQuotaCustomInput.value = "30";
   registrationKeysModal.classList.remove("hidden");
   registrationKeysModal.setAttribute("aria-hidden", "false");
   try {
@@ -5814,6 +5815,59 @@ async function loadUserQuotas() {
   const data = await api("/api/admin/users");
   state.adminUsers = Array.isArray(data.users) ? data.users : [];
   renderUserQuotas();
+}
+
+function createQuotaStepper(initialValue = 30) {
+  const stepperWrap = document.createElement("div");
+  stepperWrap.className = "quota-stepper";
+
+  const customInput = document.createElement("input");
+  customInput.type = "number";
+  customInput.min = "1";
+  customInput.max = "9999";
+  customInput.step = "1";
+  customInput.className = "quota-stepper-input";
+  customInput.value = initialValue;
+
+  const unitSpan = document.createElement("span");
+  unitSpan.className = "quota-stepper-unit";
+  unitSpan.textContent = "GB";
+
+  const arrowsWrap = document.createElement("div");
+  arrowsWrap.className = "quota-stepper-arrows";
+
+  const upBtn = document.createElement("button");
+  upBtn.type = "button";
+  upBtn.className = "quota-stepper-arrow up";
+  upBtn.setAttribute("aria-label", "增加配额");
+  upBtn.setAttribute("title", "增加 1 GB");
+  upBtn.innerHTML = `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M3.2 10.5l4.3-5.2c.3-.3.8-.3 1.1 0l4.3 5.2c.3.4.1.9-.4.9H3.6c-.5 0-.7-.5-.4-.9z"/></svg>`;
+  upBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const val = Math.max(1, (parseInt(customInput.value, 10) || 0) + 1);
+    customInput.value = val;
+    customInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  const downBtn = document.createElement("button");
+  downBtn.type = "button";
+  downBtn.className = "quota-stepper-arrow down";
+  downBtn.setAttribute("aria-label", "减少配额");
+  downBtn.setAttribute("title", "减少 1 GB");
+  downBtn.innerHTML = `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M3.2 5.5l4.3 5.2c.3.3.8.3 1.1 0l4.3-5.2c.3-.4.1-.9-.4-.9H3.6c-.5 0-.7.5-.4.9z"/></svg>`;
+  downBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const val = Math.max(1, (parseInt(customInput.value, 10) || 2) - 1);
+    customInput.value = val;
+    customInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  arrowsWrap.append(upBtn, downBtn);
+  stepperWrap.append(customInput, unitSpan, arrowsWrap);
+
+  return { stepperWrap, customInput };
 }
 
 function renderUserQuotas() {
@@ -5899,15 +5953,15 @@ function renderUserQuotas() {
           select.value = "custom";
         }
 
-        const customInput = document.createElement("input");
-        customInput.type = "number";
-        customInput.min = "1";
-        customInput.placeholder = "GB数";
-        customInput.value = typeof currentGb === "number" ? currentGb : 30;
-        customInput.style.display = select.value === "custom" ? "inline-block" : "none";
+        const stepper = createQuotaStepper(typeof currentGb === "number" ? currentGb : 30);
+        stepper.stepperWrap.style.display = select.value === "custom" ? "inline-flex" : "none";
 
         select.addEventListener("change", () => {
-          customInput.style.display = select.value === "custom" ? "inline-block" : "none";
+          const isCust = select.value === "custom";
+          stepper.stepperWrap.style.display = isCust ? "inline-flex" : "none";
+          if (isCust) {
+            stepper.customInput.focus();
+          }
         });
 
         const saveBtn = document.createElement("button");
@@ -5920,7 +5974,7 @@ function renderUserQuotas() {
           try {
             let targetGb = select.value;
             if (targetGb === "custom") {
-              const customVal = Number(customInput.value);
+              const customVal = Number(stepper.customInput.value);
               if (!Number.isFinite(customVal) || customVal <= 0) {
                 if (userQuotasError) userQuotasError.textContent = "请输入大于 0 的自定义 GB 数";
                 saveBtn.disabled = false;
@@ -5949,7 +6003,7 @@ function renderUserQuotas() {
         cancelBtn.textContent = "取消";
         cancelBtn.addEventListener("click", () => editPanel.remove());
 
-        editPanel.append(label, select, customInput, saveBtn, cancelBtn);
+        editPanel.append(label, select, stepper.stepperWrap, saveBtn, cancelBtn);
         row.append(editPanel);
       });
       actions.append(editBtn);
@@ -6151,10 +6205,26 @@ cancelPasswordResetBtn.addEventListener("click", closePasswordResetModal);
 closePasswordResetModalBtn.addEventListener("click", closePasswordResetModal);
 registrationKeysBtn?.addEventListener("click", openRegistrationKeysModal);
 closeRegistrationKeysModalBtn?.addEventListener("click", closeRegistrationKeysModal);
-newKeyQuotaSelect?.addEventListener("change", () => {
+newKeyQuotaStepUp?.addEventListener("click", (e) => {
+  e.preventDefault();
   if (!newKeyQuotaCustomInput) return;
+  const val = Math.max(1, (parseInt(newKeyQuotaCustomInput.value, 10) || 0) + 1);
+  newKeyQuotaCustomInput.value = val;
+  newKeyQuotaCustomInput.dispatchEvent(new Event("input", { bubbles: true }));
+});
+
+newKeyQuotaStepDown?.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (!newKeyQuotaCustomInput) return;
+  const val = Math.max(1, (parseInt(newKeyQuotaCustomInput.value, 10) || 2) - 1);
+  newKeyQuotaCustomInput.value = val;
+  newKeyQuotaCustomInput.dispatchEvent(new Event("input", { bubbles: true }));
+});
+
+newKeyQuotaSelect?.addEventListener("change", () => {
+  if (!newKeyQuotaStepper || !newKeyQuotaCustomInput) return;
   const isCustom = newKeyQuotaSelect.value === "custom";
-  newKeyQuotaCustomInput.classList.toggle("hidden", !isCustom);
+  newKeyQuotaStepper.classList.toggle("hidden", !isCustom);
   if (isCustom) {
     if (!newKeyQuotaCustomInput.value) newKeyQuotaCustomInput.value = "30";
     newKeyQuotaCustomInput.focus();

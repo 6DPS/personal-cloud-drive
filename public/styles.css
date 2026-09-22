@@ -3199,7 +3199,7 @@ td:nth-child(5) {
   gap: 14px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 13px 16px;
 }
 
 .registration-key-create .primary,
@@ -3215,9 +3215,10 @@ td:nth-child(5) {
 }
 
 .registration-key-create p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #5f6f87;
-  line-height: 1.5;
+  line-height: 1.45;
+  font-size: 13px;
 }
 
 .registration-key-result {
@@ -3246,7 +3247,7 @@ td:nth-child(5) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 18px 0 10px;
+  margin: 12px 0 8px;
 }
 
 .registration-key-list {
@@ -3262,9 +3263,9 @@ td:nth-child(5) {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 13px 14px;
+  padding: 10px 14px;
   border: 1px solid rgba(210, 220, 235, 0.92);
-  border-radius: 26px;
+  border-radius: 18px;
   background: transparent;
   box-shadow: none;
 }
@@ -3325,39 +3326,167 @@ td:nth-child(5) {
 }
 
 .registration-key-quota-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  font-size: 0.9rem;
-  color: #4a5568;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+  font-size: 0.9rem !important;
+  color: #4a5568 !important;
+}
+
+.registration-key-quota-row label {
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
 }
 
 .quota-select-inline {
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(210, 220, 235, 0.95);
-  background: #ffffff;
-  font-size: 0.88rem;
-  color: #172033;
-  outline: none;
+  width: auto !important;
+  max-width: 140px !important;
+  flex: 0 0 auto !important;
+  display: inline-block !important;
+  padding: 5px 10px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid rgba(210, 220, 235, 0.95) !important;
+  background: #ffffff !important;
+  font-size: 0.88rem !important;
+  color: #172033 !important;
+  outline: none !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
 }
 
-.quota-custom-input {
-  width: 90px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(210, 220, 235, 0.95);
-  background: #ffffff;
-  font-size: 0.88rem;
-  color: #172033;
-  outline: none;
+/* === 优雅大箭头配额步进器 (Quota Stepper) === */
+.quota-stepper {
+  display: inline-flex !important;
+  align-items: center !important;
+  position: relative !important;
+  background: #ffffff !important;
+  border: 1.5px solid rgba(20, 115, 230, 0.5) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(20, 115, 230, 0.08) !important;
+  transition: all 180ms ease !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  flex: 0 0 auto !important;
+}
+
+.quota-stepper.hidden {
+  display: none !important;
+}
+
+.quota-stepper:focus-within {
+  border-color: #007aff !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16) !important;
+}
+
+.quota-stepper-input {
+  width: 48px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  line-height: 36px !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 0 0 6px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #172033 !important;
+  text-align: center !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -moz-appearance: textfield !important;
+  box-sizing: border-box !important;
+}
+
+.quota-stepper-input::-webkit-outer-spin-button,
+.quota-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+.quota-stepper-unit {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  padding-right: 6px !important;
+  user-select: none !important;
+  flex: 0 0 auto !important;
+}
+
+.quota-stepper-arrows {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 32px !important;
+  height: 36px !important;
+  border-left: 1.5px solid rgba(210, 222, 238, 0.9) !important;
+  background: #f8fafc !important;
+  box-sizing: border-box !important;
+  flex: 0 0 32px !important;
+}
+
+.quota-stepper-arrow {
+  flex: 1 1 50% !important;
+  height: 18px !important;
+  min-height: 0 !important;
+  max-height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #f8fafc !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  color: #334155 !important;
+  transition: background 140ms ease, color 140ms ease !important;
+  user-select: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.quota-stepper-arrow.up {
+  border-bottom: 1px solid rgba(210, 222, 238, 0.9) !important;
+}
+
+.quota-stepper-arrow:hover {
+  background: #e0edff !important;
+  color: #1473e6 !important;
+}
+
+.quota-stepper-arrow:active {
+  background: #bfdbfe !important;
+  color: #0c4a6e !important;
+}
+
+.quota-stepper-arrow svg {
+  display: block !important;
+  pointer-events: none !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* === 用户配额管理弹窗紧凑优化 === */
+.user-quotas-card {
+  width: min(720px, 100%);
+}
+
+.user-quotas-body {
+  padding: 14px 20px 20px !important;
+}
+
+.user-quota-list {
+  max-height: min(65vh, 520px) !important;
 }
 
 .user-quota-row {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 18px;
 }
 
 .user-quota-main-row {
@@ -3371,7 +3500,7 @@ td:nth-child(5) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   padding: 10px 14px;
   margin-top: 4px;
   background: rgba(240, 246, 255, 0.85);
@@ -3380,20 +3509,14 @@ td:nth-child(5) {
   font-size: 0.88rem;
 }
 
-.user-quota-edit-panel input[type="number"] {
-  width: 90px;
-  padding: 4px 8px;
-  border: 1px solid #ccd8e8;
-  border-radius: 6px;
-  font-size: 0.88rem;
-  background: #fff;
+.user-quota-edit-panel .small-btn {
+  padding: 0 14px;
+  min-height: 34px !important;
+  font-size: 0.85rem;
+  border-radius: 8px;
 }
 
-.user-quota-edit-panel .small-btn {
-  padding: 4px 12px;
-  font-size: 0.84rem;
-  border-radius: 6px;
-}
+
 
 .dialog-modal-card .modal-header {
   padding: 0 0 18px;

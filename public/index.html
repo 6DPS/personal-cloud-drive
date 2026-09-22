@@ -120,7 +120,22 @@
                     <option value="unlimited">无限制</option>
                     <option value="custom">自定义 (GB)</option>
                   </select>
-                  <input id="newKeyQuotaCustomInput" type="number" min="1" step="1" placeholder="GB数" class="quota-custom-input hidden" />
+                  <div id="newKeyQuotaStepper" class="quota-stepper hidden">
+                    <input id="newKeyQuotaCustomInput" type="number" min="1" max="9999" step="1" value="30" class="quota-stepper-input" />
+                    <span class="quota-stepper-unit">GB</span>
+                    <div class="quota-stepper-arrows">
+                      <button id="newKeyQuotaStepUp" type="button" class="quota-stepper-arrow up" aria-label="增加配额" title="增加 1 GB">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                          <path d="M3.2 10.5l4.3-5.2c.3-.3.8-.3 1.1 0l4.3 5.2c.3.4.1.9-.4.9H3.6c-.5 0-.7-.5-.4-.9z"/>
+                        </svg>
+                      </button>
+                      <button id="newKeyQuotaStepDown" type="button" class="quota-stepper-arrow down" aria-label="减少配额" title="减少 1 GB">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+                          <path d="M3.2 5.5l4.3 5.2c.3.3.8.3 1.1 0l4.3-5.2c.3-.4.1-.9-.4-.9H3.6c-.5 0-.7.5-.4.9z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button id="generateRegistrationKeyBtn" class="primary" type="button">生成密钥</button>
@@ -141,23 +156,22 @@
       </section>
 
       <section id="userQuotasModal" class="modal hidden" aria-hidden="true">
-        <div class="modal-card registration-keys-card">
+        <div class="modal-card registration-keys-card user-quotas-card">
           <header class="modal-header">
             <div>
               <p class="eyebrow">管理员入口</p>
               <h2>用户与空间配额管理</h2>
             </div>
-            <button id="closeUserQuotasModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
-              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </header>
-          <div class="registration-keys-body">
-            <div class="registration-key-list-header">
-              <strong>已注册用户空间列表</strong>
-              <button id="refreshUserQuotasBtn" class="ghost" type="button">刷新</button>
+            <div class="modal-actions compact">
+              <button id="refreshUserQuotasBtn" class="ghost compact" type="button" title="刷新用户列表">刷新</button>
+              <button id="closeUserQuotasModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
+          </header>
+          <div class="registration-keys-body user-quotas-body">
             <div id="userQuotaList" class="registration-key-list user-quota-list"></div>
             <p id="userQuotasError" class="error modal-error"></p>
           </div>
@@ -681,7 +695,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260922_quotafix_v39"></script>
+    <script src="/app.js?v=20260922_quotafix_v40"></script>
     <script src="/login-fx.js?v=20260920_loginfix_v38"></script>
   </body>
 </html>
