@@ -171,7 +171,82 @@ async function run() {
     assert.strictEqual(adminUploadRes.status, 200, "Admin must not be restricted by quota");
     assert(adminUploadRes.data.uploadId);
 
-    console.log("\nALL STORAGE QUOTA TESTS PASSED PERFECTLY!");
+    console.log("9. Testing Strict Boundary Validation on Registration Keys API...");
+    const badKeyRes1 = await requestJson(`http://127.0.0.1:${port}/api/registration-keys`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: -10 },
+    });
+    assert.strictEqual(badKeyRes1.status, 400, "Negative quotaGb must be rejected with 400");
+
+    const badKeyRes2 = await requestJson(`http://127.0.0.1:${port}/api/registration-keys`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: "invalid_string" },
+    });
+    assert.strictEqual(badKeyRes2.status, 400, "Invalid string quotaGb must be rejected with 400");
+
+    const unlimitedKeyRes = await requestJson(`http://127.0.0.1:${port}/api/registration-keys`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: "unlimited" },
+    });
+    assert.strictEqual(unlimitedKeyRes.status, 200);
+    assert.strictEqual(unlimitedKeyRes.data.record.quotaBytes, null, "unlimited must set quotaBytes to null");
+
+    console.log("10. Testing Strict Boundary Validation on User Quota Modification API...");
+    const badQuotaRes1 = await requestJson(`http://127.0.0.1:${port}/api/admin/users/tester50/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: -20 },
+    });
+    assert.strictEqual(badQuotaRes1.status, 400, "Negative quotaGb must be rejected with 400");
+
+    const badQuotaRes2 = await requestJson(`http://127.0.0.1:${port}/api/admin/users/tester50/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: "bad_text" },
+    });
+    assert.strictEqual(badQuotaRes2.status, 400, "Invalid text quotaGb must be rejected with 400");
+
+    const adminQuotaRes = await requestJson(`http://127.0.0.1:${port}/api/admin/users/admin/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: 50 },
+    });
+    assert.strictEqual(adminQuotaRes.status, 400, "Modifying admin quota must be rejected with 400");
+
+    const nonExistUserQuota = await requestJson(`http://127.0.0.1:${port}/api/admin/users/non_exist_user_123/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: 50 },
+    });
+    assert.strictEqual(nonExistUserQuota.status, 404, "Non-existent user quota modification must return 404");
+
+    console.log("11. Testing Key Disabling and Registration Key Security...");
+    const disableRes = await requestJson(`http://127.0.0.1:${port}/api/registration-keys/${unlimitedKeyRes.data.record.id}/disable`, {
+      method: "POST",
+      headers: adminHeaders,
+    });
+    assert.strictEqual(disableRes.status, 200);
+    assert.strictEqual(disableRes.data.record.status, "disabled");
+
+    // Registering with disabled key must fail
+    const disabledKeyReg = await requestJson(`http://127.0.0.1:${port}/api/register`, {
+      method: "POST",
+      body: { username: "tester_disabled", password: "pwd", registrationKey: unlimitedKeyRes.data.key },
+    });
+    assert.strictEqual(disabledKeyReg.status, 403, "Disabled key registration must fail with 403");
+
+    console.log("12. Testing Instant Hash Check Interception when Quota Exceeded...");
+    const hashCheckExceed = await requestJson(`http://127.0.0.1:${port}/api/upload-check-hash`, {
+      method: "POST",
+      headers: user50Headers,
+      body: { hash: "a".repeat(64), name: "huge.bin", size: 1000, targetPath: "" },
+    });
+    assert.strictEqual(hashCheckExceed.status, 403, "Hash check must reject when size exceeds quota");
+
+    console.log("\nALL STORAGE QUOTA & SECURITY STABILITY TESTS PASSED PERFECTLY!");
   } finally {
     serverProc.kill();
     await wait(300);

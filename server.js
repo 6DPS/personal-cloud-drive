@@ -1547,11 +1547,15 @@ async function storageUsageBytes(basePath = currentStorageRoot()) {
   for (const entry of entries) {
     if (isSkippedDriveEntry(entry)) continue;
     const fullPath = path.join(basePath, entry.name);
-    if (entry.isDirectory()) {
-      total += await storageUsageBytes(fullPath);
-    } else if (entry.isFile()) {
-      const stat = await fsp.stat(fullPath);
-      total += stat.size;
+    try {
+      if (entry.isDirectory()) {
+        total += await storageUsageBytes(fullPath);
+      } else if (entry.isFile()) {
+        const stat = await fsp.stat(fullPath);
+        total += stat.size;
+      }
+    } catch {
+      // 忽略扫描过程中被并发移动或删除的文件
     }
   }
   return total;
@@ -3597,6 +3601,8 @@ app.post("/api/registration-keys", requireAuth, ensureAdminUser, async (req, res
         const gb = Number(qVal);
         if (Number.isFinite(gb) && gb > 0) {
           quotaBytes = Math.round(gb * 1024 * 1024 * 1024);
+        } else {
+          return res.status(400).json({ error: "配额必须为大于 0 的数字（GB）或选择无限制" });
         }
       }
     }
@@ -4871,6 +4877,9 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
 
     res.json({ instant: false });
   } catch (err) {
+    if (err && (err.quotaExceeded || err.status === 403)) {
+      return next(err);
+    }
     res.json({ instant: false });
   }
 });

@@ -233,13 +233,13 @@ async function runCheck() {
     const hasKaTeXJs = htmlContent.includes('/vendor/katex/katex.min.js');
     const hasMarked = htmlContent.includes('/vendor/marked/marked.min.js');
     const hasPurify = htmlContent.includes('/vendor/dompurify/purify.min.js');
-    const hasStylesV36 = htmlContent.includes('styles.css?v=20260920_v4flash_v36');
-    const hasAppV37 = htmlContent.includes('app.js?v=20260920_v4flash_v37');
+    const hasStylesVersion = /styles\.css\?v=[\w-]+/.test(htmlContent);
+    const hasAppVersion = /app\.js\?v=[\w-]+/.test(htmlContent);
 
     console.log(`  ✓ KaTeX 数学公式库完整: CSS [${hasKaTeXCss ? 'OK' : 'MISSING'}], JS [${hasKaTeXJs ? 'OK' : 'MISSING'}]`);
     console.log(`  ✓ Marked Markdown 解析引擎: [${hasMarked ? 'OK' : 'MISSING'}]`);
     console.log(`  ✓ DOMPurify XSS 安全过滤库: [${hasPurify ? 'OK' : 'MISSING'}]`);
-    console.log(`  ✓ 样式表与脚本版本防缓存机制: [${hasStylesV36 && hasAppV37 ? 'OK' : 'MISSING'}]`);
+    console.log(`  ✓ 样式表与脚本版本防缓存机制: [${hasStylesVersion && hasAppVersion ? 'OK' : 'MISSING'}]`);
 
     // 检查本地文件是否存在
     const katexExists = fs.existsSync('public/vendor/katex/katex.min.js');

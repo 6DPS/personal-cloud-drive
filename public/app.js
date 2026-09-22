@@ -3150,7 +3150,10 @@ async function uploadFilesInChunks(files, targetPath) {
           setStatus(`“${file.name}” 云端秒传成功！`);
           continue;
         }
-      } catch {
+      } catch (err) {
+        if (err && (err.status === 403 || err.quotaExceeded || String(err.message || "").includes("配额不足"))) {
+          throw err;
+        }
         // Fall back seamlessly to regular chunk upload
       }
     }
