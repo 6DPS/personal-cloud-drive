@@ -3324,6 +3324,66 @@ td:nth-child(5) {
   text-align: center;
 }
 
+.registration-key-quota-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+.quota-select-inline {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(210, 220, 235, 0.95);
+  background: #ffffff;
+  font-size: 0.88rem;
+  color: #172033;
+  outline: none;
+}
+
+.user-quota-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-quota-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.user-quota-edit-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
+  background: rgba(240, 246, 255, 0.85);
+  border: 1px solid rgba(190, 215, 250, 0.85);
+  border-radius: 12px;
+  font-size: 0.88rem;
+}
+
+.user-quota-edit-panel input[type="number"] {
+  width: 90px;
+  padding: 4px 8px;
+  border: 1px solid #ccd8e8;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  background: #fff;
+}
+
+.user-quota-edit-panel .small-btn {
+  padding: 4px 12px;
+  font-size: 0.84rem;
+  border-radius: 6px;
+}
+
 .dialog-modal-card .modal-header {
   padding: 0 0 18px;
   border-bottom: 0;

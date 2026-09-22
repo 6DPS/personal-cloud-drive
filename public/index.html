@@ -110,6 +110,16 @@
               <div>
                 <strong>一次性注册密钥</strong>
                 <p>密钥生成后 15 分钟内有效，注册成功后自动失效。完整密钥只在生成后显示，建议立即复制发给新用户。</p>
+                <div class="registration-key-quota-row">
+                  <label for="newKeyQuotaSelect">空间配额：</label>
+                  <select id="newKeyQuotaSelect" class="quota-select-inline">
+                    <option value="10">10 GB</option>
+                    <option value="20" selected>20 GB (默认)</option>
+                    <option value="50">50 GB</option>
+                    <option value="100">100 GB</option>
+                    <option value="unlimited">无限制</option>
+                  </select>
+                </div>
               </div>
               <button id="generateRegistrationKeyBtn" class="primary" type="button">生成密钥</button>
             </section>
@@ -127,6 +137,33 @@
           </div>
           <div class="modal-actions">
             <button id="cancelRegistrationKeysBtn" class="ghost" type="button">关闭</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="userQuotasModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card registration-keys-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">管理员入口</p>
+              <h2>用户与空间配额管理</h2>
+            </div>
+            <button id="closeUserQuotasModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </header>
+          <div class="registration-keys-body">
+            <div class="registration-key-list-header">
+              <strong>已注册用户空间列表</strong>
+              <button id="refreshUserQuotasBtn" class="ghost" type="button">刷新</button>
+            </div>
+            <div id="userQuotaList" class="registration-key-list user-quota-list"></div>
+            <p id="userQuotasError" class="error modal-error"></p>
+          </div>
+          <div class="modal-actions">
+            <button id="cancelUserQuotasBtn" class="ghost" type="button">关闭</button>
           </div>
         </div>
       </section>
@@ -167,12 +204,13 @@
             </div>
             <div class="storage-usage-metric">
               <span id="storageUsed">0 B</span>
-              <small>已用 / 可用</small>
+              <small id="storageMetricLabel">已用 / 可用</small>
             </div>
           </div>
 
           <button id="recycleBinBtn" class="ghost wide" type="button">🗑️ 回收站</button>
           <button id="mySharesBtn" class="ghost wide" type="button">🔗 我的分享</button>
+          <button id="userQuotasBtn" class="ghost wide admin-action hidden" type="button">👥 用户配额管理</button>
           <button id="registrationKeysBtn" class="ghost wide admin-action hidden">注册密钥管理</button>
           <button id="logoutBtn" class="ghost wide">退出登录</button>
         </aside>

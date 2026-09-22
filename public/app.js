@@ -29,6 +29,7 @@ const state = {
   authMode: "login",
   currentUser: null,
   registrationKeys: [],
+  adminUsers: [],
   previewItem: null,
   previewController: null,
   previewRequestSeq: 0,
@@ -135,6 +136,17 @@ const registrationKeysError = $("#registrationKeysError");
 const newRegistrationKeyPanel = $("#newRegistrationKeyPanel");
 const newRegistrationKeyValue = $("#newRegistrationKeyValue");
 const copyRegistrationKeyBtn = $("#copyRegistrationKeyBtn");
+const newKeyQuotaSelect = $("#newKeyQuotaSelect");
+
+const userQuotasBtn = $("#userQuotasBtn");
+const userQuotasModal = $("#userQuotasModal");
+const closeUserQuotasModalBtn = $("#closeUserQuotasModalBtn");
+const cancelUserQuotasBtn = $("#cancelUserQuotasBtn");
+const refreshUserQuotasBtn = $("#refreshUserQuotasBtn");
+const userQuotaList = $("#userQuotaList");
+const userQuotasError = $("#userQuotasError");
+const storageMetricLabel = $("#storageMetricLabel");
+
 const breadcrumb = $("#breadcrumb");
 const statusLine = $("#statusLine");
 const storageRoot = $("#storageRoot");
@@ -2540,8 +2552,24 @@ async function refreshStorageUsage() {
     const data = await api("/api/storage-usage");
     const used = Number(data.bytes || 0);
     const available = Number(data.availableBytes || 0);
-    storageUsed.textContent = available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
-    storageUsed.title = available > 0 ? `网盘已用 ${used} 字节 / 磁盘可用 ${available} 字节` : `网盘已用 ${used} 字节`;
+    const quota =
+      data.quotaBytes !== undefined && data.quotaBytes !== null
+        ? Number(data.quotaBytes)
+        : null;
+    if (quota && quota > 0) {
+      storageUsed.textContent = `${formatSize(used)} / ${formatSize(quota)}`;
+      const percent = Math.min(100, Math.round((used / quota) * 100));
+      storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%）`;
+      if (storageMetricLabel) storageMetricLabel.textContent = "已用 / 配额";
+    } else {
+      storageUsed.textContent =
+        available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
+      storageUsed.title =
+        available > 0
+          ? `网盘已用 ${used} 字节 / 磁盘可用 ${available} 字节`
+          : `网盘已用 ${used} 字节`;
+      if (storageMetricLabel) storageMetricLabel.textContent = "已用 / 可用";
+    }
   } catch {}
 }
 
@@ -3195,6 +3223,9 @@ async function uploadFilesInChunks(files, targetPath) {
         break;
       }
       console.warn(`Chunk upload plan failed (${plans[planIndex].label})`, lastError);
+      if (lastError?.status === 403 || lastError?.message?.includes("配额不足")) {
+        break;
+      }
     }
     if (!uploaded) {
       throw lastError || new Error("Upload failed.");
@@ -5646,6 +5677,7 @@ function setAuthMode(mode) {
 function syncAdminUi() {
   const isAdmin = state.currentUser?.role === "admin";
   registrationKeysBtn?.classList.toggle("hidden", !isAdmin);
+  userQuotasBtn?.classList.toggle("hidden", !isAdmin);
 }
 
 function registrationKeyStatusText(status) {
@@ -5686,9 +5718,11 @@ function renderRegistrationKeys() {
     created.textContent = `创建：${registrationKeyTime(record.createdAt)}`;
     const expires = document.createElement("span");
     expires.textContent = `过期：${registrationKeyTime(record.expiresAt)}`;
+    const quotaSpan = document.createElement("span");
+    quotaSpan.textContent = `配额：${record.quotaBytes ? formatSize(record.quotaBytes) : "无限制"}`;
     const used = document.createElement("span");
     used.textContent = record.usedBy ? `使用：${record.usedBy} · ${registrationKeyTime(record.usedAt)}` : "使用：-";
-    meta.append(created, expires, used);
+    meta.append(created, expires, quotaSpan, used);
     main.append(code, meta);
 
     const actions = document.createElement("div");
@@ -5741,7 +5775,12 @@ async function generateRegistrationKey() {
   registrationKeysError.textContent = "";
   generateRegistrationKeyBtn.disabled = true;
   try {
-    const data = await api("/api/registration-keys", { method: "POST", body: "{}" });
+    const quotaVal = newKeyQuotaSelect ? newKeyQuotaSelect.value : "20";
+    const quotaGb = quotaVal === "unlimited" ? "unlimited" : Number(quotaVal);
+    const data = await api("/api/registration-keys", {
+      method: "POST",
+      body: JSON.stringify({ quotaGb }),
+    });
     if (newRegistrationKeyValue) newRegistrationKeyValue.textContent = data.key || "";
     newRegistrationKeyPanel?.classList.remove("hidden");
     await loadRegistrationKeys();
@@ -5750,6 +5789,180 @@ async function generateRegistrationKey() {
   } finally {
     generateRegistrationKeyBtn.disabled = false;
   }
+}
+
+async function loadUserQuotas() {
+  if (!userQuotasBtn || userQuotasBtn.classList.contains("hidden")) return;
+  if (userQuotasError) userQuotasError.textContent = "";
+  const data = await api("/api/admin/users");
+  state.adminUsers = Array.isArray(data.users) ? data.users : [];
+  renderUserQuotas();
+}
+
+function renderUserQuotas() {
+  if (!userQuotaList) return;
+  userQuotaList.replaceChildren();
+  if (!state.adminUsers.length) {
+    const empty = document.createElement("div");
+    empty.className = "registration-key-empty";
+    empty.textContent = "暂无用户记录。";
+    userQuotaList.append(empty);
+    return;
+  }
+  for (const user of state.adminUsers) {
+    const row = document.createElement("div");
+    row.className = "registration-key-row user-quota-row";
+
+    const mainRow = document.createElement("div");
+    mainRow.className = "user-quota-main-row";
+
+    const main = document.createElement("div");
+    main.className = "registration-key-main";
+    const code = document.createElement("div");
+    code.className = "registration-key-code";
+    code.textContent = user.username;
+    if (user.role === "admin") {
+      const badge = document.createElement("span");
+      badge.className = "registration-key-status used";
+      badge.style.marginLeft = "8px";
+      badge.textContent = "管理员";
+      code.append(badge);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "registration-key-meta";
+    const used = document.createElement("span");
+    used.textContent = `已占用：${formatSize(user.usedBytes || 0)}`;
+    const quota = document.createElement("span");
+    const quotaStr =
+      user.role === "admin"
+        ? "无限制 (全盘特权)"
+        : user.quotaBytes
+          ? formatSize(user.quotaBytes)
+          : "无限制";
+    quota.textContent = `空间配额：${quotaStr}`;
+    meta.append(used, quota);
+    main.append(code, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "registration-key-actions";
+    if (user.role !== "admin") {
+      const editBtn = document.createElement("button");
+      editBtn.className = "ghost";
+      editBtn.type = "button";
+      editBtn.textContent = "修改配额";
+      editBtn.addEventListener("click", () => {
+        const existingPanel = row.querySelector(".user-quota-edit-panel");
+        if (existingPanel) {
+          existingPanel.remove();
+          return;
+        }
+        const editPanel = document.createElement("div");
+        editPanel.className = "user-quota-edit-panel";
+
+        const label = document.createElement("span");
+        label.textContent = `调整 ${user.username} 的存储配额：`;
+
+        const select = document.createElement("select");
+        select.className = "quota-select-inline";
+        select.innerHTML = `
+          <option value="10">10 GB</option>
+          <option value="20">20 GB</option>
+          <option value="50">50 GB</option>
+          <option value="100">100 GB</option>
+          <option value="unlimited">无限制</option>
+          <option value="custom">自定义 (GB)</option>
+        `;
+        const currentGb = user.quotaBytes
+          ? Math.round(user.quotaBytes / (1024 * 1024 * 1024))
+          : "unlimited";
+        if (["10", "20", "50", "100", "unlimited"].includes(String(currentGb))) {
+          select.value = String(currentGb);
+        } else {
+          select.value = "custom";
+        }
+
+        const customInput = document.createElement("input");
+        customInput.type = "number";
+        customInput.min = "1";
+        customInput.placeholder = "GB数";
+        customInput.value = typeof currentGb === "number" ? currentGb : 30;
+        customInput.style.display = select.value === "custom" ? "inline-block" : "none";
+
+        select.addEventListener("change", () => {
+          customInput.style.display = select.value === "custom" ? "inline-block" : "none";
+        });
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "primary small-btn";
+        saveBtn.type = "button";
+        saveBtn.textContent = "保存";
+        saveBtn.addEventListener("click", async () => {
+          saveBtn.disabled = true;
+          if (userQuotasError) userQuotasError.textContent = "";
+          try {
+            let targetGb = select.value;
+            if (targetGb === "custom") {
+              const customVal = Number(customInput.value);
+              if (!Number.isFinite(customVal) || customVal <= 0) {
+                if (userQuotasError) userQuotasError.textContent = "请输入大于 0 的自定义 GB 数";
+                saveBtn.disabled = false;
+                return;
+              }
+              targetGb = customVal;
+            }
+            const res = await api(`/api/admin/users/${encodeURIComponent(user.id)}/quota`, {
+              method: "POST",
+              body: JSON.stringify({ quotaGb: targetGb }),
+            });
+            user.quotaBytes = res.user.quotaBytes;
+            setStatus(
+              `已成功将账号“${user.username}”的空间配额修改为：${user.quotaBytes ? formatSize(user.quotaBytes) : "无限制"}`
+            );
+            renderUserQuotas();
+          } catch (err) {
+            if (userQuotasError) userQuotasError.textContent = err.message;
+            saveBtn.disabled = false;
+          }
+        });
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "ghost small-btn";
+        cancelBtn.type = "button";
+        cancelBtn.textContent = "取消";
+        cancelBtn.addEventListener("click", () => editPanel.remove());
+
+        editPanel.append(label, select, customInput, saveBtn, cancelBtn);
+        row.append(editPanel);
+      });
+      actions.append(editBtn);
+    } else {
+      const badge = document.createElement("span");
+      badge.className = "registration-key-status used";
+      badge.textContent = "最高特权";
+      actions.append(badge);
+    }
+
+    mainRow.append(main, actions);
+    row.append(mainRow);
+    userQuotaList.append(row);
+  }
+}
+
+async function openUserQuotasModal() {
+  if (userQuotasError) userQuotasError.textContent = "";
+  userQuotasModal?.classList.remove("hidden");
+  userQuotasModal?.setAttribute("aria-hidden", "false");
+  try {
+    await loadUserQuotas();
+  } catch (error) {
+    if (userQuotasError) userQuotasError.textContent = error.message;
+  }
+}
+
+function closeUserQuotasModal() {
+  userQuotasModal?.classList.add("hidden");
+  userQuotasModal?.setAttribute("aria-hidden", "true");
 }
 
 async function copyRegistrationKey() {
@@ -5929,6 +6142,15 @@ refreshRegistrationKeysBtn?.addEventListener("click", () => {
   });
 });
 copyRegistrationKeyBtn?.addEventListener("click", copyRegistrationKey);
+
+userQuotasBtn?.addEventListener("click", openUserQuotasModal);
+closeUserQuotasModalBtn?.addEventListener("click", closeUserQuotasModal);
+cancelUserQuotasBtn?.addEventListener("click", closeUserQuotasModal);
+refreshUserQuotasBtn?.addEventListener("click", () => {
+  loadUserQuotas().catch((error) => {
+    if (userQuotasError) userQuotasError.textContent = error.message;
+  });
+});
 
 $("#logoutBtn").addEventListener("click", async () => {
   const ok = await showConfirmDialog("退出登录", "确认退出当前网盘账号吗？");
@@ -6110,7 +6332,8 @@ $("#refreshBtn").addEventListener("click", () => {
 });
 closePreviewBtn.addEventListener("click", closePreview);
 
-for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal]) {
+for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal]) {
+  if (!modal) continue;
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
     if (modal === uploadModal) return;
@@ -6120,6 +6343,7 @@ for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordMod
     if (modal === dialogModal) return;
     if (modal === passwordResetModal) return;
     if (modal === registrationKeysModal) return;
+    if (modal === userQuotasModal) return;
   });
 }
 
@@ -6182,6 +6406,7 @@ document.addEventListener("keydown", (event) => {
   closeAiDrawer();
   closePasswordResetModal();
   closeRegistrationKeysModal();
+  closeUserQuotasModal();
   if (zipArchiveModal) zipArchiveModal.classList.add("hidden");
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");

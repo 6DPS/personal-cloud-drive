@@ -72,6 +72,11 @@ const PASSWORD_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-password
 const SESSION_SECRET_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-session-secret.txt");
 const FILE_PASSWORD = fs.existsSync(PASSWORD_FILE) ? fs.readFileSync(PASSWORD_FILE, "utf8").trim() : "";
 const ADMIN_PASSWORD = process.env.CLOUD_DRIVE_PASSWORD || FILE_PASSWORD || "admin123456";
+const DEFAULT_USER_QUOTA_GB = Number(process.env.DEFAULT_USER_QUOTA_GB || 20);
+const DEFAULT_USER_QUOTA_BYTES =
+  Number.isFinite(DEFAULT_USER_QUOTA_GB) && DEFAULT_USER_QUOTA_GB > 0
+    ? Math.round(DEFAULT_USER_QUOTA_GB * 1024 * 1024 * 1024)
+    : 20 * 1024 * 1024 * 1024;
 const ACTIVE_CLIENT_TTL_MS = 10 * 60 * 1000;
 const REGISTRATION_KEY_TTL_MS = 15 * 60 * 1000;
 const REGISTRATION_KEY_INACTIVE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -498,6 +503,7 @@ function publicRegistrationKey(record) {
   return {
     id: record.id,
     maskedKey: record.maskedKey || "DPSIR-****",
+    quotaBytes: record.quotaBytes !== undefined ? record.quotaBytes : null,
     status,
     createdBy: record.createdBy || "",
     createdAt: record.createdAt || "",
@@ -534,8 +540,8 @@ async function loadRegistrationKeyStore() {
 }
 
 function ensureAdminUser(req, res, next) {
-  if (req.user?.role === "admin") return next();
-  return res.status(403).json({ error: "只有管理员可以管理注册密钥" });
+  if (req.user?.role === "admin" || req.user?.id === SINGLE_USER_ID) return next();
+  return res.status(403).json({ error: "只有管理员有权执行此操作" });
 }
 
 function findRegistrationKeyRecord(input) {
@@ -815,10 +821,12 @@ async function writeShares(items) {
 
 function publicUser(user) {
   if (!user) return null;
+  const isAdm = user.role === "admin" || user.id === SINGLE_USER_ID;
   return {
     id: user.id,
     username: user.username,
-    role: user.role || "user",
+    role: isAdm ? "admin" : (user.role || "user"),
+    quotaBytes: isAdm ? null : (user.quotaBytes !== undefined ? user.quotaBytes : DEFAULT_USER_QUOTA_BYTES),
   };
 }
 
@@ -838,11 +846,19 @@ async function loadAccountsStore() {
       users: users.map((user) => {
         const username = String(user.username || user.id || ADMIN_USER).trim();
         const id = user.id ? userIdFromUsername(user.id) : userIdFromUsername(username);
+        const isAdm = user.role === "admin" || id === SINGLE_USER_ID;
+        let quotaBytes = user.quotaBytes;
+        if (isAdm) {
+          quotaBytes = null;
+        } else if (quotaBytes === undefined) {
+          quotaBytes = DEFAULT_USER_QUOTA_BYTES;
+        }
         return {
           ...user,
           id,
           username,
-          role: user.role || (id === SINGLE_USER_ID ? "admin" : "user"),
+          role: isAdm ? "admin" : (user.role || "user"),
+          quotaBytes,
           storageRoot: `users/${id}/files`,
           createdAt: user.createdAt || new Date().toISOString(),
         };
@@ -1551,6 +1567,38 @@ async function storageVolumeBytes(targetPath = currentStorageRoot()) {
     };
   } catch {
     return null;
+  }
+}
+
+function formatQuotaSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
+async function ensureUserStorageQuota(userOrId, incomingBytes = 0) {
+  const user =
+    typeof userOrId === "object" && userOrId !== null
+      ? userOrId
+      : accountsStore.users.find((u) => u.id === userOrId);
+  if (!user || user.role === "admin" || user.id === SINGLE_USER_ID) return;
+  const quotaBytes = user.quotaBytes !== undefined ? user.quotaBytes : DEFAULT_USER_QUOTA_BYTES;
+  if (!Number.isFinite(quotaBytes) || quotaBytes <= 0) return;
+
+  const currentBytes = await storageUsageBytes(userStorageRoot(user.id));
+  if (currentBytes + Number(incomingBytes || 0) > quotaBytes) {
+    const usedText = formatQuotaSize(currentBytes);
+    const quotaText = formatQuotaSize(quotaBytes);
+    const incomingText = incomingBytes > 0 ? `，本次上传需 ${formatQuotaSize(incomingBytes)}` : "";
+    const error = new Error(
+      `存储空间配额不足（已用 ${usedText} / 配额上限 ${quotaText}${incomingText}），请清理文件或联系管理员扩容。`
+    );
+    error.status = 403;
+    error.quotaExceeded = true;
+    error.currentBytes = currentBytes;
+    error.quotaBytes = quotaBytes;
+    throw error;
   }
 }
 
@@ -3540,10 +3588,23 @@ app.post("/api/registration-keys", requireAuth, ensureAdminUser, async (req, res
     cleanupRegistrationKeyStore();
     const key = generateRegistrationKeyValue();
     const now = Date.now();
+    let quotaBytes = DEFAULT_USER_QUOTA_BYTES;
+    if (req.body?.quotaGb !== undefined) {
+      const qVal = req.body.quotaGb;
+      if (qVal === null || qVal === "unlimited" || qVal === 0 || qVal === "" || qVal === "none") {
+        quotaBytes = null;
+      } else {
+        const gb = Number(qVal);
+        if (Number.isFinite(gb) && gb > 0) {
+          quotaBytes = Math.round(gb * 1024 * 1024 * 1024);
+        }
+      }
+    }
     const record = {
       id: `reg_${now}_${crypto.randomBytes(5).toString("base64url")}`,
       hash: registrationKeyHash(key),
       maskedKey: maskRegistrationKey(key),
+      quotaBytes,
       status: "unused",
       createdBy: req.user.username,
       createdAt: new Date(now).toISOString(),
@@ -3577,6 +3638,76 @@ app.post("/api/registration-keys/:id/disable", requireAuth, ensureAdminUser, asy
   }
 });
 
+app.get("/api/admin/users", requireAuth, ensureAdminUser, async (req, res, next) => {
+  try {
+    const list = await Promise.all(
+      accountsStore.users.map(async (u) => {
+        let usedBytes = 0;
+        try {
+          usedBytes = await storageUsageBytes(userStorageRoot(u.id));
+        } catch {}
+        const isAdm = u.role === "admin" || u.id === SINGLE_USER_ID;
+        return {
+          id: u.id,
+          username: u.username,
+          role: isAdm ? "admin" : (u.role || "user"),
+          quotaBytes: isAdm ? null : (u.quotaBytes !== undefined ? u.quotaBytes : DEFAULT_USER_QUOTA_BYTES),
+          usedBytes,
+          createdAt: u.createdAt || "",
+        };
+      })
+    );
+    res.json({ ok: true, users: list, defaultQuotaBytes: DEFAULT_USER_QUOTA_BYTES });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/admin/users/:id/quota", requireAuth, ensureAdminUser, async (req, res, next) => {
+  try {
+    const targetId = String(req.params.id || "").trim();
+    const targetUser = accountsStore.users.find(
+      (u) => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase()
+    );
+    if (!targetUser) {
+      return res.status(404).json({ error: "指定用户不存在" });
+    }
+    if (targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID) {
+      return res.status(400).json({ error: "管理员拥有全部磁盘权限，无需且不可设置配额" });
+    }
+    const rawVal = req.body?.quotaGb;
+    let nextQuota = null;
+    if (req.body?.quotaBytes !== undefined) {
+      const b = Number(req.body.quotaBytes);
+      if (!Number.isFinite(b) || b < 0) {
+        return res.status(400).json({ error: "配额字节数不合法" });
+      }
+      nextQuota = b === 0 ? null : Math.round(b);
+    } else if (rawVal === null || rawVal === "unlimited" || rawVal === 0 || rawVal === "" || rawVal === "none") {
+      nextQuota = null;
+    } else {
+      const gb = Number(rawVal);
+      if (!Number.isFinite(gb) || gb <= 0) {
+        return res.status(400).json({ error: "配额必须为正数（GB）或设置为无限制" });
+      }
+      nextQuota = Math.round(gb * 1024 * 1024 * 1024);
+    }
+    targetUser.quotaBytes = nextQuota;
+    await saveAccountsStore();
+    res.json({
+      ok: true,
+      user: {
+        id: targetUser.id,
+        username: targetUser.username,
+        role: targetUser.role,
+        quotaBytes: targetUser.quotaBytes,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/register", createRateLimitMiddleware({
   id: "register",
   windowMs: 10 * 60 * 1000,
@@ -3602,10 +3733,15 @@ app.post("/api/register", createRateLimitMiddleware({
       await saveRegistrationKeyStore();
     }
     const registrationRecord = validateRegistrationKey(req.body?.registrationKey || "");
+    const quotaBytes =
+      registrationRecord?.quotaBytes !== undefined
+        ? registrationRecord.quotaBytes
+        : DEFAULT_USER_QUOTA_BYTES;
     const user = {
       id,
       username,
       role: "user",
+      quotaBytes,
       password: createPasswordRecord(password),
       storageRoot: `users/${id}/files`,
       createdAt: new Date().toISOString(),
@@ -3725,8 +3861,16 @@ app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
   try {
     const bytes = await storageUsageBytes(userStorageRoot(req.user.id));
     const volume = await storageVolumeBytes();
+    const isAdm = req.user.role === "admin" || req.user.id === SINGLE_USER_ID;
+    const user = accountsStore.users.find((u) => u.id === req.user.id);
+    const quotaBytes = isAdm
+      ? null
+      : user?.quotaBytes !== undefined
+        ? user.quotaBytes
+        : DEFAULT_USER_QUOTA_BYTES;
     res.json({
       bytes,
+      quotaBytes,
       totalBytes: volume?.totalBytes || 0,
       availableBytes: volume?.availableBytes || 0,
     });
@@ -4053,6 +4197,8 @@ app.post("/api/upload", requireAuth, upload.array("files"), async (req, res, nex
   const userId = user?.id;
   if (user) requestContext.enterWith({ user });
   try {
+    const totalIncomingBytes = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    await ensureUserStorageQuota(req.user, totalIncomingBytes);
     await fsp.mkdir(path.join(userStorageRoot(userId), ".tmp"), { recursive: true });
     const targetPath = normalizeRelative(req.query.path || "");
     rejectHiddenDrivePath(targetPath);
@@ -4102,6 +4248,7 @@ app.post("/api/upload-chunk/init", requireAuth, async (req, res, next) => {
     if (!Number.isFinite(size) || size < 0) {
       return res.status(400).json({ error: "Invalid file size." });
     }
+    await ensureUserStorageQuota(req.user, size);
     const uploadId = crypto.randomBytes(18).toString("base64url");
     const sessionDir = path.join(currentUploadSessionRoot(userId), uploadId);
     await fsp.mkdir(sessionDir, { recursive: true });
@@ -4511,6 +4658,8 @@ app.post("/api/copy", requireAuth, async (req, res, next) => {
     const sourceRel = normalizeRelative(req.body.source || "");
     const targetRel = webPath(normalizeRelative(req.body.targetDir || ""), path.basename(target));
     const sourceStat = await fsp.stat(source);
+    const incomingBytes = sourceStat.isDirectory() ? await storageUsageBytes(source) : sourceStat.size;
+    await ensureUserStorageQuota(req.user, incomingBytes);
     const targetDirWithSep = targetDir.endsWith(path.sep) ? targetDir : `${targetDir}${path.sep}`;
     if (sourceStat.isDirectory() && targetDirWithSep.startsWith(`${source}${path.sep}`)) {
       return res.status(400).json({ error: "不能把文件夹复制到它自己里面" });
@@ -4675,6 +4824,7 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
     if (!hash || !name || size <= 0) {
       return res.json({ instant: false });
     }
+    await ensureUserStorageQuota(req.user, size);
 
     ensureFolderAccess(req, targetPath);
     const dir = resolveDrivePathForUser(req.user.id, targetPath);
