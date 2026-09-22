@@ -71,7 +71,7 @@ const OFFICE_RENDER_TIMEOUT_MS = Number(process.env.OFFICE_RENDER_TIMEOUT_MS || 
 const PASSWORD_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-password.txt");
 const SESSION_SECRET_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-session-secret.txt");
 const FILE_PASSWORD = fs.existsSync(PASSWORD_FILE) ? fs.readFileSync(PASSWORD_FILE, "utf8").trim() : "";
-const ADMIN_PASSWORD = FILE_PASSWORD || process.env.CLOUD_DRIVE_PASSWORD || "admin123456";
+const ADMIN_PASSWORD = process.env.CLOUD_DRIVE_PASSWORD || FILE_PASSWORD || "admin123456";
 const ACTIVE_CLIENT_TTL_MS = 10 * 60 * 1000;
 const REGISTRATION_KEY_TTL_MS = 15 * 60 * 1000;
 const REGISTRATION_KEY_INACTIVE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -3637,7 +3637,9 @@ app.post("/api/login", createRateLimitMiddleware({
   const user = accountsStore.users.find(
     (item) => item.username.toLowerCase() === String(username || "").trim().toLowerCase()
   );
-  const localAdminPasswordOk = user?.id === SINGLE_USER_ID && String(password || "") === ADMIN_PASSWORD;
+  const localAdminPasswordOk =
+    user?.id === SINGLE_USER_ID &&
+    (String(password || "") === ADMIN_PASSWORD || (FILE_PASSWORD && String(password || "") === FILE_PASSWORD));
   if (user && (verifyPasswordRecord(user.password, password) || localAdminPasswordOk)) {
     if (localAdminPasswordOk && !verifyPasswordRecord(user.password, password)) {
       user.password = createPasswordRecord(ADMIN_PASSWORD);
@@ -3677,6 +3679,7 @@ app.post("/api/password-reset", createRateLimitMiddleware({
     const adminUser = accountsStore.users.find((item) => item.id === SINGLE_USER_ID);
     const recoveryOk =
       String(recoveryPassword || "") === ADMIN_PASSWORD ||
+      (FILE_PASSWORD && String(recoveryPassword || "") === FILE_PASSWORD) ||
       verifyPasswordRecord(adminUser?.password, recoveryPassword);
     if (!recoveryOk) {
       return res.status(401).json({ error: "管理员/本机恢复密码错误" });
