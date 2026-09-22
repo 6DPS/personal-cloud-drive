@@ -128,7 +128,6 @@ const passwordResetError = $("#passwordResetError");
 const registrationKeysBtn = $("#registrationKeysBtn");
 const registrationKeysModal = $("#registrationKeysModal");
 const closeRegistrationKeysModalBtn = $("#closeRegistrationKeysModalBtn");
-const cancelRegistrationKeysBtn = $("#cancelRegistrationKeysBtn");
 const generateRegistrationKeyBtn = $("#generateRegistrationKeyBtn");
 const refreshRegistrationKeysBtn = $("#refreshRegistrationKeysBtn");
 const registrationKeyList = $("#registrationKeyList");
@@ -137,11 +136,11 @@ const newRegistrationKeyPanel = $("#newRegistrationKeyPanel");
 const newRegistrationKeyValue = $("#newRegistrationKeyValue");
 const copyRegistrationKeyBtn = $("#copyRegistrationKeyBtn");
 const newKeyQuotaSelect = $("#newKeyQuotaSelect");
+const newKeyQuotaCustomInput = $("#newKeyQuotaCustomInput");
 
 const userQuotasBtn = $("#userQuotasBtn");
 const userQuotasModal = $("#userQuotasModal");
 const closeUserQuotasModalBtn = $("#closeUserQuotasModalBtn");
-const cancelUserQuotasBtn = $("#cancelUserQuotasBtn");
 const refreshUserQuotasBtn = $("#refreshUserQuotasBtn");
 const userQuotaList = $("#userQuotaList");
 const userQuotasError = $("#userQuotasError");
@@ -5757,6 +5756,11 @@ async function openRegistrationKeysModal() {
   registrationKeysError.textContent = "";
   newRegistrationKeyPanel?.classList.add("hidden");
   if (newRegistrationKeyValue) newRegistrationKeyValue.textContent = "";
+  if (newKeyQuotaSelect) newKeyQuotaSelect.value = "20";
+  if (newKeyQuotaCustomInput) {
+    newKeyQuotaCustomInput.classList.add("hidden");
+    newKeyQuotaCustomInput.value = "";
+  }
   registrationKeysModal.classList.remove("hidden");
   registrationKeysModal.setAttribute("aria-hidden", "false");
   try {
@@ -5776,7 +5780,20 @@ async function generateRegistrationKey() {
   generateRegistrationKeyBtn.disabled = true;
   try {
     const quotaVal = newKeyQuotaSelect ? newKeyQuotaSelect.value : "20";
-    const quotaGb = quotaVal === "unlimited" ? "unlimited" : Number(quotaVal);
+    let quotaGb;
+    if (quotaVal === "custom") {
+      const customVal = Number(newKeyQuotaCustomInput ? newKeyQuotaCustomInput.value : "");
+      if (!Number.isFinite(customVal) || customVal <= 0) {
+        registrationKeysError.textContent = "请输入大于 0 的自定义 GB 数";
+        generateRegistrationKeyBtn.disabled = false;
+        return;
+      }
+      quotaGb = customVal;
+    } else if (quotaVal === "unlimited") {
+      quotaGb = "unlimited";
+    } else {
+      quotaGb = Number(quotaVal);
+    }
     const data = await api("/api/registration-keys", {
       method: "POST",
       body: JSON.stringify({ quotaGb }),
@@ -6134,7 +6151,15 @@ cancelPasswordResetBtn.addEventListener("click", closePasswordResetModal);
 closePasswordResetModalBtn.addEventListener("click", closePasswordResetModal);
 registrationKeysBtn?.addEventListener("click", openRegistrationKeysModal);
 closeRegistrationKeysModalBtn?.addEventListener("click", closeRegistrationKeysModal);
-cancelRegistrationKeysBtn?.addEventListener("click", closeRegistrationKeysModal);
+newKeyQuotaSelect?.addEventListener("change", () => {
+  if (!newKeyQuotaCustomInput) return;
+  const isCustom = newKeyQuotaSelect.value === "custom";
+  newKeyQuotaCustomInput.classList.toggle("hidden", !isCustom);
+  if (isCustom) {
+    if (!newKeyQuotaCustomInput.value) newKeyQuotaCustomInput.value = "30";
+    newKeyQuotaCustomInput.focus();
+  }
+});
 generateRegistrationKeyBtn?.addEventListener("click", generateRegistrationKey);
 refreshRegistrationKeysBtn?.addEventListener("click", () => {
   loadRegistrationKeys().catch((error) => {
@@ -6145,7 +6170,6 @@ copyRegistrationKeyBtn?.addEventListener("click", copyRegistrationKey);
 
 userQuotasBtn?.addEventListener("click", openUserQuotasModal);
 closeUserQuotasModalBtn?.addEventListener("click", closeUserQuotasModal);
-cancelUserQuotasBtn?.addEventListener("click", closeUserQuotasModal);
 refreshUserQuotasBtn?.addEventListener("click", () => {
   loadUserQuotas().catch((error) => {
     if (userQuotasError) userQuotasError.textContent = error.message;

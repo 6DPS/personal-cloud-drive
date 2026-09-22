@@ -3343,6 +3343,17 @@ td:nth-child(5) {
   outline: none;
 }
 
+.quota-custom-input {
+  width: 90px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(210, 220, 235, 0.95);
+  background: #ffffff;
+  font-size: 0.88rem;
+  color: #172033;
+  outline: none;
+}
+
 .user-quota-row {
   display: flex;
   flex-direction: column;

@@ -118,7 +118,9 @@
                     <option value="50">50 GB</option>
                     <option value="100">100 GB</option>
                     <option value="unlimited">无限制</option>
+                    <option value="custom">自定义 (GB)</option>
                   </select>
+                  <input id="newKeyQuotaCustomInput" type="number" min="1" step="1" placeholder="GB数" class="quota-custom-input hidden" />
                 </div>
               </div>
               <button id="generateRegistrationKeyBtn" class="primary" type="button">生成密钥</button>
@@ -134,9 +136,6 @@
             </div>
             <div id="registrationKeyList" class="registration-key-list"></div>
             <p id="registrationKeysError" class="error modal-error"></p>
-          </div>
-          <div class="modal-actions">
-            <button id="cancelRegistrationKeysBtn" class="ghost" type="button">关闭</button>
           </div>
         </div>
       </section>
@@ -161,9 +160,6 @@
             </div>
             <div id="userQuotaList" class="registration-key-list user-quota-list"></div>
             <p id="userQuotasError" class="error modal-error"></p>
-          </div>
-          <div class="modal-actions">
-            <button id="cancelUserQuotasBtn" class="ghost" type="button">关闭</button>
           </div>
         </div>
       </section>
@@ -685,7 +681,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260920_loginfix_v38"></script>
+    <script src="/app.js?v=20260922_quotafix_v39"></script>
     <script src="/login-fx.js?v=20260920_loginfix_v38"></script>
   </body>
 </html>
