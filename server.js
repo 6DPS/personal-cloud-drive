@@ -534,6 +534,8 @@ async function loadRegistrationKeyStore() {
     };
     if (cleanupRegistrationKeyStore()) {
       await saveRegistrationKeyStore();
+    } else if (!fs.existsSync(`${REGISTRATION_KEYS_FILE}.bak`)) {
+      await fsp.copyFile(REGISTRATION_KEYS_FILE, `${REGISTRATION_KEYS_FILE}.bak`).catch(() => {});
     }
   } catch (error) {
     if (error.code !== "ENOENT") {
@@ -850,6 +852,9 @@ async function readShares() {
   try {
     if (!fs.existsSync(SHARES_FILE)) return [];
     const raw = await fsp.readFile(SHARES_FILE, "utf8");
+    if (!fs.existsSync(`${SHARES_FILE}.bak`)) {
+      await fsp.copyFile(SHARES_FILE, `${SHARES_FILE}.bak`).catch(() => {});
+    }
     return JSON.parse(raw || "[]");
   } catch (error) {
     try {
@@ -1611,6 +1616,8 @@ async function ensureAccountsFile() {
   }
   if (changed || !(await pathExists(ACCOUNTS_FILE))) {
     await saveAccountsStore();
+  } else if (!(await pathExists(`${ACCOUNTS_FILE}.bak`))) {
+    await fsp.copyFile(ACCOUNTS_FILE, `${ACCOUNTS_FILE}.bak`).catch(() => {});
   }
 }
 
