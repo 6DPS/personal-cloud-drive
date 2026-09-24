@@ -21,7 +21,7 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       }
     </style>
-    <link rel="stylesheet" href="/styles.css?v=20260920_loginfix_v38" />
+    <link rel="stylesheet" href="/styles.css?v=20260924_backbtn_v42" />
   </head>
   <body>
     <main id="app">
@@ -230,7 +230,11 @@
           <header class="topbar">
             <div class="path-panel">
               <div class="path-controls">
-                <button id="backBtn" class="icon-button" title="返回上级" aria-label="返回上级">‹</button>
+                <button id="backBtn" class="icon-button back-nav-btn" title="返回上一级" aria-label="返回上一级">
+                  <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 15L7 10L12 5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
                 <div>
                   <div id="breadcrumb" class="breadcrumb"></div>
                   <p id="statusLine">准备就绪</p>
