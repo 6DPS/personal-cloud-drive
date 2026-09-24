@@ -518,6 +518,11 @@ async function saveRegistrationKeyStore() {
   const tmpPath = `${REGISTRATION_KEYS_FILE}.tmp`;
   await fsp.writeFile(tmpPath, JSON.stringify(registrationKeyStore, null, 2), "utf8");
   await fsp.rename(tmpPath, REGISTRATION_KEYS_FILE);
+  try {
+    await fsp.copyFile(REGISTRATION_KEYS_FILE, `${REGISTRATION_KEYS_FILE}.bak`);
+  } catch (err) {
+    console.warn("保存注册密钥备份镜像失败：", err.message);
+  }
 }
 
 async function loadRegistrationKeyStore() {
@@ -532,7 +537,20 @@ async function loadRegistrationKeyStore() {
     }
   } catch (error) {
     if (error.code !== "ENOENT") {
-      console.warn("注册密钥文件读取失败，将使用空密钥列表：", error.message);
+      console.warn("注册密钥主文件读取失败，尝试从备份镜像恢复：", error.message);
+      try {
+        const bakRaw = await fsp.readFile(`${REGISTRATION_KEYS_FILE}.bak`, "utf8");
+        const bakParsed = JSON.parse(bakRaw);
+        const keys = Array.isArray(bakParsed?.keys) ? bakParsed.keys.filter((item) => item?.id && item?.hash) : [];
+        if (keys.length > 0) {
+          console.log(`成功从注册密钥备份镜像恢复 ${keys.length} 个密钥数据！`);
+          await fsp.writeFile(REGISTRATION_KEYS_FILE, bakRaw, "utf8").catch(() => {});
+          registrationKeyStore = { keys };
+          return registrationKeyStore;
+        }
+      } catch (bakErr) {
+        console.error("从注册密钥备份镜像恢复也失败：", bakErr.message);
+      }
     }
     registrationKeyStore = { keys: [] };
   }
@@ -656,12 +674,18 @@ const BACKUPS_DIR = path.join(SYSTEM_ROOT, "backups");
 const SHARES_FILE = path.join(SYSTEM_ROOT, "shares.json");
 
 async function readTrashMeta(userId) {
+  const metaFile = userTrashMetaFile(userId);
   try {
-    const metaFile = userTrashMetaFile(userId);
     if (!fs.existsSync(metaFile)) return [];
     const raw = await fsp.readFile(metaFile, "utf8");
     return JSON.parse(raw || "[]");
   } catch (err) {
+    try {
+      if (fs.existsSync(`${metaFile}.bak`)) {
+        const bakRaw = await fsp.readFile(`${metaFile}.bak`, "utf8");
+        return JSON.parse(bakRaw || "[]");
+      }
+    } catch {}
     return [];
   }
 }
@@ -672,6 +696,9 @@ async function writeTrashMeta(userId, items) {
   const tmp = `${metaFile}.tmp`;
   await fsp.writeFile(tmp, JSON.stringify(items, null, 2), "utf8");
   await fsp.rename(tmp, metaFile);
+  try {
+    await fsp.copyFile(metaFile, `${metaFile}.bak`);
+  } catch {}
 }
 
 async function moveToTrash(userId, relPath, sourceFullPath, stat) {
@@ -695,6 +722,11 @@ async function moveToTrash(userId, relPath, sourceFullPath, stat) {
   const items = await readTrashMeta(userId);
   items.unshift(meta);
   await writeTrashMeta(userId, items);
+  if (!isDirectory && Number.isFinite(stat.size)) {
+    adjustUserStorageUsage(userId, -stat.size);
+  } else {
+    invalidateUserStorageUsage(userId);
+  }
   return meta;
 }
 
@@ -726,6 +758,11 @@ async function restoreFromTrash(userId, trashId) {
   }
 
   await fsp.rename(trashPath, destFull);
+  if (!meta.isDirectory && Number.isFinite(meta.size)) {
+    adjustUserStorageUsage(userId, meta.size);
+  } else {
+    invalidateUserStorageUsage(userId);
+  }
   items.splice(index, 1);
   await writeTrashMeta(userId, items);
   return { ok: true, restoredPath: destRel, name: path.basename(destFull) };
@@ -780,10 +817,12 @@ async function performSystemBackup() {
     const today = new Date().toISOString().slice(0, 10);
     const backupFile = path.join(BACKUPS_DIR, `system-backup-${today}.json`);
 
+    const shares = await readShares().catch(() => []);
     const backupData = {
       backupAt: new Date().toISOString(),
       accounts: accountsStore,
       registrationKeys: registrationKeyStore,
+      shares,
     };
 
     const tmpPath = `${backupFile}.tmp`;
@@ -802,12 +841,26 @@ async function performSystemBackup() {
   }
 }
 
+// 启动 24 小时每日定时快照备份
+setInterval(() => {
+  performSystemBackup().catch(() => {});
+}, 24 * 60 * 60 * 1000).unref();
+
 async function readShares() {
   try {
     if (!fs.existsSync(SHARES_FILE)) return [];
     const raw = await fsp.readFile(SHARES_FILE, "utf8");
     return JSON.parse(raw || "[]");
-  } catch {
+  } catch (error) {
+    try {
+      if (fs.existsSync(`${SHARES_FILE}.bak`)) {
+        const bakRaw = await fsp.readFile(`${SHARES_FILE}.bak`, "utf8");
+        const parsed = JSON.parse(bakRaw || "[]");
+        console.log(`成功从分享备份镜像恢复 ${parsed.length} 条分享记录！`);
+        await fsp.writeFile(SHARES_FILE, bakRaw, "utf8").catch(() => {});
+        return parsed;
+      }
+    } catch {}
     return [];
   }
 }
@@ -817,6 +870,11 @@ async function writeShares(items) {
   const tmp = `${SHARES_FILE}.tmp`;
   await fsp.writeFile(tmp, JSON.stringify(items, null, 2), "utf8");
   await fsp.rename(tmp, SHARES_FILE);
+  try {
+    await fsp.copyFile(SHARES_FILE, `${SHARES_FILE}.bak`);
+  } catch (err) {
+    console.warn("保存分享备份镜像失败：", err.message);
+  }
 }
 
 function publicUser(user) {
@@ -835,38 +893,59 @@ async function saveAccountsStore() {
   const tmpPath = `${ACCOUNTS_FILE}.tmp`;
   await fsp.writeFile(tmpPath, JSON.stringify(accountsStore, null, 2), "utf8");
   await fsp.rename(tmpPath, ACCOUNTS_FILE);
+  try {
+    await fsp.copyFile(ACCOUNTS_FILE, `${ACCOUNTS_FILE}.bak`);
+  } catch (err) {
+    console.warn("保存账号备份镜像失败：", err.message);
+  }
+}
+
+function normalizeAccountsUsers(users) {
+  return (Array.isArray(users) ? users : []).map((user) => {
+    const username = String(user.username || user.id || ADMIN_USER).trim();
+    const id = user.id ? userIdFromUsername(user.id) : userIdFromUsername(username);
+    const isAdm = user.role === "admin" || id === SINGLE_USER_ID;
+    let quotaBytes = user.quotaBytes;
+    if (isAdm) {
+      quotaBytes = null;
+    } else if (quotaBytes === undefined) {
+      quotaBytes = DEFAULT_USER_QUOTA_BYTES;
+    }
+    return {
+      ...user,
+      id,
+      username,
+      role: isAdm ? "admin" : (user.role || "user"),
+      quotaBytes,
+      storageRoot: `users/${id}/files`,
+      createdAt: user.createdAt || new Date().toISOString(),
+    };
+  });
 }
 
 async function loadAccountsStore() {
   try {
     const raw = await fsp.readFile(ACCOUNTS_FILE, "utf8");
     const parsed = JSON.parse(raw);
-    const users = Array.isArray(parsed?.users) ? parsed.users : [];
     accountsStore = {
-      users: users.map((user) => {
-        const username = String(user.username || user.id || ADMIN_USER).trim();
-        const id = user.id ? userIdFromUsername(user.id) : userIdFromUsername(username);
-        const isAdm = user.role === "admin" || id === SINGLE_USER_ID;
-        let quotaBytes = user.quotaBytes;
-        if (isAdm) {
-          quotaBytes = null;
-        } else if (quotaBytes === undefined) {
-          quotaBytes = DEFAULT_USER_QUOTA_BYTES;
-        }
-        return {
-          ...user,
-          id,
-          username,
-          role: isAdm ? "admin" : (user.role || "user"),
-          quotaBytes,
-          storageRoot: `users/${id}/files`,
-          createdAt: user.createdAt || new Date().toISOString(),
-        };
-      }),
+      users: normalizeAccountsUsers(parsed?.users),
     };
   } catch (error) {
     if (error.code !== "ENOENT") {
-      console.warn("账号文件读取失败，将使用默认管理员账号：", error.message);
+      console.warn("账号主文件读取失败，尝试从备份镜像恢复：", error.message);
+      try {
+        const bakRaw = await fsp.readFile(`${ACCOUNTS_FILE}.bak`, "utf8");
+        const bakParsed = JSON.parse(bakRaw);
+        const users = normalizeAccountsUsers(bakParsed?.users);
+        if (users.length > 0) {
+          console.log(`成功从账号备份镜像恢复 ${users.length} 个账号数据！`);
+          await fsp.writeFile(ACCOUNTS_FILE, bakRaw, "utf8").catch(() => {});
+          accountsStore = { users };
+          return accountsStore;
+        }
+      } catch (bakErr) {
+        console.error("从账号备份镜像恢复也失败：", bakErr.message);
+      }
     }
     accountsStore = { users: [] };
   }
@@ -1561,6 +1640,37 @@ async function storageUsageBytes(basePath = currentStorageRoot()) {
   return total;
 }
 
+const userStorageUsageCache = new Map();
+const STORAGE_USAGE_CACHE_TTL_MS = 15 * 60 * 1000;
+
+async function getUserStorageUsage(userId, { forceScan = false } = {}) {
+  if (!userId) return 0;
+  const cached = userStorageUsageCache.get(userId);
+  const now = Date.now();
+  if (!forceScan && cached && (now - cached.updatedAt < STORAGE_USAGE_CACHE_TTL_MS)) {
+    return cached.bytes;
+  }
+  const root = userStorageRoot(userId);
+  const bytes = await storageUsageBytes(root);
+  userStorageUsageCache.set(userId, { bytes, updatedAt: Date.now() });
+  return bytes;
+}
+
+function adjustUserStorageUsage(userId, deltaBytes) {
+  if (!userId || !deltaBytes || !Number.isFinite(deltaBytes)) return;
+  const cached = userStorageUsageCache.get(userId);
+  if (cached) {
+    cached.bytes = Math.max(0, cached.bytes + Number(deltaBytes));
+    cached.updatedAt = Date.now();
+  }
+}
+
+function invalidateUserStorageUsage(userId) {
+  if (userId) {
+    userStorageUsageCache.delete(userId);
+  }
+}
+
 async function storageVolumeBytes(targetPath = currentStorageRoot()) {
   if (typeof fsp.statfs !== "function") return null;
   try {
@@ -1590,7 +1700,7 @@ async function ensureUserStorageQuota(userOrId, incomingBytes = 0) {
   const quotaBytes = user.quotaBytes !== undefined ? user.quotaBytes : DEFAULT_USER_QUOTA_BYTES;
   if (!Number.isFinite(quotaBytes) || quotaBytes <= 0) return;
 
-  const currentBytes = await storageUsageBytes(userStorageRoot(user.id));
+  const currentBytes = await getUserStorageUsage(user.id);
   if (currentBytes + Number(incomingBytes || 0) > quotaBytes) {
     const usedText = formatQuotaSize(currentBytes);
     const quotaText = formatQuotaSize(quotaBytes);
@@ -1858,6 +1968,24 @@ async function sendFileStream(req, res, filePath, options = {}) {
   const contentType = options.contentType || contentTypeFor(filePath);
   const range = req.headers.range;
 
+  const mtimeMs = Math.floor(stat.mtimeMs || 0);
+  const etag = `"${stat.size.toString(16)}-${mtimeMs.toString(16)}"`;
+  res.setHeader("ETag", etag);
+  res.setHeader("Last-Modified", new Date(mtimeMs).toUTCString());
+
+  if (disposition === "inline" && !range) {
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
+    const ifModifiedSince = req.headers["if-modified-since"];
+    if (ifModifiedSince) {
+      const ifModifiedDate = Date.parse(ifModifiedSince);
+      if (!Number.isNaN(ifModifiedDate) && mtimeMs <= ifModifiedDate) {
+        return res.status(304).end();
+      }
+    }
+  }
+
   if (range) {
     const match = /^bytes=(\d*)-(\d*)$/.exec(range);
     if (!match) {
@@ -1874,7 +2002,7 @@ async function sendFileStream(req, res, filePath, options = {}) {
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Disposition", contentDisposition(disposition, filename));
-    res.setHeader("Cache-Control", "no-store, no-cache, no-transform");
+    res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
     res.setHeader("X-Content-Type-Options", "nosniff");
     await pipeline(fs.createReadStream(filePath, { start, end, highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
     return;
@@ -1884,7 +2012,7 @@ async function sendFileStream(req, res, filePath, options = {}) {
   res.setHeader("Content-Disposition", contentDisposition(disposition, filename));
   res.setHeader("Content-Length", stat.size);
   res.setHeader("Accept-Ranges", "bytes");
-  res.setHeader("Cache-Control", "no-store, no-cache, no-transform");
+  res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
   res.setHeader("X-Content-Type-Options", "nosniff");
   await pipeline(fs.createReadStream(filePath, { highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
 }
@@ -1961,13 +2089,21 @@ async function cleanupExpiredUploadSessionsForAllUsers() {
   await removePath(path.join(SYSTEM_TMP_ROOT, "chunk-uploads")).catch(() => {});
 }
 
+let lastHiddenCleanupTime = 0;
+const HIDDEN_CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
+
 function scheduleHiddenCleanup(userId = currentUserId()) {
+  const now = Date.now();
+  if (now - lastHiddenCleanupTime < HIDDEN_CLEANUP_INTERVAL_MS) {
+    return;
+  }
   clearTimeout(hiddenCleanupTimer);
   hiddenCleanupTimer = setTimeout(() => {
+    lastHiddenCleanupTime = Date.now();
     Promise.all([cleanupHiddenDriveFiles(userStorageRoot(userId)), cleanupExpiredUploadSessions(userId)]).catch((error) => {
       console.warn("清理临时/系统文件失败：", error.message);
     });
-  }, 800);
+  }, 10000);
 }
 
 function notifyFileChange(userId = currentUserId()) {
@@ -2230,10 +2366,6 @@ const officePreviewWorkers = new Map();
 
 async function renderOfficeToPdfWarm(inputPath, outputPath) {
   const kind = officePreviewKind(inputPath);
-  if (kind === "powerpoint") {
-    await renderOfficeToPdf(inputPath, outputPath);
-    return;
-  }
   let worker = officePreviewWorkers.get(kind);
   if (!worker) {
     worker = new OfficePreviewWorker(kind);
@@ -2264,7 +2396,15 @@ async function ensureOfficePreviewPdf(filePath, stat) {
   return { outputPath, temporary: !CACHE_OFFICE_PREVIEW };
 }
 
-async function cleanupPreviewCache(previewRoot = currentPreviewRoot()) {
+let lastPreviewCacheCleanupTime = 0;
+const PREVIEW_CACHE_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+
+async function cleanupPreviewCache(previewRoot = currentPreviewRoot(), { force = false } = {}) {
+  const now = Date.now();
+  if (!force && (now - lastPreviewCacheCleanupTime < PREVIEW_CACHE_CLEANUP_INTERVAL_MS)) {
+    return;
+  }
+  lastPreviewCacheCleanupTime = now;
   try {
     const entries = await fsp.readdir(previewRoot, { withFileTypes: true });
     const files = await Promise.all(
@@ -3650,7 +3790,7 @@ app.get("/api/admin/users", requireAuth, ensureAdminUser, async (req, res, next)
       accountsStore.users.map(async (u) => {
         let usedBytes = 0;
         try {
-          usedBytes = await storageUsageBytes(userStorageRoot(u.id));
+          usedBytes = await getUserStorageUsage(u.id);
         } catch {}
         const isAdm = u.role === "admin" || u.id === SINGLE_USER_ID;
         return {
@@ -3865,7 +4005,7 @@ app.get("/api/access-info", requireAuth, (req, res) => {
 
 app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
   try {
-    const bytes = await storageUsageBytes(userStorageRoot(req.user.id));
+    const bytes = await getUserStorageUsage(req.user.id);
     const volume = await storageVolumeBytes();
     const isAdm = req.user.role === "admin" || req.user.id === SINGLE_USER_ID;
     const user = accountsStore.users.find((u) => u.id === req.user.id);
@@ -4230,6 +4370,7 @@ app.post("/api/upload", requireAuth, upload.array("files"), async (req, res, nex
       await fsp.rename(file.path, target);
       savedCount += 1;
     }
+    adjustUserStorageUsage(userId, totalIncomingBytes);
     notifyFileChange(userId);
     res.json({ ok: true, count: savedCount });
   } catch (error) {
@@ -4337,6 +4478,7 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
       }
       await fsp.rename(tmpTarget, target);
       await removePath(sessionDir).catch(() => {});
+      adjustUserStorageUsage(userId, stat.size);
       notifyFileChange(userId);
       res.json({ ok: true, count: 1 });
     } catch (error) {
@@ -4602,6 +4744,11 @@ app.delete("/api/item", requireAuth, async (req, res, next) => {
 
     if (req.body.permanent === true) {
       await removePath(target);
+      if (!stat.isDirectory() && Number.isFinite(stat.size)) {
+        adjustUserStorageUsage(req.user.id, -stat.size);
+      } else {
+        invalidateUserStorageUsage(req.user.id);
+      }
       if (removedPasswords) {
         await saveFolderPasswordStore();
         syncUnlockedFoldersAfterMutation(req, res);
@@ -4671,6 +4818,7 @@ app.post("/api/copy", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "不能把文件夹复制到它自己里面" });
     }
     await fsp.cp(source, target, { recursive: true, errorOnExist: true });
+    adjustUserStorageUsage(req.user.id, incomingBytes);
     if (sourceStat.isDirectory() && copyFolderPasswordTree(sourceRel, targetRel)) {
       await saveFolderPasswordStore();
       syncUnlockedFoldersAfterMutation(req, res);
@@ -4819,8 +4967,51 @@ app.post("/api/trash/clear", requireAuth, async (req, res, next) => {
 });
 
 // ==========================================
-// 2. 秒传哈希比对 API
+// 2. 秒传哈希比对 API 与内存哈希索引
 // ==========================================
+const userFileHashMap = new Map();
+
+function recordFileHash(userId, hash, filePath, size, mtimeMs) {
+  if (!userId || !hash) return;
+  let map = userFileHashMap.get(userId);
+  if (!map) {
+    map = new Map();
+    userFileHashMap.set(userId, map);
+  }
+  map.set(hash.toLowerCase(), { path: filePath, size, mtimeMs: mtimeMs || Date.now() });
+}
+
+function findCachedMatchingFile(userId, hash, expectedSize) {
+  const map = userFileHashMap.get(userId);
+  if (!map) return null;
+  const entry = map.get(hash.toLowerCase());
+  if (!entry) return null;
+  if (entry.size !== expectedSize) return null;
+  try {
+    const s = fs.statSync(entry.path);
+    if (s.isFile() && s.size === expectedSize) {
+      return entry.path;
+    }
+  } catch {
+    map.delete(hash.toLowerCase());
+  }
+  return null;
+}
+
+async function computeFileSha256(filePath, size) {
+  if (size <= 16 * 1024 * 1024) {
+    const buf = await fsp.readFile(filePath);
+    return crypto.createHash("sha256").update(buf).digest("hex").toLowerCase();
+  }
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath, { highWaterMark: 1024 * 1024 });
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex").toLowerCase()));
+    stream.on("error", reject);
+  });
+}
+
 app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
   try {
     const hash = String(req.body.hash || "").trim().toLowerCase();
@@ -4839,38 +5030,43 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
       return res.json({ instant: false, exists: true });
     }
 
-    const storageRoot = userStorageRoot(req.user.id);
-    let matchedPath = null;
+    let matchedPath = findCachedMatchingFile(req.user.id, hash, size);
 
-    async function searchMatchingFile(currentDir) {
-      if (matchedPath) return;
-      const entries = await fsp.readdir(currentDir, { withFileTypes: true });
-      for (const entry of entries) {
+    if (!matchedPath) {
+      const storageRoot = userStorageRoot(req.user.id);
+
+      async function searchMatchingFile(currentDir) {
         if (matchedPath) return;
-        const full = path.join(currentDir, entry.name);
-        if (entry.isDirectory()) {
-          if (!isHiddenDriveEntry(entry.name)) {
-            await searchMatchingFile(full);
-          }
-        } else if (entry.isFile()) {
-          const s = await fsp.stat(full).catch(() => null);
-          if (s && s.size === size) {
-            const fileBuf = await fsp.readFile(full);
-            const fileHash = crypto.createHash("sha256").update(fileBuf).digest("hex").toLowerCase();
-            if (fileHash === hash) {
-              matchedPath = full;
-              return;
+        const entries = await fsp.readdir(currentDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (matchedPath) return;
+          const full = path.join(currentDir, entry.name);
+          if (entry.isDirectory()) {
+            if (!isHiddenDriveEntry(entry.name)) {
+              await searchMatchingFile(full);
+            }
+          } else if (entry.isFile()) {
+            const s = await fsp.stat(full).catch(() => null);
+            if (s && s.size === size) {
+              const fileHash = await computeFileSha256(full, s.size);
+              recordFileHash(req.user.id, fileHash, full, s.size, s.mtimeMs);
+              if (fileHash === hash) {
+                matchedPath = full;
+                return;
+              }
             }
           }
         }
       }
-    }
 
-    await searchMatchingFile(storageRoot);
+      await searchMatchingFile(storageRoot);
+    }
 
     if (matchedPath) {
       await fsp.mkdir(path.dirname(targetDest), { recursive: true });
       await fsp.copyFile(matchedPath, targetDest);
+      recordFileHash(req.user.id, hash, targetDest, size, Date.now());
+      adjustUserStorageUsage(req.user.id, size);
       notifyFileChange(req.user.id);
       return res.json({ instant: true, name });
     }
