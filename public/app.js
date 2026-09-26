@@ -2575,7 +2575,12 @@ async function refreshStorageUsage() {
       }
       storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%）${warningMsg ? " " + warningMsg : ""}`;
       if (storageMetricLabel) {
-        storageMetricLabel.textContent = warningMsg ? `配额预警 ${percent}%` : "已用 / 配额";
+        storageMetricLabel.textContent =
+          warningLevel === "danger"
+            ? `配额告急 ${percent}%`
+            : warningLevel === "warning"
+            ? `配额预警 ${percent}%`
+            : "已用 / 配额";
       }
     } else {
       storageUsed.textContent =
@@ -2584,17 +2589,24 @@ async function refreshStorageUsage() {
       const freeRatio = total > 0 ? available / total : 1;
       if (available > 0 && (freeGB < 5 || freeRatio < 0.05)) {
         warningLevel = "danger";
-        warningMsg = `（磁盘剩余不足 ${freeGB.toFixed(1)} GB）`;
+        const reason = freeGB < 5 ? `剩余不足 ${freeGB.toFixed(1)} GB` : `余量不足 5%（剩余 ${formatSize(available)}）`;
+        warningMsg = `（磁盘空间严重不足：${reason}）`;
       } else if (available > 0 && (freeGB < 10 || freeRatio < 0.10)) {
         warningLevel = "warning";
-        warningMsg = `（磁盘剩余不足 ${freeGB.toFixed(1)} GB）`;
+        const reason = freeGB < 10 ? `剩余不足 ${freeGB.toFixed(1)} GB` : `余量不足 10%（剩余 ${formatSize(available)}）`;
+        warningMsg = `（磁盘空间紧张：${reason}）`;
       }
       storageUsed.title =
         available > 0
           ? `网盘已用 ${formatSize(used)} / 磁盘剩余可用 ${formatSize(available)}${warningMsg ? " " + warningMsg : ""}`
           : `网盘已用 ${formatSize(used)}`;
       if (storageMetricLabel) {
-        storageMetricLabel.textContent = warningMsg ? `空间告急 ${formatSize(available)}` : "已用 / 可用";
+        storageMetricLabel.textContent =
+          warningLevel === "danger"
+            ? `空间告急 ${formatSize(available)}`
+            : warningLevel === "warning"
+            ? `空间紧张 ${formatSize(available)}`
+            : "已用 / 可用";
       }
     }
 
