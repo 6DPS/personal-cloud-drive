@@ -295,18 +295,19 @@ function createRateLimitMiddleware({
     cleanupRateLimitStore(authRateLimits, now);
     const keyPart = String(key(req) || "").trim() || "unknown";
     const bucketKey = `${id}:${keyPart}`;
+    const limit = typeof maxHits === "function" ? maxHits(req) : maxHits;
     let entry = authRateLimits.get(bucketKey);
     if (!entry || entry.resetAt <= now) {
       entry = { hits: 0, resetAt: now + windowMs };
       authRateLimits.set(bucketKey, entry);
     }
     entry.hits += 1;
-    const remaining = Math.max(0, maxHits - entry.hits);
+    const remaining = Math.max(0, limit - entry.hits);
     const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
-    res.setHeader("X-RateLimit-Limit", String(maxHits));
+    res.setHeader("X-RateLimit-Limit", String(limit));
     res.setHeader("X-RateLimit-Remaining", String(remaining));
     res.setHeader("X-RateLimit-Reset", String(entry.resetAt));
-    if (entry.hits > maxHits) {
+    if (entry.hits > limit) {
       res.setHeader("Retry-After", String(retryAfterSeconds));
       return res.status(429).json({ error: message || "请求太频繁，请稍后再试" });
     }
@@ -3914,14 +3915,31 @@ app.post("/api/register", createRateLimitMiddleware({
   }
 });
 
-app.post("/api/login", createRateLimitMiddleware({
-  id: "login",
+const loginIpRateLimit = createRateLimitMiddleware({
+  id: "login-ip",
   windowMs: 10 * 60 * 1000,
-  maxHits: 12,
-  message: "登录尝试过于频繁，请 10 分钟后再试",
+  maxHits: (req) => {
+    const ip = clientIp(req);
+    return (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") ? 40 : 15;
+  },
+  message: "检测到来自该 IP 的高频异常登录，已临时安全拦截，请 15 分钟后再试",
+  key: (req) => clientIp(req),
+  skipSuccessful: true,
+});
+
+const loginAccountRateLimit = createRateLimitMiddleware({
+  id: "login-account",
+  windowMs: 10 * 60 * 1000,
+  maxHits: (req) => {
+    const ip = clientIp(req);
+    return (ip === "127.0.0.1" || ip === "::1" || ip === "localhost") ? 12 : 6;
+  },
+  message: "密码错误次数过多，账号登录已临时锁定保护，请 10 分钟后再试",
   key: (req) => `${clientIp(req)}:${String(req.body?.username || "").trim().toLowerCase() || "-"}`,
   skipSuccessful: true,
-}), (req, res) => {
+});
+
+app.post("/api/login", loginIpRateLimit, loginAccountRateLimit, (req, res) => {
   const { username, password } = req.body || {};
   const user = accountsStore.users.find(
     (item) => item.username.toLowerCase() === String(username || "").trim().toLowerCase()

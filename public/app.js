@@ -2554,23 +2554,55 @@ async function refreshStorageUsage() {
     const data = await api("/api/storage-usage");
     const used = Number(data.bytes || 0);
     const available = Number(data.availableBytes || 0);
+    const total = Number(data.totalBytes || 0);
     const quota =
       data.quotaBytes !== undefined && data.quotaBytes !== null
         ? Number(data.quotaBytes)
         : null;
+
+    let warningLevel = "normal";
+    let warningMsg = "";
+
     if (quota && quota > 0) {
       storageUsed.textContent = `${formatSize(used)} / ${formatSize(quota)}`;
       const percent = Math.min(100, Math.round((used / quota) * 100));
-      storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%）`;
-      if (storageMetricLabel) storageMetricLabel.textContent = "已用 / 配额";
+      if (percent >= 95) {
+        warningLevel = "danger";
+        warningMsg = `（配额已用 ${percent}%，极度紧张）`;
+      } else if (percent >= 85) {
+        warningLevel = "warning";
+        warningMsg = `（配额已用 ${percent}%）`;
+      }
+      storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%）${warningMsg ? " " + warningMsg : ""}`;
+      if (storageMetricLabel) {
+        storageMetricLabel.textContent = warningMsg ? `配额预警 ${percent}%` : "已用 / 配额";
+      }
     } else {
       storageUsed.textContent =
         available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
+      const freeGB = available / (1024 * 1024 * 1024);
+      const freeRatio = total > 0 ? available / total : 1;
+      if (available > 0 && (freeGB < 5 || freeRatio < 0.05)) {
+        warningLevel = "danger";
+        warningMsg = `（磁盘剩余不足 ${freeGB.toFixed(1)} GB）`;
+      } else if (available > 0 && (freeGB < 10 || freeRatio < 0.10)) {
+        warningLevel = "warning";
+        warningMsg = `（磁盘剩余不足 ${freeGB.toFixed(1)} GB）`;
+      }
       storageUsed.title =
         available > 0
-          ? `网盘已用 ${used} 字节 / 磁盘可用 ${available} 字节`
-          : `网盘已用 ${used} 字节`;
-      if (storageMetricLabel) storageMetricLabel.textContent = "已用 / 可用";
+          ? `网盘已用 ${formatSize(used)} / 磁盘剩余可用 ${formatSize(available)}${warningMsg ? " " + warningMsg : ""}`
+          : `网盘已用 ${formatSize(used)}`;
+      if (storageMetricLabel) {
+        storageMetricLabel.textContent = warningMsg ? `空间告急 ${formatSize(available)}` : "已用 / 可用";
+      }
+    }
+
+    const metricContainer = storageUsed.closest(".storage-usage-metric");
+    if (metricContainer) {
+      metricContainer.classList.remove("storage-warning", "storage-danger");
+      if (warningLevel === "warning") metricContainer.classList.add("storage-warning");
+      else if (warningLevel === "danger") metricContainer.classList.add("storage-danger");
     }
   } catch {}
 }
@@ -2791,10 +2823,25 @@ function uploadChunkRequest(url, form, onProgress) {
       try {
         data = JSON.parse(xhr.responseText || "{}");
       } catch {}
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-      else reject(new Error(friendlyErrorMessage(data || {}, data.error || "上传失败")));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data);
+      } else {
+        const error = new Error(friendlyErrorMessage(data || {}, data.error || "上传分片失败"));
+        error.status = xhr.status;
+        reject(error);
+      }
     });
-    xhr.addEventListener("error", () => reject(new Error("网络连接中断，上传失败，请检查当前网络后重试。")));
+    xhr.addEventListener("error", () => {
+      const error = new Error("网络连接短暂中断，即将自动重连并续传...");
+      error.isNetworkError = true;
+      reject(error);
+    });
+    xhr.addEventListener("timeout", () => {
+      const error = new Error("分片上传网络响应超时，即将自动重试...");
+      error.isTimeout = true;
+      reject(error);
+    });
+    xhr.timeout = 75000;
     xhr.send(form);
   });
 }
@@ -3066,15 +3113,27 @@ function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function uploadChunkWithRetry(url, form, onProgress) {
+async function uploadChunkWithRetry(url, form, onProgress, chunkInfo = {}) {
   let lastError = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       return await uploadChunkRequest(url, form, onProgress);
     } catch (error) {
       if (isAbortError(error)) return;
       lastError = error;
-      if (attempt < 3) await delay(800 * attempt);
+      // 遇到配额已满、未授权或非法参数等不可重试错误，立即终止重试并抛出
+      if (error.status === 403 || error.status === 401 || error.status === 400 || error.quotaExceeded) {
+        throw error;
+      }
+      if (attempt < maxAttempts) {
+        // 指数退避：1s, 2s, 4s, 8s 并添加微小随机抖动，总重试容忍窗口达 15~20 秒
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 10000);
+        const waitSec = Math.max(1, Math.round(backoffMs / 1000));
+        const label = chunkInfo.partLabel ? ` ${chunkInfo.partLabel}` : "";
+        setStatus(`网络出现短暂波动，${waitSec} 秒后自动重试并续传${label}（第 ${attempt}/${maxAttempts - 1} 次重连）...`);
+        await delay(backoffMs);
+      }
     }
   }
   throw lastError;
@@ -3180,15 +3239,20 @@ async function uploadFilesInChunks(files, targetPath) {
           const chunk = file.slice(start, end);
           const form = new FormData();
           form.append("chunk", chunk, `${file.name}.part${index}`);
-          await uploadChunkWithRetry(`/api/upload-chunk/${encodeURIComponent(uploadId)}/${index}`, form, (loaded) => {
-            inFlightBytes.set(index, Math.min(loaded, chunk.size));
-            const activeBytes = [...inFlightBytes.values()].reduce((sum, value) => sum + value, 0);
-            const percent = Math.min(
-              99,
-              Math.round(((fileCompletedBytes + stageCompletedBytes + activeBytes) / totalBytes) * 100)
-            );
-            showUploadProgress(percent, files.length);
-          });
+          await uploadChunkWithRetry(
+            `/api/upload-chunk/${encodeURIComponent(uploadId)}/${index}`,
+            form,
+            (loaded) => {
+              inFlightBytes.set(index, Math.min(loaded, chunk.size));
+              const activeBytes = [...inFlightBytes.values()].reduce((sum, value) => sum + value, 0);
+              const percent = Math.min(
+                99,
+                Math.round(((fileCompletedBytes + stageCompletedBytes + activeBytes) / totalBytes) * 100)
+              );
+              showUploadProgress(percent, files.length);
+            },
+            { partLabel: `分片 ${index + 1}/${chunkCount}` }
+          );
           inFlightBytes.delete(index);
           stageCompletedBytes += chunk.size;
           showUploadProgress(

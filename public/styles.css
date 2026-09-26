@@ -616,10 +616,30 @@ select {
   font-size: 18px;
   line-height: 1.25;
   text-align: center;
+  transition: color 240ms ease;
+}
+
+.side-metrics .storage-usage-metric.storage-warning span {
+  color: #d97706 !important;
+}
+
+.side-metrics .storage-usage-metric.storage-warning small {
+  color: #b45309 !important;
+  font-weight: 600;
+}
+
+.side-metrics .storage-usage-metric.storage-danger span {
+  color: #dc2626 !important;
+}
+
+.side-metrics .storage-usage-metric.storage-danger small {
+  color: #b91c1c !important;
+  font-weight: 600;
 }
 
 .side-metrics small {
   color: #69778d;
+  transition: color 240ms ease;
 }
 
 .wide {
