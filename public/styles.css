@@ -4682,10 +4682,13 @@ button.ghost:hover,
 }
 
 .brand-row .brand-mark {
+  width: 120px;
+  height: 120px;
   border-radius: 0;
   clip-path: none;
   overflow: visible;
   box-shadow: none;
+  flex-shrink: 0;
 }
 
 .login-panel label,
@@ -5144,8 +5147,8 @@ select:focus {
   }
 
   .sidebar .brand-mark {
-    width: 82px;
-    height: 82px;
+    width: 106px;
+    height: 106px;
   }
 
   .storage-box,
