@@ -855,10 +855,27 @@ select {
   gap: 8px;
 }
 
+.btn-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 36px;
   padding-inline: 14px;
   font-weight: 700;
+}
+
+.actions button .btn-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .search-panel {
@@ -985,6 +1002,10 @@ select {
   border-radius: 999px;
   padding: 0 16px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
 }
 
 #clearSearchBtn {
@@ -1021,17 +1042,18 @@ select {
 .ai-global-search {
   order: 5;
   position: static;
-  flex: 0 0 114px;
-  width: 114px;
-  min-width: 114px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 122px;
   min-height: 38px;
   height: 38px;
-  padding: 0 10px;
+  padding: 0 14px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  gap: 6px;
   border: 2px solid transparent;
   border-radius: 999px;
   background:
@@ -1147,6 +1169,11 @@ select {
   white-space: nowrap;
   transform: translateY(-50%);
   z-index: 1;
+}
+
+.row-actions .ai-chat-action .btn-icon {
+  width: 13px;
+  height: 13px;
 }
 
 .row-actions .ai-chat-placeholder {

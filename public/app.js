@@ -4108,8 +4108,12 @@ function actionButton(label, className, handler) {
 }
 
 function aiActionSlot(item, options = {}, index = 0) {
+  const aiSvgHtml = `<svg class="btn-icon" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 1L8.2 4.7C8.4 5.3 8.9 5.8 9.5 6L13.2 7.2L9.5 8.4C8.9 8.6 8.4 9.1 8.2 9.7L7 13.4L5.8 9.7C5.6 9.1 5.1 8.6 4.5 8.4L0.8 7.2L4.5 6C5.1 5.8 5.6 5.3 5.8 4.7L7 1Z" fill="currentColor"/></svg><span>AI对话</span>`;
   if (state.aiModeEnabled) {
-    const btn = actionButton("AI对话", "ai-chat-action", () => openAiChatPlaceholder(item));
+    const btn = document.createElement("button");
+    btn.className = "ai-chat-action";
+    btn.innerHTML = aiSvgHtml;
+    btn.addEventListener("click", () => openAiChatPlaceholder(item));
     if (options.animateAi) {
       btn.classList.add("ai-animate-in");
       btn.style.animationDelay = `${Math.min(index * 24, 200)}ms`;
@@ -4123,7 +4127,7 @@ function aiActionSlot(item, options = {}, index = 0) {
   const slot = document.createElement("span");
   slot.className = "ai-chat-action ai-chat-placeholder";
   slot.setAttribute("aria-hidden", "true");
-  slot.textContent = "AI对话";
+  slot.innerHTML = aiSvgHtml;
   return slot;
 }
 
@@ -4364,7 +4368,12 @@ function updateSelectionUi() {
     if (bulkMoveBtn) bulkMoveBtn.disabled = count === 0;
     if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
   }
-  selectModeBtn.textContent = state.selectionMode ? "完成" : "多选";
+  const selectModeText = selectModeBtn.querySelector(".btn-text");
+  if (selectModeText) {
+    selectModeText.textContent = state.selectionMode ? "完成" : "多选";
+  } else {
+    selectModeBtn.textContent = state.selectionMode ? "完成" : "多选";
+  }
 }
 
 function syncSelectionRows() {
