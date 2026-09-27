@@ -1155,6 +1155,38 @@ select {
   user-select: none;
 }
 
+.row-actions button.ai-chat-action.ai-animate-in {
+  animation: aiActionIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ai-global-search.ai-animate-in {
+  animation: aiGlobalIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes aiActionIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+@keyframes aiGlobalIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 .search-hint,
 .search-summary {
   margin: 0;

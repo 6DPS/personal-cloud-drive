@@ -302,13 +302,21 @@ function setStatus(message) {
   statusLine.title = message || "";
 }
 
-function syncAiModeUi() {
+function syncAiModeUi(options = {}) {
   if (!aiModeToggleBtn) return;
   aiModeToggleBtn.classList.toggle("active", state.aiModeEnabled);
   aiModeToggleBtn.setAttribute("aria-pressed", state.aiModeEnabled ? "true" : "false");
   aiModeToggleBtn.textContent = state.aiModeEnabled ? "AI模式 开" : "AI模式";
   aiModeToggleBtn.title = state.aiModeEnabled ? "关闭后隐藏每行的 AI 对话入口" : "开启后每个文件和文件夹都会显示 AI 对话入口";
   aiGlobalSearchBtn?.classList.toggle("hidden", !state.aiModeEnabled);
+  if (state.aiModeEnabled && aiGlobalSearchBtn && options.animate) {
+    aiGlobalSearchBtn.classList.remove("ai-animate-in");
+    void aiGlobalSearchBtn.offsetWidth;
+    aiGlobalSearchBtn.classList.add("ai-animate-in");
+    aiGlobalSearchBtn.addEventListener("animationend", () => {
+      aiGlobalSearchBtn.classList.remove("ai-animate-in");
+    }, { once: true });
+  }
 }
 
 function setAiModeEnabled(enabled, { render = true } = {}) {
@@ -316,12 +324,12 @@ function setAiModeEnabled(enabled, { render = true } = {}) {
   if (!state.aiModeEnabled) {
     closeAiDrawer();
   }
-  syncAiModeUi();
+  syncAiModeUi({ animate: state.aiModeEnabled });
   setStatus(state.aiModeEnabled ? "AI 模式已开启：每个项目都可以显示 AI 对话入口" : "AI 模式已关闭");
   if (render) {
     cancelAnimationFrame(aiModeRenderFrame);
     aiModeRenderFrame = requestAnimationFrame(() => {
-      renderRows({ noAnimation: true });
+      renderRows({ noAnimation: false, animateAi: state.aiModeEnabled });
     });
   }
 }
@@ -4071,6 +4079,26 @@ function renderBreadcrumb() {
   }
 }
 
+function areFolderItemsEqual(a = [], b = []) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const itemA = a[i];
+    const itemB = b[i];
+    if (
+      itemA.path !== itemB.path ||
+      itemA.size !== itemB.size ||
+      itemA.modifiedAt !== itemB.modifiedAt ||
+      itemA.type !== itemB.type ||
+      itemA.locked !== itemB.locked ||
+      itemA.unlocked !== itemB.unlocked
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function actionButton(label, className, handler) {
   const button = document.createElement("button");
   button.textContent = label;
@@ -4079,9 +4107,18 @@ function actionButton(label, className, handler) {
   return button;
 }
 
-function aiActionSlot(item) {
+function aiActionSlot(item, options = {}, index = 0) {
   if (state.aiModeEnabled) {
-    return actionButton("AI对话", "ai-chat-action", () => openAiChatPlaceholder(item));
+    const btn = actionButton("AI对话", "ai-chat-action", () => openAiChatPlaceholder(item));
+    if (options.animateAi) {
+      btn.classList.add("ai-animate-in");
+      btn.style.animationDelay = `${Math.min(index * 24, 200)}ms`;
+      btn.addEventListener("animationend", () => {
+        btn.classList.remove("ai-animate-in");
+        btn.style.animationDelay = "";
+      }, { once: true });
+    }
+    return btn;
   }
   const slot = document.createElement("span");
   slot.className = "ai-chat-action ai-chat-placeholder";
@@ -4925,7 +4962,7 @@ function renderRows(options = {}) {
         }));
       };
 
-    actions.append(aiActionSlot(item));
+    actions.append(aiActionSlot(item, options, index));
     actions.append(actionButton("下载", "", () => downloadFile(item)));
     if (item.type === "folder") {
       actions.append(actionButton(item.locked ? "修改密码" : "加密", "ghost", async () => {
@@ -4998,6 +5035,14 @@ function applyFolderData(data, options = {}) {
     saveAiConversation();
   }
 
+  const itemsIdentical = !pathChanged && areFolderItemsEqual(state.items, data.items);
+  if (itemsIdentical && options.silent) {
+    storageRoot.textContent = compactStoragePath(data.storageRoot);
+    storageRoot.title = data.storageRoot;
+    scheduleStorageUsageRefresh();
+    return;
+  }
+
   state.path = data.path;
   state.items = data.items;
   for (const item of state.items) {
@@ -5025,7 +5070,8 @@ function applyFolderData(data, options = {}) {
   backBtn.disabled = !state.path;
   renderBreadcrumb();
   updateSelectionUi();
-  renderRows({ noAnimation: options.noAnimation });
+  const shouldAnimateAi = Boolean(state.aiModeEnabled && (options.animateAi ?? (pathChanged && !options.noAnimation && !options.silent)));
+  renderRows({ noAnimation: options.noAnimation, animateAi: shouldAnimateAi });
   scheduleStorageUsageRefresh();
   if (aiDrawer && !aiDrawer.classList.contains("hidden")) {
     if (!isAiGenerating) {
@@ -5052,8 +5098,11 @@ async function loadFolder(path = state.path, options = {}) {
     exitTrashMode();
   }
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
+  let cachedRendered = false;
   if (cached) {
-    applyFolderData(cached, { ...options, silent: true, noAnimation: true });
+    cachedRendered = true;
+    const animateFromCache = Boolean(state.aiModeEnabled && !options.noAnimation && !options.silent);
+    applyFolderData(cached, { ...options, silent: true, noAnimation: !animateFromCache, animateAi: animateFromCache });
     if (!options.silent) setStatus("正在加载目录内容...");
   }
   const requestSeq = ++state.folderLoadRequestSeq;
@@ -5079,7 +5128,11 @@ async function loadFolder(path = state.path, options = {}) {
   }
   if (requestSeq !== state.folderLoadRequestSeq || controller.signal.aborted) return;
   setCachedFolder(data);
-  applyFolderData(data, options);
+  if (cachedRendered) {
+    applyFolderData(data, { ...options, noAnimation: true, animateAi: false });
+  } else {
+    applyFolderData(data, options);
+  }
   if (state.folderLoadController === controller) state.folderLoadController = null;
 }
 
@@ -6588,7 +6641,7 @@ $("#refreshBtn").addEventListener("click", () => {
     performSearch();
     return;
   }
-  loadFolder(state.path, { replaceHistory: true });
+  loadFolder(state.path, { replaceHistory: true, forceRefresh: true, animateAi: state.aiModeEnabled });
 });
 closePreviewBtn.addEventListener("click", closePreview);
 
