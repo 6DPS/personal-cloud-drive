@@ -1050,7 +1050,6 @@ select {
     0 0 20px rgba(240, 180, 41, 0.24),
     0 0 16px rgba(240, 122, 34, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.24) inset;
-  animation: aiGlobalIn 220ms ease;
   transition: opacity 0.22s ease, transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1150,38 +1149,10 @@ select {
   z-index: 1;
 }
 
-.row-actions button.ai-chat-action:not(.ghost):not(.danger) {
-  animation: aiActionIn 220ms ease;
-}
-
 .row-actions .ai-chat-placeholder {
   visibility: hidden;
   pointer-events: none;
   user-select: none;
-}
-
-@keyframes aiActionIn {
-  from {
-    opacity: 0;
-    transform: translate(-8px, -50%) scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(0, -50%) scale(1);
-  }
-}
-
-@keyframes aiGlobalIn {
-  from {
-    opacity: 0;
-    transform: translateX(8px) scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
 }
 
 .search-hint,
