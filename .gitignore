@@ -5,6 +5,8 @@ tmp/
 .cloudflared/
 .env
 backup_*/
+backups/
+preview-*.html
 恢复至*.bat
 report-output/
 output/

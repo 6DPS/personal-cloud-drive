@@ -65,6 +65,8 @@ let aiPromptPressTimer = null;
 let aiModeRenderFrame = 0;
 const AI_PENDING_CONTEXT_DELAY_MS = 1800;
 const AI_PENDING_LONG_DELAY_MS = 8000;
+const AI_SEND_ARROW_SVG = '<svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
+const AI_STOP_SQUARE_SVG = '<svg class="stop-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3.5"></rect></svg>';
 
 const recycleBinBtn = $("#recycleBinBtn");
 const mySharesBtn = $("#mySharesBtn");
@@ -444,7 +446,16 @@ function updateAiPendingMessage(pendingMessage, text) {
   if (!pendingMessage || !pendingMessage.pending) return;
   if (!state.aiDrawer.messages.includes(pendingMessage)) return;
   pendingMessage.text = text;
-  renderAiMessages();
+  const pendingEl = aiMessages?.querySelector(".ai-message.pending");
+  if (pendingEl) {
+    const p = pendingEl.querySelector(".ai-markdown p") || pendingEl.querySelector("p");
+    if (p) {
+      p.textContent = text;
+      return;
+    }
+    const textEl = pendingEl.querySelector(".ai-markdown") || pendingEl;
+    textEl.replaceChildren(renderAiMarkdown(text, pendingMessage.reasoning));
+  }
 }
 
 function clearAiPendingTimers(pendingMessage) {
@@ -1215,7 +1226,8 @@ function renderAiContextCard() {
     const title = document.createElement("strong");
     title.textContent = "全库语义问答";
     const desc = document.createElement("span");
-    desc.textContent = `范围：${displayFolder(state.path || "")}；可结合文件名、路径和目录结构。`;
+    const scopePath = state.path ? `全部文件 / ${state.path}` : "全部文件";
+    desc.textContent = `范围：${scopePath}；可结合文件名、路径和目录结构。`;
     aiContextCard.append(title, desc);
     return;
   }
@@ -1815,6 +1827,54 @@ function renderAiMessageActions(message, isLastAssistant) {
   return actions;
 }
 
+function createAiMessageBubble(message, index, total, lastCompletedAssistantIndex, isNew = false) {
+  const bubble = document.createElement("div");
+  const hasUserBefore = state.aiDrawer.messages.slice(0, index).some((m) => m.role === "user");
+  const isInitialGreeting = Boolean(message.isInitial || (!hasUserBefore && message.role === "assistant"));
+  bubble.className = `ai-message ${message.role === "user" ? "user" : "assistant"}${message.pending ? " pending" : ""}${isInitialGreeting ? " initial-greeting" : ""}${isNew ? " ai-msg-new" : ""}`;
+  if (message.role === "assistant" && message.webSearch) {
+    const webBadge = document.createElement("div");
+    webBadge.className = `ai-web-search-badge ${message.webSearch.enabled ? "used" : "off"}${message.webSearch.error ? " error" : ""}`;
+    if (!message.webSearch.enabled) {
+      webBadge.textContent = "联网搜索：未开启";
+    } else if (message.webSearch.error) {
+      webBadge.textContent = `联网搜索：搜索失败 · ${message.webSearch.error}`;
+    } else if (message.webSearch.skipped) {
+      webBadge.textContent = "联网搜索：未使用 · 本次无需联网";
+    } else if (message.webSearch.count > 0) {
+      const pageText = message.webSearch.pagesRead ? ` · 已读 ${message.webSearch.pagesRead} 页正文` : "";
+      webBadge.textContent = `联网搜索：已使用 · ${message.webSearch.count} 条结果${pageText}`;
+    } else {
+      webBadge.textContent = "联网搜索：未使用";
+    }
+    bubble.append(webBadge);
+  }
+  if (message.role === "assistant" && (message.model || typeof message.thinking === "boolean")) {
+    const meta = document.createElement("div");
+    meta.className = "ai-message-meta";
+    const modeLabel = "思考";
+    meta.innerHTML = `<span class="meta-icon">💡</span> ${escapeHtml(message.model || aiModelDisplayName())} · ${modeLabel}`;
+    bubble.append(meta);
+  }
+  bubble.append(renderAiMarkdown(message.text, message.reasoning));
+  if (message.role === "assistant" && message.webSearch?.sources?.length) {
+    bubble.append(renderAiWebSources(message.webSearch.sources));
+  }
+  if (message.results?.length) {
+    const resultList = document.createElement("div");
+    resultList.className = "ai-result-list";
+    for (const item of message.results) {
+      resultList.append(renderAiResultCard(item));
+    }
+    bubble.append(resultList);
+  }
+  if (message.role === "assistant" && !message.pending && !isInitialGreeting && message.text) {
+    const isLast = index === lastCompletedAssistantIndex;
+    bubble.append(renderAiMessageActions(message, isLast));
+  }
+  return bubble;
+}
+
 function renderAiMessages() {
   if (!aiMessages) return;
   aiMessages.replaceChildren();
@@ -1829,51 +1889,7 @@ function renderAiMessages() {
   }
 
   state.aiDrawer.messages.forEach((message, index) => {
-    const bubble = document.createElement("div");
-    const hasUserBefore = state.aiDrawer.messages.slice(0, index).some((m) => m.role === "user");
-    const isInitialGreeting = Boolean(message.isInitial || (!hasUserBefore && message.role === "assistant"));
-    bubble.className = `ai-message ${message.role === "user" ? "user" : "assistant"}${message.pending ? " pending" : ""}${isInitialGreeting ? " initial-greeting" : ""}`;
-    if (message.role === "assistant" && message.webSearch) {
-      const webBadge = document.createElement("div");
-      webBadge.className = `ai-web-search-badge ${message.webSearch.enabled ? "used" : "off"}${message.webSearch.error ? " error" : ""}`;
-      if (!message.webSearch.enabled) {
-        webBadge.textContent = "联网搜索：未开启";
-      } else if (message.webSearch.error) {
-        webBadge.textContent = `联网搜索：搜索失败 · ${message.webSearch.error}`;
-      } else if (message.webSearch.skipped) {
-        webBadge.textContent = "联网搜索：未使用 · 本次无需联网";
-      } else if (message.webSearch.count > 0) {
-        const pageText = message.webSearch.pagesRead ? ` · 已读 ${message.webSearch.pagesRead} 页正文` : "";
-        webBadge.textContent = `联网搜索：已使用 · ${message.webSearch.count} 条结果${pageText}`;
-      } else {
-        webBadge.textContent = "联网搜索：未使用";
-      }
-      bubble.append(webBadge);
-    }
-    if (message.role === "assistant" && (message.model || typeof message.thinking === "boolean")) {
-      const meta = document.createElement("div");
-      meta.className = "ai-message-meta";
-      const modeLabel = "思考";
-      meta.innerHTML = `<span class="meta-icon">💡</span> ${escapeHtml(message.model || aiModelDisplayName())} · ${modeLabel}`;
-      bubble.append(meta);
-    }
-    bubble.append(renderAiMarkdown(message.text, message.reasoning));
-    if (message.role === "assistant" && message.webSearch?.sources?.length) {
-      bubble.append(renderAiWebSources(message.webSearch.sources));
-    }
-    if (message.results?.length) {
-      const resultList = document.createElement("div");
-      resultList.className = "ai-result-list";
-      for (const item of message.results) {
-        resultList.append(renderAiResultCard(item));
-      }
-      bubble.append(resultList);
-    }
-    if (message.role === "assistant" && !message.pending && !isInitialGreeting && message.text) {
-      const isLast = index === lastCompletedAssistantIndex;
-      bubble.append(renderAiMessageActions(message, isLast));
-    }
-    aiMessages.append(bubble);
+    aiMessages.append(createAiMessageBubble(message, index, total, lastCompletedAssistantIndex, false));
   });
   aiMessages.scrollTop = aiMessages.scrollHeight;
 }
@@ -2184,37 +2200,65 @@ function renderAiDrawer() {
   const item = state.aiDrawer.item;
   const currentScope = getCurrentAiScope();
   if (aiDrawerTitle) {
+    let titleText = "";
     if (isItemMode) {
-      aiDrawerTitle.textContent = item?.type === "folder" ? "AI文件夹对话" : "AI文件对话";
+      titleText = item?.type === "folder" ? "AI文件夹对话" : "AI文件对话";
     } else {
-      aiDrawerTitle.textContent = currentScope.type === "folder" ? "AI目录问答" : "AI全库问答";
+      titleText = currentScope.type === "folder" ? "AI目录问答" : "AI全库问答";
     }
+    aiDrawerTitle.innerHTML = `<span class="title-text">${titleText}</span><span class="model-badge">${escapeHtml(aiModelDisplayName())}</span>`;
   }
   if (aiDrawerSubtitle) {
-    aiDrawerSubtitle.textContent = isItemMode && item
-      ? `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 对象：${itemName(item)}`
-      : `模型：${aiModelDisplayName()} · ${aiModelModeLabel()} · 范围：${displayFolder(state.path || "") || "全部文件"}`;
-    aiDrawerSubtitle.title = aiDrawerSubtitle.textContent;
+    aiDrawerSubtitle.textContent = "";
+    aiDrawerSubtitle.style.display = "none";
   }
   state.aiDrawer.model = "reasoner";
   aiModelReasonerBtn?.classList.add("active");
   syncAiWebSearchUi();
   aiDrawerBackBtn?.classList.toggle("hidden", !(isItemMode && state.aiDrawer.returnTo));
   if (aiScopeBtn) {
-    const scopeLabel = isItemMode ? "当前文件" : (currentScope.type === "folder" ? "当前目录" : "当前范围");
+    let scopeIcon = "📁";
+    let scopeText = "全部文件";
+    let scopeFull = "全部文件";
+
+    if (isItemMode && item) {
+      if (item.type === "folder") {
+        scopeIcon = "📂";
+        scopeText = `目录：${itemName(item)}`;
+        scopeFull = item.path ? `全部文件 / ${item.path}` : itemName(item);
+      } else {
+        scopeIcon = "📄";
+        scopeText = "当前文件";
+        scopeFull = item.path ? `全部文件 / ${item.path}` : itemName(item);
+      }
+    } else if (currentScope.type === "folder") {
+      const folderName = displayFolder(state.path || "") || "当前目录";
+      scopeIcon = "📂";
+      scopeText = `目录：${folderName}`;
+      scopeFull = state.path ? `全部文件 / ${state.path}` : folderName;
+    } else {
+      scopeIcon = "📁";
+      scopeText = "全部文件";
+      scopeFull = "全部文件";
+    }
+
+    const iconEl = aiScopeBtn.querySelector(".pill-icon");
     const labelEl = aiScopeBtn.querySelector(".pill-label");
-    if (labelEl) labelEl.textContent = scopeLabel;
-    else aiScopeBtn.textContent = scopeLabel;
+    if (iconEl) iconEl.textContent = scopeIcon;
+    if (labelEl) labelEl.textContent = scopeText;
+    else aiScopeBtn.textContent = scopeText;
+
+    aiScopeBtn.title = `范围：${scopeFull}`;
   }
   if (aiPromptHint) {
     aiPromptHint.textContent = isItemMode
-      ? "围绕这个文件提问"
+      ? (item?.type === "folder" ? "围绕当前文件夹提问" : "围绕当前文件提问")
       : (currentScope.type === "folder" ? "围绕当前目录提问" : "问问整个网盘");
   }
   if (aiPromptInput) {
     aiPromptInput.placeholder = isItemMode
-      ? "例如：总结这个文件的重点"
-      : (currentScope.type === "folder" ? "例如：梳理当前目录下的资料" : "例如：帮我找毕业设计相关资料");
+      ? (item?.type === "folder" ? "例如：梳理包含哪些资料、查找核心文档..." : "例如：总结重点、提炼核心结论、寻找数据...")
+      : (currentScope.type === "folder" ? "例如：梳理当前目录资料、按类型总结..." : "例如：帮我找毕业设计相关资料");
   }
   renderAiContextCard();
   renderAiSuggestionsDynamic();
@@ -2250,7 +2294,19 @@ async function executeAiChatTurn(prompt) {
     pendingStageTimers: [],
   };
   state.aiDrawer.messages.push(pendingMessage);
-  renderAiMessages();
+
+  const total = state.aiDrawer.messages.length;
+  if (aiMessages && aiMessages.children.length === total - 2) {
+    const userMsg = state.aiDrawer.messages[total - 2];
+    aiMessages.append(
+      createAiMessageBubble(userMsg, total - 2, total, -1, true),
+      createAiMessageBubble(pendingMessage, total - 1, total, -1, true)
+    );
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+  } else {
+    renderAiMessages();
+  }
+
   scheduleAiPendingStages(pendingMessage, prompt, state.aiDrawer.mode, state.aiWebSearchEnabled);
 
   isAiGenerating = true;
@@ -2260,7 +2316,7 @@ async function executeAiChatTurn(prompt) {
   if (aiPromptSendBtn) {
     aiPromptSendBtn.setAttribute("aria-label", "停止生成");
     aiPromptSendBtn.title = "点击停止生成当前回答";
-    aiPromptSendBtn.innerHTML = '<span class="stop-icon" aria-hidden="true">■</span><span class="send-text">停止</span>';
+    aiPromptSendBtn.innerHTML = AI_STOP_SQUARE_SVG;
   }
   syncAiPromptSendState();
 
@@ -2272,8 +2328,8 @@ async function executeAiChatTurn(prompt) {
       signal: aiChatAbortController.signal,
     });
     clearAiPendingTimers(pendingMessage);
-    state.aiDrawer.messages = state.aiDrawer.messages.filter((message) => message !== pendingMessage);
-    state.aiDrawer.messages.push({
+    const msgIdx = state.aiDrawer.messages.indexOf(pendingMessage);
+    const completedMsg = {
       role: "assistant",
       text: response.text,
       reasoning: response.reasoning || "",
@@ -2281,23 +2337,52 @@ async function executeAiChatTurn(prompt) {
       model: response.model || aiModelDisplayName(),
       thinking: Boolean(response.thinking || response.reasoning),
       webSearch: response.webSearch || null,
-    });
-    saveAiConversation();
-    archiveCurrentAiSession();
-  } catch (error) {
-    clearAiPendingTimers(pendingMessage);
-    state.aiDrawer.messages = state.aiDrawer.messages.filter((message) => message !== pendingMessage);
-    if (isAbortError(error)) {
-      state.aiDrawer.messages.push({
-        role: "assistant",
-        text: "已停止生成当前回答。",
-      });
-      setStatus("已停止生成");
+    };
+    if (msgIdx !== -1) {
+      state.aiDrawer.messages[msgIdx] = completedMsg;
     } else {
-      state.aiDrawer.messages.push({ role: "assistant", text: error.message || "AI 回复失败，请稍后再试。" });
+      state.aiDrawer.messages.push(completedMsg);
     }
     saveAiConversation();
     archiveCurrentAiSession();
+
+    const pendingEl = aiMessages?.querySelector(".ai-message.pending");
+    if (pendingEl) {
+      const newBubble = createAiMessageBubble(completedMsg, msgIdx, state.aiDrawer.messages.length, msgIdx, true);
+      pendingEl.replaceWith(newBubble);
+      aiMessages.scrollTop = aiMessages.scrollHeight;
+    } else {
+      renderAiMessages();
+    }
+  } catch (error) {
+    clearAiPendingTimers(pendingMessage);
+    const msgIdx = state.aiDrawer.messages.indexOf(pendingMessage);
+    const errText = isAbortError(error) ? "已停止生成当前回答。" : (error.message || "AI 回复失败，请稍后再试。");
+    const errMessage = {
+      role: "assistant",
+      text: errText,
+      results: [],
+      model: aiModelDisplayName(),
+    };
+    if (msgIdx !== -1) {
+      state.aiDrawer.messages[msgIdx] = errMessage;
+    } else {
+      state.aiDrawer.messages.push(errMessage);
+    }
+    if (isAbortError(error)) {
+      setStatus("已停止生成");
+    }
+    saveAiConversation();
+    archiveCurrentAiSession();
+
+    const pendingEl = aiMessages?.querySelector(".ai-message.pending");
+    if (pendingEl) {
+      const newBubble = createAiMessageBubble(errMessage, msgIdx, state.aiDrawer.messages.length, msgIdx, true);
+      pendingEl.replaceWith(newBubble);
+      aiMessages.scrollTop = aiMessages.scrollHeight;
+    } else {
+      renderAiMessages();
+    }
   } finally {
     clearAiPendingTimers(pendingMessage);
     isAiGenerating = false;
@@ -2305,13 +2390,13 @@ async function executeAiChatTurn(prompt) {
     aiPromptSendBtn?.classList.remove("is-generating");
     if (aiPromptSendBtn) {
       aiPromptSendBtn.removeAttribute("disabled");
-      aiPromptSendBtn.setAttribute("aria-label", "发送");
+      aiPromptSendBtn.setAttribute("aria-label", "发送提问");
       aiPromptSendBtn.title = "发送提问 (Enter 发送，Shift+Enter 换行)";
-      aiPromptSendBtn.innerHTML = '<span class="send-text">发送</span>';
+      aiPromptSendBtn.innerHTML = AI_SEND_ARROW_SVG;
     }
     syncAiPromptSendState();
     autoResizeAiPromptInput();
-    renderAiMessages();
+    void flushPendingRealtimeRefresh();
   }
 }
 
@@ -2967,6 +3052,7 @@ function isModalOpen(modal) {
 function isUiInteractionActive() {
   return (
     state.busy ||
+    isAiGenerating ||
     state.selectionMode ||
     isModalOpen(uploadModal) ||
     isModalOpen(bulkMoveModal) ||
@@ -4942,14 +5028,16 @@ function applyFolderData(data, options = {}) {
   renderRows({ noAnimation: options.noAnimation });
   scheduleStorageUsageRefresh();
   if (aiDrawer && !aiDrawer.classList.contains("hidden")) {
-    if (state.aiDrawer.mode === "global" && pathChanged) {
-      state.aiDrawer.key = aiConversationKey("global", null, state.path);
-      syncCurrentAiSessionScope();
-      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
-    }
-    renderAiDrawer();
-    if (aiHistoryPanel && !aiHistoryPanel.classList.contains("hidden")) {
-      renderAiHistoryPanel();
+    if (!isAiGenerating) {
+      if (state.aiDrawer.mode === "global" && pathChanged) {
+        state.aiDrawer.key = aiConversationKey("global", null, state.path);
+        syncCurrentAiSessionScope();
+        state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+        renderAiDrawer();
+      }
+      if (aiHistoryPanel && !aiHistoryPanel.classList.contains("hidden")) {
+        renderAiHistoryPanel();
+      }
     }
   }
   if (!options.silent) setStatus(`已加载 ${state.items.length} 个项目，上传将保存到当前目录。`);
@@ -6375,7 +6463,6 @@ aiClearAllHistoryBtn?.addEventListener("click", clearAllAiSessions);
 aiDrawerCloseBtn?.addEventListener("click", closeAiDrawer);
 aiDrawerBackdrop?.addEventListener("click", closeAiDrawer);
 aiDrawerBackBtn?.addEventListener("click", returnToAiGlobalDrawer);
-aiModelReasonerBtn?.addEventListener("click", () => setAiModel("reasoner"));
 aiWebSearchToggleBtn?.addEventListener("click", () => setAiWebSearchEnabled(!state.aiWebSearchEnabled));
 aiPromptForm?.addEventListener("submit", (event) => {
   event.preventDefault();

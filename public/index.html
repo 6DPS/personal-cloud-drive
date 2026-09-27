@@ -357,8 +357,8 @@
                 </svg>
               </div>
               <div class="ai-drawer-title-text">
-                <h2 id="aiDrawerTitle">AI对话</h2>
-                <p id="aiDrawerSubtitle">选择一个入口开始</p>
+                <h2 id="aiDrawerTitle"><span class="title-text">AI全库问答</span><span class="model-badge">deepseek-v4-pro</span></h2>
+                <p id="aiDrawerSubtitle" style="display:none;"></p>
               </div>
             </div>
             <div class="ai-drawer-header-actions">
@@ -382,14 +382,14 @@
           </header>
 
           <div class="ai-drawer-toolbar">
-            <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button">
+            <button id="aiModelReasonerBtn" class="ai-model-pill active" type="button" tabindex="-1">
               <span class="pill-icon">💡</span><span class="pill-label">思考</span>
             </button>
             <button id="aiWebSearchToggleBtn" class="ai-model-pill ai-web-search-toggle" type="button" aria-pressed="false">
               <span class="pill-icon">🌐</span><span class="pill-label">联网关闭</span>
             </button>
-            <button id="aiScopeBtn" class="ai-model-pill subtle" type="button">
-              <span class="pill-icon">📂</span><span class="pill-label">当前范围</span>
+            <button id="aiScopeBtn" class="ai-model-pill subtle" type="button" tabindex="-1">
+              <span class="pill-icon">📁</span><span class="pill-label">全部文件</span>
             </button>
           </div>
 
@@ -403,8 +403,11 @@
                 <span id="aiPromptHint">输入你的问题</span>
                 <textarea id="aiPromptInput" rows="1" placeholder="例如：帮我找毕业设计相关资料"></textarea>
               </label>
-              <button id="aiPromptSendBtn" class="ai-send-btn" type="submit" aria-label="发送">
-                <span class="send-text">发送</span>
+              <button id="aiPromptSendBtn" class="ai-send-btn" type="submit" aria-label="发送提问" title="发送提问 (Enter 发送，Shift+Enter 换行)">
+                <svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
               </button>
             </div>
           </form>
