@@ -141,6 +141,16 @@ async function run() {
     });
     assert.strictEqual(storageRes.status, 200);
     assert.strictEqual(storageRes.data.quotaBytes, 10 * 1024 * 1024 * 1024);
+    assert.strictEqual(storageRes.data.totalBytes, null, "Normal user must not see host totalBytes");
+    assert.strictEqual(storageRes.data.availableBytes, null, "Normal user must not see host availableBytes");
+
+    const adminStorageRes = await requestJson(`http://127.0.0.1:${port}/api/storage-usage`, {
+      headers: adminHeaders,
+    });
+    assert.strictEqual(adminStorageRes.status, 200);
+    assert.strictEqual(adminStorageRes.data.quotaBytes, null, "Admin has no quota limit (null)");
+    assert(typeof adminStorageRes.data.totalBytes === "number", "Admin can see host totalBytes");
+    assert(typeof adminStorageRes.data.availableBytes === "number", "Admin can see host availableBytes");
 
     console.log("8. Testing Upload Interception when Quota Exceeded...");
     // Adjust user quota to tiny 500 bytes via admin API
@@ -170,6 +180,29 @@ async function run() {
     });
     assert.strictEqual(adminUploadRes.status, 200, "Admin must not be restricted by quota");
     assert(adminUploadRes.data.uploadId);
+
+    console.log("8b. Testing Non-Admin User Quota Set to Unlimited...");
+    const setUnlimitedRes = await requestJson(`http://127.0.0.1:${port}/api/admin/users/tester50/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaGb: "unlimited" },
+    });
+    assert.strictEqual(setUnlimitedRes.status, 200);
+    assert.strictEqual(setUnlimitedRes.data.user.quotaBytes, null, "Quota must be null when set to unlimited");
+    const unlimitedStorageRes = await requestJson(`http://127.0.0.1:${port}/api/storage-usage`, {
+      headers: user50Headers,
+    });
+    assert.strictEqual(unlimitedStorageRes.status, 200);
+    assert.strictEqual(unlimitedStorageRes.data.quotaBytes, null, "quotaBytes must be null");
+    assert.strictEqual(unlimitedStorageRes.data.totalBytes, null, "totalBytes must remain null for non-admin");
+    assert.strictEqual(unlimitedStorageRes.data.availableBytes, null, "availableBytes must remain null for non-admin");
+
+    // Restore quota to 500 bytes for subsequent quota enforcement tests
+    await requestJson(`http://127.0.0.1:${port}/api/admin/users/tester50/quota`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: { quotaBytes: 500 },
+    });
 
     console.log("9. Testing Strict Boundary Validation on Registration Keys API...");
     const badKeyRes1 = await requestJson(`http://127.0.0.1:${port}/api/registration-keys`, {

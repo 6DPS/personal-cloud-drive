@@ -2680,7 +2680,7 @@ async function refreshStorageUsage() {
         storageMetricLabel.title = `配额上限 ${formatSize(quota)}（剩余配额 ${formatSize(remainingQuota)}）`;
       }
       remainingText = `（余 ${formatSize(remainingQuota)}）`;
-    } else {
+    } else if (available > 0) {
       const totalPool = used + available;
       storageUsed.textContent =
         available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
@@ -2713,6 +2713,16 @@ async function refreshStorageUsage() {
         storageMetricLabel.title = available > 0 ? `磁盘剩余可用 ${formatSize(available)}（共 ${formatSize(total)}）` : "存储状态正常";
       }
       remainingText = available > 0 ? `（余 ${formatSize(available)}）` : "";
+    } else {
+      storageUsed.textContent = `${formatSize(used)} / 不限`;
+      percent = 0;
+      warningLevel = "normal";
+      storageUsed.title = `已用 ${formatSize(used)} / 配额不限`;
+      if (storageMetricLabel) {
+        storageMetricLabel.textContent = "充裕";
+        storageMetricLabel.title = "空间不限，使用充裕";
+      }
+      remainingText = "（不限配额）";
     }
 
     const metricContainer = storageUsed.closest(".storage-usage-metric");
@@ -2731,8 +2741,12 @@ async function refreshStorageUsage() {
       else if (warningLevel === "danger") storageProgressBarFill.classList.add("bar-danger");
     }
     if (storagePercentBadge) {
-      const percentStr = used > 0 && percent < 1 ? "< 1%" : `${percent}%`;
-      storagePercentBadge.textContent = `${percentStr} 已用${remainingText}`;
+      if ((!quota || quota <= 0) && available <= 0) {
+        storagePercentBadge.textContent = `已用 ${formatSize(used)}（不限）`;
+      } else {
+        const percentStr = used > 0 && percent < 1 ? "< 1%" : `${percent}%`;
+        storagePercentBadge.textContent = `${percentStr} 已用${remainingText}`;
+      }
       storagePercentBadge.classList.remove("badge-warning", "badge-danger");
       if (warningLevel === "warning") storagePercentBadge.classList.add("badge-warning");
       else if (warningLevel === "danger") storagePercentBadge.classList.add("badge-danger");
