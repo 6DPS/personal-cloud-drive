@@ -30,7 +30,7 @@
         vertical-align: middle !important;
       }
     </style>
-    <link rel="stylesheet" href="/styles.css?v=20260928_trash_fix_v47" />
+    <link rel="stylesheet" href="/styles.css?v=20260928_sidebar_b_v48" />
   </head>
   <body>
     <main id="app">
@@ -227,11 +227,48 @@
             </div>
           </div>
 
-          <button id="recycleBinBtn" class="ghost wide" type="button">🗑️ 回收站</button>
-          <button id="mySharesBtn" class="ghost wide" type="button">🔗 我的分享</button>
-          <button id="userQuotasBtn" class="ghost wide admin-action hidden" type="button">👥 用户配额管理</button>
-          <button id="registrationKeysBtn" class="ghost wide admin-action hidden">注册密钥管理</button>
-          <button id="logoutBtn" class="ghost wide">退出登录</button>
+          <div class="sidebar-user-tools">
+            <div class="sidebar-tools-grid">
+              <button id="recycleBinBtn" class="sidebar-tool-tile" type="button" title="查看回收站">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 5h12M6 5V3.5A1.5 1.5 0 0 1 7.5 2h3A1.5 1.5 0 0 1 12 3.5V5M14 5v9.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 14.5V5"/>
+                </svg>
+                <span>回收站</span>
+              </button>
+              <button id="mySharesBtn" class="sidebar-tool-tile" type="button" title="查看外链分享">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M7.5 10.5a4 4 0 0 0 5.66 0l2.12-2.12a4 4 0 0 0-5.66-5.66L8.2 4.14M10.5 7.5a4 4 0 0 0-5.66 0L2.72 9.62a4 4 0 0 0 5.66 5.66l1.42-1.42"/>
+                </svg>
+                <span>我的分享</span>
+              </button>
+            </div>
+
+            <div id="adminPanelCard" class="admin-panel-card admin-action hidden">
+              <div class="admin-panel-header">
+                <span>管理配置</span>
+              </div>
+              <button id="userQuotasBtn" class="admin-sub-btn admin-action hidden" type="button">
+                <svg class="btn-icon" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12.5 15.5v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v1M7.5 8.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM14.5 9.5a2.5 2.5 0 0 0 0-5"/>
+                </svg>
+                <span>用户配额管理</span>
+              </button>
+              <button id="registrationKeysBtn" class="admin-sub-btn admin-action hidden" type="button">
+                <svg class="btn-icon" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="6.5" cy="7.5" r="4" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M9.5 10.5L16 17M13 14l2 2M15 12l1.5 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>注册密钥管理</span>
+              </button>
+            </div>
+
+            <button id="logoutBtn" class="sidebar-logout-btn" type="button" title="退出当前账号">
+              <svg class="btn-icon" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6.5 15.5H3.5A1.5 1.5 0 0 1 2 14V4a1.5 1.5 0 0 1 1.5-1.5h3M12 12.5l3.5-3.5L12 5.5M15.5 9H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>退出登录</span>
+            </button>
+          </div>
         </aside>
 
         <section class="content">
@@ -745,7 +782,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260928_trash_fix_v47"></script>
+    <script src="/app.js?v=20260928_sidebar_b_v48"></script>
     <script src="/login-fx.js?v=20260920_loginfix_v38"></script>
   </body>
 </html>

@@ -5912,6 +5912,8 @@ function syncAdminUi() {
   const isAdmin = state.currentUser?.role === "admin";
   registrationKeysBtn?.classList.toggle("hidden", !isAdmin);
   userQuotasBtn?.classList.toggle("hidden", !isAdmin);
+  const adminPanelCard = document.getElementById("adminPanelCard");
+  if (adminPanelCard) adminPanelCard.classList.toggle("hidden", !isAdmin);
 }
 
 function registrationKeyStatusText(status) {
