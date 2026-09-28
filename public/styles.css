@@ -605,6 +605,16 @@ select {
   color: #2563eb;
 }
 
+.storage-dash-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+  border-radius: 3px;
+  filter: drop-shadow(0 1px 2px rgba(20, 115, 230, 0.15));
+}
+
 .storage-dash-title {
   font-size: 13.5px;
   font-weight: 700;
