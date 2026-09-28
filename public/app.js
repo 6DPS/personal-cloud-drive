@@ -2655,10 +2655,11 @@ async function refreshStorageUsage() {
 
     let warningLevel = "normal";
     let warningMsg = "";
+    let percent = 0;
 
     if (quota && quota > 0) {
       storageUsed.textContent = `${formatSize(used)} / ${formatSize(quota)}`;
-      const percent = Math.min(100, Math.round((used / quota) * 100));
+      percent = Math.min(100, Math.max(0, Math.round((used / quota) * 100)));
       if (percent >= 95) {
         warningLevel = "danger";
         warningMsg = `（配额已用 ${percent}%，极度紧张）`;
@@ -2673,13 +2674,19 @@ async function refreshStorageUsage() {
             ? `配额告急 ${percent}%`
             : warningLevel === "warning"
             ? `配额预警 ${percent}%`
-            : "已用 / 配额";
+            : "空间充裕";
       }
     } else {
       storageUsed.textContent =
         available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
       const freeGB = available / (1024 * 1024 * 1024);
       const freeRatio = total > 0 ? available / total : 1;
+
+      const referenceTotal = total > 0 ? total : (used + available);
+      if (referenceTotal > 0) {
+        percent = Math.min(100, Math.max(0, Math.round((used / referenceTotal) * 100)));
+      }
+
       if (available > 0 && (freeGB < 5 || freeRatio < 0.05)) {
         warningLevel = "danger";
         const reason = freeGB < 5 ? `剩余不足 ${freeGB.toFixed(1)} GB` : `余量不足 5%（剩余 ${formatSize(available)}）`;
@@ -2699,7 +2706,7 @@ async function refreshStorageUsage() {
             ? `空间告急 ${formatSize(available)}`
             : warningLevel === "warning"
             ? `空间紧张 ${formatSize(available)}`
-            : "已用 / 可用";
+            : "空间充裕";
       }
     }
 
@@ -2708,6 +2715,22 @@ async function refreshStorageUsage() {
       metricContainer.classList.remove("storage-warning", "storage-danger");
       if (warningLevel === "warning") metricContainer.classList.add("storage-warning");
       else if (warningLevel === "danger") metricContainer.classList.add("storage-danger");
+    }
+
+    const storageProgressBarFill = document.getElementById("storageProgressBarFill");
+    const storagePercentBadge = document.getElementById("storagePercentBadge");
+    if (storageProgressBarFill) {
+      storageProgressBarFill.style.width = `${Math.max(used > 0 ? 5 : 0, percent)}%`;
+      storageProgressBarFill.classList.remove("bar-warning", "bar-danger");
+      if (warningLevel === "warning") storageProgressBarFill.classList.add("bar-warning");
+      else if (warningLevel === "danger") storageProgressBarFill.classList.add("bar-danger");
+    }
+    if (storagePercentBadge) {
+      const percentStr = used > 0 && percent < 1 ? "< 1%" : `${percent}%`;
+      storagePercentBadge.textContent = `${percentStr} 已用`;
+      storagePercentBadge.classList.remove("badge-warning", "badge-danger");
+      if (warningLevel === "warning") storagePercentBadge.classList.add("badge-warning");
+      else if (warningLevel === "danger") storagePercentBadge.classList.add("badge-danger");
     }
   } catch {}
 }

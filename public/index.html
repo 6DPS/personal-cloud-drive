@@ -30,7 +30,7 @@
         vertical-align: middle !important;
       }
     </style>
-    <link rel="stylesheet" href="/styles.css?v=20260928_sidebar_b_v48" />
+    <link rel="stylesheet" href="/styles.css?v=20260928_storage_fusion1_v49" />
   </head>
   <body>
     <main id="app">
@@ -212,18 +212,56 @@
             <small id="networkStatus" class="network-status">当前访问：正在检测...</small>
           </div>
 
-          <div class="side-metrics">
-            <div>
-              <span id="folderCount">0</span>
-              <small>文件夹</small>
+          <div class="side-metrics storage-dashboard-card">
+            <div class="storage-dash-header">
+              <div class="storage-dash-title-group">
+                <div class="storage-dash-icon-badge">
+                  <svg class="btn-icon" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 14.5a3.5 3.5 0 0 1-.5-6.96A5 5 0 0 1 13.5 6a4 4 0 0 1 1.5 7.72"/>
+                    <path d="M7 14.5h8"/>
+                  </svg>
+                </div>
+                <span class="storage-dash-title">存储空间</span>
+              </div>
+              <span id="storagePercentBadge" class="storage-percent-badge">--% 已用</span>
             </div>
-            <div>
-              <span id="fileCount">0</span>
-              <small>文件</small>
+
+            <div class="storage-bar-track">
+              <div id="storageProgressBarFill" class="storage-bar-fill"></div>
             </div>
-            <div class="storage-usage-metric">
-              <span id="storageUsed">0 B</span>
-              <small id="storageMetricLabel">已用 / 可用</small>
+
+            <div class="storage-usage-metric storage-capacity-row">
+              <div class="storage-capacity-main">
+                <span id="storageUsed">0 B</span>
+              </div>
+              <small id="storageMetricLabel" class="storage-capacity-hint">已用 / 可用</small>
+            </div>
+
+            <div class="storage-embedded-tiles">
+              <div class="storage-mini-tile">
+                <div class="storage-mini-icon-box folder-bg">
+                  <svg width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2.5 4.5A1.5 1.5 0 0 1 4 3h3.5l1.5 2H14a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 14 15H4a1.5 1.5 0 0 1-1.5-1.5v-9z"/>
+                  </svg>
+                </div>
+                <div class="storage-mini-meta">
+                  <span id="folderCount">0</span>
+                  <small>文件夹</small>
+                </div>
+              </div>
+
+              <div class="storage-mini-tile">
+                <div class="storage-mini-icon-box file-bg">
+                  <svg width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 2.5H4.5A1.5 1.5 0 0 0 3 4v10a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V7.5L10 2.5z"/>
+                    <path d="M10 2.5v5h5"/>
+                  </svg>
+                </div>
+                <div class="storage-mini-meta">
+                  <span id="fileCount">0</span>
+                  <small>文件</small>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -782,7 +820,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260928_sidebar_b_v48"></script>
+    <script src="/app.js?v=20260928_storage_fusion1_v49"></script>
     <script src="/login-fx.js?v=20260920_loginfix_v38"></script>
   </body>
 </html>
