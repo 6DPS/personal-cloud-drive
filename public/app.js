@@ -2671,10 +2671,11 @@ async function refreshStorageUsage() {
       if (storageMetricLabel) {
         storageMetricLabel.textContent =
           warningLevel === "danger"
-            ? `配额告急 ${percent}%`
+            ? "告急"
             : warningLevel === "warning"
-            ? `配额预警 ${percent}%`
-            : "空间充裕";
+            ? "预警"
+            : "充裕";
+        storageMetricLabel.title = `配额上限 ${formatSize(quota)}（已用 ${percent}%）`;
       }
     } else {
       const totalPool = used + available;
@@ -2702,10 +2703,11 @@ async function refreshStorageUsage() {
       if (storageMetricLabel) {
         storageMetricLabel.textContent =
           warningLevel === "danger"
-            ? `空间告急 ${formatSize(available)}`
+            ? "告急"
             : warningLevel === "warning"
-            ? `空间紧张 ${formatSize(available)}`
-            : "空间充裕";
+            ? "紧张"
+            : "充裕";
+        storageMetricLabel.title = available > 0 ? `磁盘剩余可用 ${formatSize(available)}` : "存储状态正常";
       }
     }
 

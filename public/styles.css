@@ -579,66 +579,72 @@ select {
 .side-metrics {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   margin-top: 4px;
-  padding: 10px 12px 9px;
+  padding: 9px 11px 8px;
   border: 1px solid rgba(188, 206, 230, 0.85);
   border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 3px 10px rgba(30, 41, 59, 0.03);
+  box-shadow: 0 3px 8px rgba(30, 41, 59, 0.03);
 }
 
 .storage-dash-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .storage-dash-title-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.storage-dash-icon-badge {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #eff6ff;
+  gap: 5px;
   color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .storage-dash-title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #1e293b;
 }
 
-.storage-percent-badge {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
-  padding: 1.5px 7px;
-  border-radius: 999px;
+.storage-val-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.storage-capacity-val {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.storage-capacity-hint {
+  font-size: 9.5px;
+  color: #059669;
+  font-weight: 600;
+  background: #ecfdf5;
+  padding: 1px 5px;
+  border-radius: 4px;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.storage-percent-badge.badge-warning {
-  background: #fefce8;
-  color: #d97706;
-  border-color: #fef08a;
+.storage-val-group.storage-warning .storage-capacity-hint {
+  color: #b45309 !important;
+  background: #fefce8 !important;
+  border: 1px solid #fef08a !important;
 }
 
-.storage-percent-badge.badge-danger {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
+.storage-val-group.storage-danger .storage-capacity-hint {
+  color: #b91c1c !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
 }
 
 .storage-bar-track {
@@ -647,6 +653,8 @@ select {
   background: #e2e8f0;
   border-radius: 999px;
   overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .storage-bar-fill {
@@ -654,76 +662,63 @@ select {
   height: 100%;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
   border-radius: 999px;
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.35);
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
 }
 
 .storage-bar-fill.bar-warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.35);
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
 }
 
 .storage-bar-fill.bar-danger {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.35);
+  background: linear-gradient(90deg, #ef4444, #f87171) !important;
 }
 
-.storage-capacity-row {
-  display: flex !important;
-  align-items: baseline !important;
-  justify-content: space-between !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.storage-capacity-main strong,
-.storage-capacity-main span {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: #0f172a;
-  overflow-wrap: anywhere;
-}
-
-.storage-capacity-hint {
+.storage-subrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 10.5px;
-  color: #059669;
-  font-weight: 600;
-  background: #ecfdf5;
-  padding: 1px 6px;
-  border-radius: 5px;
+  color: #64748b;
+  padding-top: 1px;
+}
+
+.storage-percent-text {
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 10.5px;
   transition: all 0.2s ease;
 }
 
-.storage-capacity-row.storage-warning .storage-capacity-hint {
-  color: #b45309 !important;
-  background: #fefce8 !important;
+.storage-percent-text.badge-warning {
+  color: #d97706 !important;
 }
 
-.storage-capacity-row.storage-danger .storage-capacity-hint {
-  color: #b91c1c !important;
-  background: #fef2f2 !important;
+.storage-percent-text.badge-danger {
+  color: #dc2626 !important;
 }
 
 .storage-embedded-tiles {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 7px;
+  gap: 5px;
   margin-top: 0;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(226, 232, 240, 0.95);
+  padding-top: 5px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.9);
 }
 
 .storage-mini-tile {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 9px;
-  padding: 5px 8px;
+  border-radius: 6px;
+  padding: 3.5px 7px;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 7px;
+  justify-content: space-between !important;
+  font-size: 10.5px;
+  color: #475569;
   transition: all 0.18s ease;
 }
 
@@ -733,42 +728,19 @@ select {
   box-shadow: 0 2px 5px rgba(30, 41, 59, 0.04);
 }
 
-.storage-mini-icon-box {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+.storage-tile-label-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.storage-mini-icon-box.folder-bg {
-  background: #eff6ff;
-  color: #2563eb;
-}
-
-.storage-mini-icon-box.file-bg {
-  background: #f5f3ff;
-  color: #7c3aed;
-}
-
-.storage-mini-meta {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.storage-mini-meta span {
-  font-size: 13px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.storage-mini-meta small {
-  font-size: 10px;
+  gap: 4px;
+  font-size: 10.5px;
   color: #64748b;
   font-weight: 600;
+}
+
+.storage-mini-tile strong {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .wide {
@@ -5573,13 +5545,8 @@ select:focus {
   }
 
   .side-metrics {
-    gap: 7px;
+    gap: 6px;
     margin-top: 3px;
-  }
-
-  .side-metrics div {
-    gap: 2px;
-    padding: 7px 9px;
   }
 
   .sidebar .wide {
