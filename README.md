@@ -6,9 +6,13 @@
 
 ## 📸 界面预览 (UI Screenshots)
 
-| 🎨 专属视觉登录界面 | 🖥️ 现代化网盘管理主界面 |
+| 🎨 专属视觉登录界面 | 🖥️ 现代化网盘管理主界面（全新存储看板） |
 | :---: | :---: |
 | <img src="docs/screenshots/01_login_view.png" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png" width="100%" /> |
+
+| 👥 子账号存储配额可视化调控 | 🔒 普通用户空间绝对隔离与配额保护 |
+| :---: | :---: |
+| <img src="docs/screenshots/04_user_quota_management.png" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png" width="100%" /> |
 
 ### 🤖 智能 AI 全库问答与深度检索 (DeepSeek 驱动)
 <p align="center">
@@ -23,6 +27,11 @@
   - 支持大文件自动分片（1MB/2MB）、双通道并发上传与失败指数退避重试；
   - 云端哈希快速秒传，避免重复上传相同文件；
   - 下载支持 HTTP 206 Range 断点续传与流式直推，局域网千兆直连可达 100+ MB/s。
+
+- **📊 精细化存储配额与隐私安全隔离**
+  - **全新流线型存储看板**：侧边栏实时呈现容量状态（充裕/预警/告急三档阶梯）、平滑动效进度条、余量胶囊及当前目录文件夹/文件即时计数；
+  - **角色级数据隔离**：普通用户严格按个人配额（如 20.0 GB）计算余量与百分比，后端自动脱敏宿主机硬件参数，100% 杜绝服务器物理磁盘泄露；
+  - **动态可视化调控**：管理员后台一键调整任意账号配额（10GB、20GB、50GB、100GB、不限或自定义），超额上传毫秒级安全拦截阻断。
 
 - **📑 强大的文档与多媒体原生预览**
   - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与排版预览；
