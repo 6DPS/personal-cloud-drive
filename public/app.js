@@ -2677,23 +2677,22 @@ async function refreshStorageUsage() {
             : "空间充裕";
       }
     } else {
+      const totalPool = used + available;
       storageUsed.textContent =
-        available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
+        available > 0 ? `${formatSize(used)} / ${formatSize(totalPool)}` : formatSize(used);
       const freeGB = available / (1024 * 1024 * 1024);
-      const freeRatio = total > 0 ? available / total : 1;
 
-      const referenceTotal = total > 0 ? total : (used + available);
-      if (referenceTotal > 0) {
-        percent = Math.min(100, Math.max(0, Math.round((used / referenceTotal) * 100)));
+      if (totalPool > 0) {
+        percent = Math.min(100, Math.max(0, Math.round((used / totalPool) * 100)));
       }
 
-      if (available > 0 && (freeGB < 5 || freeRatio < 0.05)) {
+      if (available > 0 && freeGB < 5) {
         warningLevel = "danger";
-        const reason = freeGB < 5 ? `剩余不足 ${freeGB.toFixed(1)} GB` : `余量不足 5%（剩余 ${formatSize(available)}）`;
+        const reason = `剩余不足 ${freeGB.toFixed(1)} GB`;
         warningMsg = `（磁盘空间严重不足：${reason}）`;
-      } else if (available > 0 && (freeGB < 10 || freeRatio < 0.10)) {
+      } else if (available > 0 && freeGB < 10) {
         warningLevel = "warning";
-        const reason = freeGB < 10 ? `剩余不足 ${freeGB.toFixed(1)} GB` : `余量不足 10%（剩余 ${formatSize(available)}）`;
+        const reason = `剩余不足 ${freeGB.toFixed(1)} GB`;
         warningMsg = `（磁盘空间紧张：${reason}）`;
       }
       storageUsed.title =
@@ -2720,7 +2719,7 @@ async function refreshStorageUsage() {
     const storageProgressBarFill = document.getElementById("storageProgressBarFill");
     const storagePercentBadge = document.getElementById("storagePercentBadge");
     if (storageProgressBarFill) {
-      storageProgressBarFill.style.width = `${Math.max(used > 0 ? 5 : 0, percent)}%`;
+      storageProgressBarFill.style.width = `${Math.max(used > 0 ? 3 : 0, percent)}%`;
       storageProgressBarFill.classList.remove("bar-warning", "bar-danger");
       if (warningLevel === "warning") storageProgressBarFill.classList.add("bar-warning");
       else if (warningLevel === "danger") storageProgressBarFill.classList.add("bar-danger");
