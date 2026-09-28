@@ -4042,8 +4042,8 @@ app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
     res.json({
       bytes,
       quotaBytes,
-      totalBytes: volume?.totalBytes || 0,
-      availableBytes: volume?.availableBytes || 0,
+      totalBytes: isAdm ? (volume?.totalBytes || 0) : null,
+      availableBytes: isAdm ? (volume?.availableBytes || 0) : null,
     });
   } catch (error) {
     next(error);

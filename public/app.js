@@ -2656,8 +2656,10 @@ async function refreshStorageUsage() {
     let warningLevel = "normal";
     let warningMsg = "";
     let percent = 0;
+    let remainingText = "";
 
     if (quota && quota > 0) {
+      const remainingQuota = Math.max(0, quota - used);
       storageUsed.textContent = `${formatSize(used)} / ${formatSize(quota)}`;
       percent = Math.min(100, Math.max(0, Math.round((used / quota) * 100)));
       if (percent >= 95) {
@@ -2667,7 +2669,7 @@ async function refreshStorageUsage() {
         warningLevel = "warning";
         warningMsg = `（配额已用 ${percent}%）`;
       }
-      storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%）${warningMsg ? " " + warningMsg : ""}`;
+      storageUsed.title = `已用 ${formatSize(used)} / 配额上限 ${formatSize(quota)}（已使用 ${percent}%，剩余配额 ${formatSize(remainingQuota)}）${warningMsg ? " " + warningMsg : ""}`;
       if (storageMetricLabel) {
         storageMetricLabel.textContent =
           warningLevel === "danger"
@@ -2675,8 +2677,9 @@ async function refreshStorageUsage() {
             : warningLevel === "warning"
             ? "预警"
             : "充裕";
-        storageMetricLabel.title = `配额上限 ${formatSize(quota)}（已用 ${percent}%）`;
+        storageMetricLabel.title = `配额上限 ${formatSize(quota)}（剩余配额 ${formatSize(remainingQuota)}）`;
       }
+      remainingText = `（余 ${formatSize(remainingQuota)}）`;
     } else {
       const totalPool = used + available;
       storageUsed.textContent =
@@ -2709,6 +2712,7 @@ async function refreshStorageUsage() {
             : "充裕";
         storageMetricLabel.title = available > 0 ? `磁盘剩余可用 ${formatSize(available)}（共 ${formatSize(total)}）` : "存储状态正常";
       }
+      remainingText = available > 0 ? `（余 ${formatSize(available)}）` : "";
     }
 
     const metricContainer = storageUsed.closest(".storage-usage-metric");
@@ -2728,8 +2732,7 @@ async function refreshStorageUsage() {
     }
     if (storagePercentBadge) {
       const percentStr = used > 0 && percent < 1 ? "< 1%" : `${percent}%`;
-      const freeText = available > 0 ? `（余 ${formatSize(available)}）` : "";
-      storagePercentBadge.textContent = `${percentStr} 已用${freeText}`;
+      storagePercentBadge.textContent = `${percentStr} 已用${remainingText}`;
       storagePercentBadge.classList.remove("badge-warning", "badge-danger");
       if (warningLevel === "warning") storagePercentBadge.classList.add("badge-warning");
       else if (warningLevel === "danger") storagePercentBadge.classList.add("badge-danger");
