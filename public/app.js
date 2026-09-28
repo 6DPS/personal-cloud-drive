@@ -2680,7 +2680,7 @@ async function refreshStorageUsage() {
     } else {
       const totalPool = used + available;
       storageUsed.textContent =
-        available > 0 ? `${formatSize(used)} / ${formatSize(totalPool)}` : formatSize(used);
+        available > 0 ? `${formatSize(used)} / ${formatSize(available)}` : formatSize(used);
       const freeGB = available / (1024 * 1024 * 1024);
 
       if (totalPool > 0) {
@@ -2698,7 +2698,7 @@ async function refreshStorageUsage() {
       }
       storageUsed.title =
         available > 0
-          ? `网盘已用 ${formatSize(used)} / 磁盘剩余可用 ${formatSize(available)}${warningMsg ? " " + warningMsg : ""}`
+          ? `网盘已用 ${formatSize(used)} / 磁盘剩余可用 ${formatSize(available)}（磁盘分区总容量 ${formatSize(total)}）${warningMsg ? " " + warningMsg : ""}`
           : `网盘已用 ${formatSize(used)}`;
       if (storageMetricLabel) {
         storageMetricLabel.textContent =
@@ -2707,7 +2707,7 @@ async function refreshStorageUsage() {
             : warningLevel === "warning"
             ? "紧张"
             : "充裕";
-        storageMetricLabel.title = available > 0 ? `磁盘剩余可用 ${formatSize(available)}` : "存储状态正常";
+        storageMetricLabel.title = available > 0 ? `磁盘剩余可用 ${formatSize(available)}（共 ${formatSize(total)}）` : "存储状态正常";
       }
     }
 
@@ -2728,7 +2728,8 @@ async function refreshStorageUsage() {
     }
     if (storagePercentBadge) {
       const percentStr = used > 0 && percent < 1 ? "< 1%" : `${percent}%`;
-      storagePercentBadge.textContent = `${percentStr} 已用`;
+      const freeText = available > 0 ? `（余 ${formatSize(available)}）` : "";
+      storagePercentBadge.textContent = `${percentStr} 已用${freeText}`;
       storagePercentBadge.classList.remove("badge-warning", "badge-danger");
       if (warningLevel === "warning") storagePercentBadge.classList.add("badge-warning");
       else if (warningLevel === "danger") storagePercentBadge.classList.add("badge-danger");
@@ -3452,14 +3453,20 @@ function hideUploadProgressSoon() {
   }, 650);
 }
 
-function formatSize(size) {
+function formatSize(size, precision = null) {
   if (size == null) return "-";
   const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = size;
+  let value = Number(size);
   let index = 0;
   while (value >= 1024 && index < units.length - 1) {
     value /= 1024;
     index += 1;
+  }
+  if (precision !== null) {
+    return `${value.toFixed(precision)} ${units[index]}`;
+  }
+  if (index >= 3) {
+    return `${value.toFixed(1)} ${units[index]}`;
   }
   return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
 }
