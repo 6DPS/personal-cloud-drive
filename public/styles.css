@@ -95,7 +95,9 @@ button.ghost:hover {
   background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(223, 235, 249, 0.94));
 }
 
-.hidden {
+.hidden,
+[hidden],
+.actions button.hidden {
   display: none !important;
 }
 

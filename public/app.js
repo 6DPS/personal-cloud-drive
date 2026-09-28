@@ -5105,6 +5105,9 @@ async function loadFolder(path = state.path, options = {}) {
       return loadTrash(options);
     }
     exitTrashMode();
+  } else {
+    const lingeringTrashBtn = document.getElementById("trashClearBtn");
+    if (lingeringTrashBtn) lingeringTrashBtn.remove();
   }
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
   let cachedRendered = false;
@@ -6943,7 +6946,6 @@ document.addEventListener("visibilitychange", () => {
 
 // --- 1. 回收站逻辑 ---
 function exitTrashMode() {
-  if (!state.trashMode) return;
   state.trashMode = false;
   state.selectedPaths.clear();
   state.selectionMode = false;
@@ -6956,7 +6958,10 @@ function exitTrashMode() {
   if (newFolderBtn) newFolderBtn.classList.remove("hidden");
   if (selectModeBtn) selectModeBtn.classList.remove("hidden");
   const trashClearBtn = document.getElementById("trashClearBtn");
-  if (trashClearBtn) trashClearBtn.classList.add("hidden");
+  if (trashClearBtn) {
+    trashClearBtn.classList.add("hidden");
+    trashClearBtn.remove();
+  }
   if (normalSelectionActions) normalSelectionActions.classList.remove("hidden");
   if (trashSelectionActions) trashSelectionActions.classList.add("hidden");
 }
