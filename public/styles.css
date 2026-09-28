@@ -4353,9 +4353,15 @@ td:nth-child(5) {
 
   .actions button {
     min-height: 36px;
-    padding: 0 6px;
-    font-size: 13px;
+    padding: 0 4px;
+    font-size: 12.5px;
+    gap: 4px;
     white-space: nowrap;
+  }
+
+  .actions button .btn-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .search-panel {

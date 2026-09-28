@@ -20,8 +20,21 @@
         background: #f0f4f9;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       }
+      .btn-icon {
+        width: 15px !important;
+        height: 15px !important;
+        flex-shrink: 0 !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
+      }
+      .actions button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+      }
     </style>
-    <link rel="stylesheet" href="/styles.css?v=20260926_resilience_v44" />
+    <link rel="stylesheet" href="/styles.css?v=20260928_btn_icons_v46" />
   </head>
   <body>
     <main id="app">
@@ -231,7 +244,7 @@
             <div class="path-panel">
               <div class="path-controls">
                 <button id="backBtn" class="icon-button back-nav-btn" title="返回上一级" aria-label="返回上一级">
-                  <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <svg width="18" height="18" style="width:18px;height:18px;display:block;" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M12 15L7 10L12 5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </button>
@@ -247,27 +260,27 @@
               <input id="fileInput" type="file" multiple hidden />
               <input id="folderInput" type="file" multiple webkitdirectory directory hidden />
               <button id="uploadBtn" class="primary">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M2.5 11V13C2.5 13.5523 2.94772 14 3.5 14H12.5C13.0523 14 13.5 13.5523 13.5 13V11M8 2V10.5M8 2L4.5 5.5M8 2L11.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span>上传文件</span>
               </button>
               <button id="newFolderBtn" class="primary secondary">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M2 3.5C2 2.94772 2.44772 2.5 3 2.5H6.2C6.55 2.5 6.88 2.68 7.07 2.98L7.93 4.35C8.12 4.65 8.45 4.83 8.8 4.83H13C13.5523 4.83 14 5.27772 14 5.83V12.5C14 13.0523 13.5523 13.5 13 13.5H3C2.44772 13.5 2 13.0523 2 12.5V3.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
                   <path d="M8 7.8V11.2M6.3 9.5H9.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                 </svg>
                 <span>新建文件夹</span>
               </button>
               <button id="selectModeBtn" class="ghost">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <rect x="2.5" y="2.5" width="11" height="11" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
                   <path d="M5.2 8L7.1 10L10.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span class="btn-text">多选</span>
               </button>
               <button id="refreshBtn" class="ghost">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M2.5 8C2.5 4.96243 4.96243 2.5 8 2.5C10.6033 2.5 12.7844 4.31015 13.3444 6.75M13.5 8C13.5 11.0376 11.0376 13.5 8 13.5C5.39673 13.5 3.21557 11.6898 2.65556 9.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                   <path d="M13.5 3.5V6.75H10.25M2.5 12.5V9.25H5.75" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -288,7 +301,7 @@
                 />
               </label>
               <button id="searchBtn" class="primary secondary" type="button">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.6"/>
                   <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
@@ -302,7 +315,7 @@
               </div>
               <button id="aiModeToggleBtn" class="ai-mode-toggle" type="button" aria-pressed="false">AI模式</button>
               <button id="aiGlobalSearchBtn" class="ai-global-search hidden" type="button" title="使用满血 AI 旗舰大模型（deepseek-v4-pro）进行全库问答与检索">
-                <svg class="btn-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M8 1.5L9.3 5.3C9.5 5.8 9.9 6.2 10.4 6.4L14.2 7.7C14.6 7.8 14.6 8.4 14.2 8.5L10.4 9.8C9.9 10 9.5 10.4 9.3 10.9L8 14.7C7.9 15.1 7.3 15.1 7.2 14.7L5.9 10.9C5.7 10.4 5.3 10 4.8 9.8L1 8.5C0.6 8.4 0.6 7.8 1 7.7L4.8 6.4C5.3 6.2 5.7 5.8 5.9 5.3L7.2 1.5C7.3 1.1 7.9 1.1 8 1.5Z" fill="currentColor"/>
                 </svg>
                 <span>AI全库问答</span>
@@ -736,7 +749,7 @@
     <script src="/vendor/dompurify/purify.min.js"></script>
     <script src="/vendor/katex/katex.min.js"></script>
     <script src="/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/app.js?v=20260926_storage_v45"></script>
+    <script src="/app.js?v=20260928_btn_icons_v46"></script>
     <script src="/login-fx.js?v=20260920_loginfix_v38"></script>
   </body>
 </html>

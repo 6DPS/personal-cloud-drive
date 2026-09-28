@@ -4108,7 +4108,7 @@ function actionButton(label, className, handler) {
 }
 
 function aiActionSlot(item, options = {}, index = 0) {
-  const aiSvgHtml = `<svg class="btn-icon" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 1L8.2 4.7C8.4 5.3 8.9 5.8 9.5 6L13.2 7.2L9.5 8.4C8.9 8.6 8.4 9.1 8.2 9.7L7 13.4L5.8 9.7C5.6 9.1 5.1 8.6 4.5 8.4L0.8 7.2L4.5 6C5.1 5.8 5.6 5.3 5.8 4.7L7 1Z" fill="currentColor"/></svg><span>AI对话</span>`;
+  const aiSvgHtml = `<svg class="btn-icon" width="14" height="14" style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 1L8.2 4.7C8.4 5.3 8.9 5.8 9.5 6L13.2 7.2L9.5 8.4C8.9 8.6 8.4 9.1 8.2 9.7L7 13.4L5.8 9.7C5.6 9.1 5.1 8.6 4.5 8.4L0.8 7.2L4.5 6C5.1 5.8 5.6 5.3 5.8 4.7L7 1Z" fill="currentColor"/></svg><span>AI对话</span>`;
   if (state.aiModeEnabled) {
     const btn = document.createElement("button");
     btn.className = "ai-chat-action";
@@ -4372,7 +4372,7 @@ function updateSelectionUi() {
   if (selectModeText) {
     selectModeText.textContent = state.selectionMode ? "完成" : "多选";
   } else {
-    selectModeBtn.textContent = state.selectionMode ? "完成" : "多选";
+    selectModeBtn.innerHTML = `<svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M5.2 8L7.1 10L10.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-text">${state.selectionMode ? "完成" : "多选"}</span>`;
   }
 }
 
