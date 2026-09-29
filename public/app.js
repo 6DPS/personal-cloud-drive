@@ -51,6 +51,7 @@ const state = {
     model: "reasoner",
     key: "",
     returnTo: null,
+    forceGlobal: false,
   },
   currentAiSessionId: null,
   aiConversations: new Map(),
@@ -302,6 +303,22 @@ function setStatus(message) {
   statusLine.title = message || "";
 }
 
+function syncAiGlobalBtnUi() {
+  if (!aiGlobalSearchBtn) return;
+  const isFolder = Boolean(state.path);
+  const textSpan = aiGlobalSearchBtn.querySelector("span");
+  if (isFolder) {
+    const folderName = displayFolder(state.path || "") || "当前文件夹";
+    if (textSpan) textSpan.textContent = "AI文件夹对话";
+    aiGlobalSearchBtn.classList.add("is-folder");
+    aiGlobalSearchBtn.title = `使用满血 AI 旗舰大模型（deepseek-v4-pro）围绕当前文件夹（${folderName}）进行对话与梳理`;
+  } else {
+    if (textSpan) textSpan.textContent = "AI全库问答";
+    aiGlobalSearchBtn.classList.remove("is-folder");
+    aiGlobalSearchBtn.title = "使用满血 AI 旗舰大模型（deepseek-v4-pro）进行全库问答与检索";
+  }
+}
+
 function syncAiModeUi(options = {}) {
   if (!aiModeToggleBtn) return;
   aiModeToggleBtn.classList.toggle("active", state.aiModeEnabled);
@@ -309,6 +326,7 @@ function syncAiModeUi(options = {}) {
   aiModeToggleBtn.textContent = state.aiModeEnabled ? "AI模式 开" : "AI模式";
   aiModeToggleBtn.title = state.aiModeEnabled ? "关闭后隐藏每行的 AI 对话入口" : "开启后每个文件和文件夹都会显示 AI 对话入口";
   aiGlobalSearchBtn?.classList.toggle("hidden", !state.aiModeEnabled);
+  syncAiGlobalBtnUi();
   if (state.aiModeEnabled && aiGlobalSearchBtn && options.animate) {
     aiGlobalSearchBtn.classList.remove("ai-animate-in");
     void aiGlobalSearchBtn.offsetWidth;
@@ -362,6 +380,7 @@ function openAiChatPlaceholder(item) {
 
 function openAiGlobalSearchPlaceholder() {
   const query = searchInput?.value.trim() || "";
+  if (state.aiDrawer) state.aiDrawer.forceGlobal = false;
   openAiDrawer("global");
   if (query) {
     if (aiPromptInput) aiPromptInput.value = `帮我搜索网盘中与“${query}”相关的文件，并分析其内容与用途`;
@@ -372,9 +391,13 @@ function openAiGlobalSearchPlaceholder() {
 }
 
 function aiInitialMessages(mode, item = null) {
-  const targetLabel = mode === "item" && item
-    ? `${item.type === "folder" ? "当前文件夹" : "当前文件"}“${itemName(item)}”`
-    : `当前文库“${displayFolder(state.path || "") || "全部文件"}”`;
+  const currentScope = getCurrentAiScope();
+  let targetLabel = "全部文件";
+  if (currentScope.type === "item") {
+    targetLabel = `当前文件“${currentScope.label}”`;
+  } else if (currentScope.type === "folder") {
+    targetLabel = `当前文件夹“${currentScope.label}”`;
+  }
   return [{
     role: "assistant",
     isInitial: true,
@@ -383,7 +406,7 @@ function aiInitialMessages(mode, item = null) {
 }
 
 function aiConversationKey(mode = state.aiDrawer.mode, item = state.aiDrawer.item, scopePath = state.path) {
-  const targetPath = mode === "item" ? item?.path || "" : scopePath || "";
+  const targetPath = mode === "item" ? item?.path || "" : (state.aiDrawer?.forceGlobal ? "" : scopePath || "");
   return `${mode}:${targetPath}`;
 }
 
@@ -578,6 +601,15 @@ function getCurrentAiScope() {
   }
 
   // mode === "global": differentiate folder-level vs root global scope
+  if (state.aiDrawer?.forceGlobal) {
+    return {
+      type: "global",
+      key: "global",
+      label: "全局资料库",
+      itemPath: "",
+    };
+  }
+
   const currentPath = (state.path || "").trim();
   if (currentPath) {
     const folderName = currentPath.split("/").filter(Boolean).pop() || displayFolder(currentPath) || "当前文件夹";
@@ -987,6 +1019,9 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   const previous = options.returnToCurrent ? aiDrawerSnapshot() : null;
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
   state.aiDrawer.item = state.aiDrawer.mode === "item" ? item : null;
+  if (!options.preserveForceGlobal) {
+    state.aiDrawer.forceGlobal = false;
+  }
   state.aiDrawer.key = aiConversationKey(state.aiDrawer.mode, state.aiDrawer.item, state.path);
 
   // Synchronize state.currentAiSessionId to match the new scope
@@ -1026,6 +1061,7 @@ function returnToAiGlobalDrawer() {
   closeAiHistoryPanel();
   state.aiDrawer.mode = "global";
   state.aiDrawer.item = null;
+  state.aiDrawer.forceGlobal = false;
   state.aiDrawer.key = target.key || aiConversationKey("global", null, state.path);
 
   // Synchronize state.currentAiSessionId to match global/folder scope
@@ -1045,6 +1081,38 @@ function returnToAiGlobalDrawer() {
     archiveCurrentAiSession();
     saveAiConversation();
   }, 400);
+}
+
+function handleAiDrawerBackOrSwitch() {
+  if (state.aiDrawer.mode === "item" && state.aiDrawer.returnTo) {
+    returnToAiGlobalDrawer();
+    return;
+  }
+  if (state.aiDrawer.mode === "global" && state.path) {
+    closeAiHistoryPanel();
+    archiveCurrentAiSession();
+    saveAiConversation();
+    state.aiDrawer.forceGlobal = !state.aiDrawer.forceGlobal;
+    state.aiDrawer.key = aiConversationKey("global", null, state.path);
+    syncCurrentAiSessionScope();
+    state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+    renderAiDrawer();
+    syncAiPromptSendState();
+    const currentScope = getCurrentAiScope();
+    if (state.aiDrawer.forceGlobal) {
+      setStatus("已切换为 AI 全库问答，可跨目录提问与检索整个网盘");
+    } else {
+      setStatus(`已切回“${currentScope.label}”文件夹对话`);
+    }
+    window.setTimeout(() => {
+      autoResizeAiPromptInput();
+      aiPromptInput?.focus({ preventScroll: true });
+    }, 100);
+    return;
+  }
+  if (state.aiDrawer.returnTo) {
+    returnToAiGlobalDrawer();
+  }
 }
 
 function closeAiDrawer() {
@@ -1231,11 +1299,11 @@ function renderAiContextCard() {
   if (!aiContextCard) return;
   aiContextCard.replaceChildren();
   if (state.aiDrawer.mode === "global") {
-    const isFolder = Boolean(state.path);
+    const isFolder = Boolean(state.path) && !state.aiDrawer?.forceGlobal;
     const title = document.createElement("strong");
     title.textContent = isFolder ? "AI文件夹对话" : "AI全库问答";
     const desc = document.createElement("span");
-    const scopePath = state.path ? `全部文件 / ${state.path}` : "全部文件";
+    const scopePath = isFolder ? `全部文件 / ${state.path}` : "全部文件";
     desc.textContent = isFolder
       ? `范围：${scopePath}；围绕当前文件夹内容进行问答与梳理。`
       : `范围：${scopePath}；可结合文件名、路径和全库结构。`;
@@ -2226,7 +2294,28 @@ function renderAiDrawer() {
   state.aiDrawer.model = "reasoner";
   aiModelReasonerBtn?.classList.add("active");
   syncAiWebSearchUi();
-  aiDrawerBackBtn?.classList.toggle("hidden", !(isItemMode && state.aiDrawer.returnTo));
+  const drawerHeader = aiDrawer?.querySelector(".ai-drawer-header");
+  if (aiDrawerBackBtn) {
+    if (isItemMode && state.aiDrawer.returnTo) {
+      aiDrawerBackBtn.classList.remove("hidden");
+      aiDrawerBackBtn.textContent = state.aiDrawer.returnTo.mode === "global" && state.path ? "返回文件夹" : "返回全库问答";
+      aiDrawerBackBtn.title = "返回上一个对话";
+      drawerHeader?.classList.add("has-back-btn");
+    } else if (Boolean(state.path) && !isItemMode) {
+      aiDrawerBackBtn.classList.remove("hidden");
+      if (state.aiDrawer.forceGlobal) {
+        aiDrawerBackBtn.textContent = "当前文件夹";
+        aiDrawerBackBtn.title = `缩小检索范围，仅围绕当前文件夹（${displayFolder(state.path)}）提问`;
+      } else {
+        aiDrawerBackBtn.textContent = "全库问答";
+        aiDrawerBackBtn.title = "扩大检索范围，向整个网盘提问";
+      }
+      drawerHeader?.classList.add("has-back-btn");
+    } else {
+      aiDrawerBackBtn.classList.add("hidden");
+      drawerHeader?.classList.remove("has-back-btn");
+    }
+  }
   if (aiScopeBtn) {
     let scopeIcon = "📁";
     let scopeText = "全部文件";
@@ -2277,7 +2366,7 @@ function renderAiDrawer() {
 }
 
 async function requestAiAssistant({ mode, item, prompt, signal }) {
-  const path = mode === "item" ? item?.path || "" : state.path || "";
+  const path = mode === "item" ? item?.path || "" : (state.aiDrawer?.forceGlobal ? "" : state.path || "");
   const messages = state.aiDrawer.messages
     .slice(-10)
     .filter((message) => !message.pending)
@@ -5127,6 +5216,7 @@ function applyFolderData(data, options = {}) {
   storageRoot.title = data.storageRoot;
   if (currentFolderLabel) currentFolderLabel.textContent = displayFolder(state.path);
   updateSearchScopeLabel();
+  syncAiGlobalBtnUi();
   backBtn.disabled = !state.path;
   renderBreadcrumb();
   updateSelectionUi();
@@ -5136,6 +5226,7 @@ function applyFolderData(data, options = {}) {
   if (aiDrawer && !aiDrawer.classList.contains("hidden")) {
     if (!isAiGenerating) {
       if (state.aiDrawer.mode === "global" && pathChanged) {
+        state.aiDrawer.forceGlobal = false;
         state.aiDrawer.key = aiConversationKey("global", null, state.path);
         syncCurrentAiSessionScope();
         state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
@@ -6580,7 +6671,7 @@ aiCloseHistoryBtn?.addEventListener("click", closeAiHistoryPanel);
 aiClearAllHistoryBtn?.addEventListener("click", clearAllAiSessions);
 aiDrawerCloseBtn?.addEventListener("click", closeAiDrawer);
 aiDrawerBackdrop?.addEventListener("click", closeAiDrawer);
-aiDrawerBackBtn?.addEventListener("click", returnToAiGlobalDrawer);
+aiDrawerBackBtn?.addEventListener("click", handleAiDrawerBackOrSwitch);
 aiWebSearchToggleBtn?.addEventListener("click", () => setAiWebSearchEnabled(!state.aiWebSearchEnabled));
 aiPromptForm?.addEventListener("submit", (event) => {
   event.preventDefault();
