@@ -580,7 +580,7 @@ function getCurrentAiScope() {
   // mode === "global": differentiate folder-level vs root global scope
   const currentPath = (state.path || "").trim();
   if (currentPath) {
-    const folderName = currentPath.split("/").filter(Boolean).pop() || displayFolder(currentPath) || "当前目录";
+    const folderName = currentPath.split("/").filter(Boolean).pop() || displayFolder(currentPath) || "当前文件夹";
     return {
       type: "folder",
       key: `folder:${currentPath}`,
@@ -717,7 +717,7 @@ function renderAiHistoryPanel() {
     if (currentScope.type === "item") {
       aiHistoryTitleText.textContent = `文件历史 (${currentScope.label})`;
     } else if (currentScope.type === "folder") {
-      aiHistoryTitleText.textContent = `目录历史 (${currentScope.label})`;
+      aiHistoryTitleText.textContent = `文件夹历史 (${currentScope.label})`;
     } else {
       aiHistoryTitleText.textContent = "全库问答历史";
     }
@@ -728,7 +728,7 @@ function renderAiHistoryPanel() {
     if (currentScope.type === "item") {
       aiClearAllHistoryBtn.textContent = "清空本文件记录";
     } else if (currentScope.type === "folder") {
-      aiClearAllHistoryBtn.textContent = "清空本目录记录";
+      aiClearAllHistoryBtn.textContent = "清空本文件夹记录";
     } else {
       aiClearAllHistoryBtn.textContent = "清空全库记录";
     }
@@ -739,7 +739,7 @@ function renderAiHistoryPanel() {
   }
 
   if (!sessions.length) {
-    const typeLabel = currentScope.type === "item" ? "文件" : (currentScope.type === "folder" ? "目录" : "全库问答");
+    const typeLabel = currentScope.type === "item" ? "文件" : (currentScope.type === "folder" ? "文件夹" : "全库问答");
     aiHistoryList.innerHTML = `
       <div class="ai-history-empty">
         <div class="ai-history-empty-icon">💬</div>
@@ -755,7 +755,7 @@ function renderAiHistoryPanel() {
     const isCurrent = session.id === state.currentAiSessionId;
     const timeStr = formatAiSessionTime(session.updatedAt);
     const turnCount = (session.messages || []).filter((m) => m.role === "user").length;
-    const scopeBadgeLabel = session.targetLabel || (currentScope.type === "item" ? currentScope.label : (currentScope.type === "folder" ? `目录: ${currentScope.label}` : "全局资料库"));
+    const scopeBadgeLabel = session.targetLabel || (currentScope.type === "item" ? currentScope.label : (currentScope.type === "folder" ? `文件夹: ${currentScope.label}` : "全局资料库"));
 
     const card = document.createElement("div");
     card.className = `ai-history-card${isCurrent ? " active" : ""}`;
@@ -909,12 +909,12 @@ async function clearAllAiSessions() {
 
   const isItem = currentScope.type === "item";
   const isFolder = currentScope.type === "folder";
-  const title = isItem ? "清空本文件历史记录" : (isFolder ? "清空本目录历史记录" : "清空全库历史会话");
+  const title = isItem ? "清空本文件历史记录" : (isFolder ? "清空本文件夹历史记录" : "清空全库历史会话");
   const description = isItem
-    ? `确定要清空关于“${currentScope.label}”的 ${targetSessions.length} 条历史会话吗？（其他文件、目录与全库历史不受影响）`
+    ? `确定要清空关于“${currentScope.label}”的 ${targetSessions.length} 条历史会话吗？（其他文件、文件夹与全库历史不受影响）`
     : (isFolder
-      ? `确定要清空关于“${currentScope.label}”目录的 ${targetSessions.length} 条历史会话吗？（其他目录、文件与全库历史不受影响）`
-      : `确定要清空全库问答的 ${targetSessions.length} 条历史会话吗？（各文件与各目录的历史会话不受影响）`);
+      ? `确定要清空关于“${currentScope.label}”文件夹的 ${targetSessions.length} 条历史会话吗？（其他文件夹、文件与全库历史不受影响）`
+      : `确定要清空全库问答的 ${targetSessions.length} 条历史会话吗？（各文件与各文件夹的历史会话不受影响）`);
 
   const confirmed = await openDialog({
     eyebrow: "会话管理",
@@ -935,7 +935,7 @@ async function clearAllAiSessions() {
   renderAiHistoryPanel();
   const statusMsg = isItem
     ? "已清空本文件的历史会话记录"
-    : (isFolder ? "已清空本目录的历史会话记录" : "已清空全库问答历史记录");
+    : (isFolder ? "已清空本文件夹的历史会话记录" : "已清空全库问答历史记录");
   setStatus(statusMsg);
 }
 
@@ -1011,7 +1011,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   const currentScope = getCurrentAiScope();
   setStatus(state.aiDrawer.mode === "item" && item
     ? `已打开“${itemName(item)}”的 AI 对话`
-    : (currentScope.type === "folder" ? `已打开“${currentScope.label}”的 AI 问答` : "已打开 AI 全库问答"));
+    : (currentScope.type === "folder" ? `已打开“${currentScope.label}”的 AI 文件夹对话` : "已打开 AI 全库问答"));
 
   // Defer session storage persistence until animation completes smoothly
   window.setTimeout(() => {
@@ -1040,7 +1040,7 @@ function returnToAiGlobalDrawer() {
     aiPromptInput?.focus({ preventScroll: true });
   }, 100);
   const currentScope = getCurrentAiScope();
-  setStatus(currentScope.type === "folder" ? `已返回“${currentScope.label}”的 AI 问答` : "已返回 AI 全库问答");
+  setStatus(currentScope.type === "folder" ? `已返回“${currentScope.label}”的 AI 文件夹对话` : "已返回 AI 全库问答");
   window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();
@@ -1231,11 +1231,14 @@ function renderAiContextCard() {
   if (!aiContextCard) return;
   aiContextCard.replaceChildren();
   if (state.aiDrawer.mode === "global") {
+    const isFolder = Boolean(state.path);
     const title = document.createElement("strong");
-    title.textContent = "全库语义问答";
+    title.textContent = isFolder ? "AI文件夹对话" : "AI全库问答";
     const desc = document.createElement("span");
     const scopePath = state.path ? `全部文件 / ${state.path}` : "全部文件";
-    desc.textContent = `范围：${scopePath}；可结合文件名、路径和目录结构。`;
+    desc.textContent = isFolder
+      ? `范围：${scopePath}；围绕当前文件夹内容进行问答与梳理。`
+      : `范围：${scopePath}；可结合文件名、路径和全库结构。`;
     aiContextCard.append(title, desc);
     return;
   }
@@ -2096,9 +2099,9 @@ function buildAiSuggestionItems() {
   if (!items.length) {
     return state.aiDrawer.mode === "global"
       ? [
-          ["整理结构", "帮我梳理当前目录的资料结构，并列出最值得先看的文件夹。"],
-          ["查找文档", "帮我找和当前目录相关的文档、报告或论文资料。"],
-          ["筛选素材", "帮我筛选当前目录里可能有用的图片、表格或其他素材。"],
+          ["整理结构", "帮我梳理当前文件夹的资料结构，并列出最值得先看的文件夹。"],
+          ["查找文档", "帮我找和当前文件夹相关的文档、报告或论文资料。"],
+          ["筛选素材", "帮我筛选当前文件夹里可能有用的图片、表格或其他素材。"],
         ]
       : [
           ["总结", "总结这个文件的主要内容。"],
@@ -2212,7 +2215,7 @@ function renderAiDrawer() {
     if (isItemMode) {
       titleText = item?.type === "folder" ? "AI文件夹对话" : "AI文件对话";
     } else {
-      titleText = currentScope.type === "folder" ? "AI目录问答" : "AI全库问答";
+      titleText = currentScope.type === "folder" ? "AI文件夹对话" : "AI全库问答";
     }
     aiDrawerTitle.innerHTML = `<span class="title-text">${titleText}</span><span class="model-badge">${escapeHtml(aiModelDisplayName())}</span>`;
   }
@@ -2232,7 +2235,7 @@ function renderAiDrawer() {
     if (isItemMode && item) {
       if (item.type === "folder") {
         scopeIcon = "📂";
-        scopeText = `目录：${itemName(item)}`;
+        scopeText = `文件夹：${itemName(item)}`;
         scopeFull = item.path ? `全部文件 / ${item.path}` : itemName(item);
       } else {
         scopeIcon = "📄";
@@ -2240,9 +2243,9 @@ function renderAiDrawer() {
         scopeFull = item.path ? `全部文件 / ${item.path}` : itemName(item);
       }
     } else if (currentScope.type === "folder") {
-      const folderName = displayFolder(state.path || "") || "当前目录";
+      const folderName = displayFolder(state.path || "") || "当前文件夹";
       scopeIcon = "📂";
-      scopeText = `目录：${folderName}`;
+      scopeText = `文件夹：${folderName}`;
       scopeFull = state.path ? `全部文件 / ${state.path}` : folderName;
     } else {
       scopeIcon = "📁";
@@ -2261,12 +2264,12 @@ function renderAiDrawer() {
   if (aiPromptHint) {
     aiPromptHint.textContent = isItemMode
       ? (item?.type === "folder" ? "围绕当前文件夹提问" : "围绕当前文件提问")
-      : (currentScope.type === "folder" ? "围绕当前目录提问" : "问问整个网盘");
+      : (currentScope.type === "folder" ? "围绕当前文件夹提问" : "问问整个网盘");
   }
   if (aiPromptInput) {
     aiPromptInput.placeholder = isItemMode
       ? (item?.type === "folder" ? "例如：梳理包含哪些资料、查找核心文档..." : "例如：总结重点、提炼核心结论、寻找数据...")
-      : (currentScope.type === "folder" ? "例如：梳理当前目录资料、按类型总结..." : "例如：帮我找毕业设计相关资料");
+      : (currentScope.type === "folder" ? "例如：梳理当前文件夹资料、按类型总结..." : "例如：帮我找毕业设计相关资料");
   }
   renderAiContextCard();
   renderAiSuggestionsDynamic();
