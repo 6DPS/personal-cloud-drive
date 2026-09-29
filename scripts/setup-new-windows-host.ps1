@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # DPSir 个人网盘 - Windows 小主机/新电脑一键部署与迁移配置脚本
 # ==============================================================================
 
@@ -67,7 +67,13 @@ if (Test-Path -LiteralPath $envFilePath) {
     $lines = Get-Content -LiteralPath $envFilePath -Encoding UTF8
     foreach ($line in $lines) {
         if ($line -match "^\s*STORAGE_BASE_ROOT\s*=\s*(.+)$") {
-            $currentStorage = $matches[1].Trim('"', "'", " ")
+            $candidateStorage = $matches[1].Trim('"', "'", " ")
+            $driveRoot = Split-Path $candidateStorage -Qualifier
+            if (-not $driveRoot -or (Test-Path -LiteralPath "$driveRoot\")) {
+                $currentStorage = $candidateStorage
+            } else {
+                Write-Host "  [提示] 旧配置中的盘符 $driveRoot 在本台电脑上不存在，将为您推荐可用盘符..." -ForegroundColor Yellow
+            }
         }
     }
 }
@@ -87,16 +93,29 @@ if (-not $currentStorage) {
 }
 
 Write-Host "  当前推荐/已设定的数据根目录: [$currentStorage]" -ForegroundColor Cyan
-Write-Host "  提示: 如果你的新主机数据放在其他盘（如 E:\PersonalCloudDrive 或外接大硬盘），请输入新路径。" -ForegroundColor Gray
+Write-Host "  提示: 如果你的新主机数据放在其他盘（如 E:\PersonalCloudDrive 或外接移动硬盘），请输入新路径。" -ForegroundColor Gray
 $userInputPath = Read-Host "  请输入数据目录路径 [直接按回车默认使用 $currentStorage]"
 if ($userInputPath.Trim()) {
-    $currentStorage = $userInputPath.Trim().Trim('"').Trim("'").TrimEnd('\', '/')
+    $candidateInput = $userInputPath.Trim().Trim('"').Trim("'").TrimEnd('\', '/')
+    $candidateDrive = Split-Path $candidateInput -Qualifier
+    if ($candidateDrive -and (-not (Test-Path -LiteralPath "$candidateDrive\"))) {
+        Write-Host "  [警告] 盘符 $candidateDrive 在此电脑不存在，回退使用推荐路径: $currentStorage" -ForegroundColor Red
+    } else {
+        $currentStorage = $candidateInput
+    }
 }
 
 # 确保目录存在
 if (-not (Test-Path -LiteralPath $currentStorage)) {
     Write-Host "  正在初始化创建数据目录: $currentStorage ..." -ForegroundColor Gray
     New-Item -ItemType Directory -Force -Path $currentStorage | Out-Null
+}
+
+$accountsFile = Join-Path $currentStorage "accounts.json"
+if (Test-Path -LiteralPath $accountsFile) {
+    Write-Host "  ✓ 检测到已迁移的历史账号数据 (accounts.json)，系统将自动无缝接管，历史账号与配额均已就绪！" -ForegroundColor Green
+} else {
+    Write-Host "  [提示] 当前目录暂无历史 accounts.json，系统将在启动时自动初始化默认管理员账户。" -ForegroundColor Gray
 }
 
 # 写入/更新 .env 文件
@@ -177,21 +196,15 @@ try {
 
 # 6. 验证服务启动状态（确保新用户部署后立马可用）
 Write-Host ""
-Write-Host "正在验证网盘核心服务就绪状态..." -ForegroundColor Cyan
-$serviceReady = $false
-for ($i = 0; $i -lt 5; $i++) {
-    try {
-        $res = Invoke-RestMethod -Uri "http://127.0.0.1:8081/api/me" -TimeoutSec 2 -ErrorAction SilentlyContinue
-        if ($null -ne $res) {
-            $serviceReady = $true
-            break
-        }
-    } catch {}
-    Start-Sleep -Seconds 1
-}
+Write-Host "正在唤醒并验证网盘核心服务就绪状态..." -ForegroundColor Cyan
+Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
 
-if (-not $serviceReady) {
-    Write-Host "  正在为您直接拉起网盘后台服务..." -ForegroundColor Yellow
+$serviceReady = $false
+$lanTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+if ($lanTask) {
+    Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+} else {
     $runScript = Join-Path $PSScriptRoot "run-lan-drive-hidden.ps1"
     if (Test-Path -LiteralPath $runScript) {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $runScript
@@ -206,7 +219,6 @@ if (-not $serviceReady) {
         } catch {}
         Start-Sleep -Seconds 1
     }
-}
 
 if ($serviceReady) {
     Write-Host "  ✓ 网盘核心服务已成功就绪并正常监听 8081 端口！" -ForegroundColor Green

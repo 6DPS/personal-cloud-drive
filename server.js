@@ -26,7 +26,7 @@ const app = express();
 function loadDotEnv(envPath = path.join(__dirname, ".env")) {
   if (!fs.existsSync(envPath)) return;
   try {
-    const content = fs.readFileSync(envPath, "utf8");
+    const content = fs.readFileSync(envPath, "utf8").replace(/^\uFEFF/, "");
     for (const rawLine of content.split(/\r?\n/)) {
       const line = rawLine.trim();
       if (!line || line.startsWith("#")) continue;
@@ -51,7 +51,13 @@ const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || "";
 const PUBLIC_ROOT = path.join(__dirname, "public");
 const ADMIN_USER = process.env.CLOUD_DRIVE_USER || "admin";
-const STORAGE_BASE_ROOT = path.resolve(process.env.STORAGE_BASE_ROOT || "D:\\PersonalCloudDrive");
+const defaultStorageFallback = () => {
+  if (process.platform === "win32") {
+    return fs.existsSync("D:\\") ? "D:\\PersonalCloudDrive" : "C:\\PersonalCloudDrive";
+  }
+  return path.join(os.homedir(), "PersonalCloudDrive");
+};
+const STORAGE_BASE_ROOT = path.resolve(process.env.STORAGE_BASE_ROOT || defaultStorageFallback());
 const SINGLE_USER_ID = String(ADMIN_USER || "admin").replace(/[^a-zA-Z0-9_-]/g, "_") || "admin";
 const USER_ROOT = path.join(STORAGE_BASE_ROOT, "users", SINGLE_USER_ID);
 const SYSTEM_ROOT = path.join(STORAGE_BASE_ROOT, "system");
@@ -2214,29 +2220,69 @@ function previewCachePath(filePath, stat) {
 }
 
 function renderOfficeToPdf(inputPath, outputPath) {
-  const scriptPath = path.join(__dirname, "scripts", "render-office-preview.ps1");
+  if (process.platform === "win32") {
+    const scriptPath = path.join(__dirname, "scripts", "render-office-preview.ps1");
+    return new Promise((resolve, reject) => {
+      execFile(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          scriptPath,
+          "-InputPath",
+          inputPath,
+          "-OutputPath",
+          outputPath,
+        ],
+        { timeout: 120000, windowsHide: true },
+        (error, stdout, stderr) => {
+          if (error) {
+            error.message = `${error.message}\n${stderr || stdout || ""}`;
+            reject(error);
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+  }
+
+  // macOS / Linux: Use LibreOffice CLI if installed
   return new Promise((resolve, reject) => {
+    let sofficeBin = "soffice";
+    if (process.platform === "darwin") {
+      const macPaths = [
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+        path.join(os.homedir(), "Applications/LibreOffice.app/Contents/MacOS/soffice"),
+      ];
+      for (const p of macPaths) {
+        if (fs.existsSync(p)) {
+          sofficeBin = p;
+          break;
+        }
+      }
+    }
+    const outDir = path.dirname(outputPath);
+    const expectedPdf = path.join(outDir, `${path.parse(inputPath).name}.pdf`);
     execFile(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        scriptPath,
-        "-InputPath",
-        inputPath,
-        "-OutputPath",
-        outputPath,
-      ],
-      { timeout: 120000, windowsHide: true },
-      (error, stdout, stderr) => {
+      sofficeBin,
+      ["--headless", "--convert-to", "pdf", "--outdir", outDir, inputPath],
+      { timeout: 120000 },
+      async (error, stdout, stderr) => {
         if (error) {
-          error.message = `${error.message}\n${stderr || stdout || ""}`;
-          reject(error);
+          reject(new Error(`Office preview rendering unavailable on ${process.platform}: ${error.message}`));
           return;
         }
-        resolve();
+        try {
+          if (expectedPdf !== outputPath && fs.existsSync(expectedPdf)) {
+            await fsp.rename(expectedPdf, outputPath);
+          }
+          resolve();
+        } catch (renameErr) {
+          reject(renameErr);
+        }
       }
     );
   });
@@ -2373,6 +2419,10 @@ class OfficePreviewWorker {
 const officePreviewWorkers = new Map();
 
 async function renderOfficeToPdfWarm(inputPath, outputPath) {
+  if (process.platform !== "win32") {
+    await renderOfficeToPdf(inputPath, outputPath);
+    return;
+  }
   const kind = officePreviewKind(inputPath);
   let worker = officePreviewWorkers.get(kind);
   if (!worker) {
