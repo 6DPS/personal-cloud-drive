@@ -2372,33 +2372,64 @@ td:nth-child(5) {
     0 0 0 1px rgba(255, 255, 255, 0.18) inset;
 }
 
-.ai-model-pill.subtle {
-  margin-left: auto;
-  color: #1769e0;
-  border-color: rgba(23, 105, 224, 0.28);
-  background: linear-gradient(180deg, #f0f7ff, #e6f0ff);
+/* AI 抽屉顶部胶囊按钮统一与克制 (建议 1) */
+.ai-drawer-header .ai-model-pill {
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: rgba(241, 245, 249, 0.95);
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
-.ai-model-pill.subtle:hover {
-  background: linear-gradient(180deg, #e6f1ff, #d5e7ff);
-  box-shadow:
-    0 8px 18px rgba(23, 105, 224, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
-}
-
-/* 思考按钮与范围按钮：纯指示胶囊，禁用点击与悬浮抬升效果 */
+.ai-drawer-toolbar .ai-model-pill,
 #aiModelReasonerBtn,
+#aiWebSearchToggleBtn,
 #aiScopeBtn {
+  background: rgba(241, 245, 249, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  color: #334155;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 思考指示胶囊：暖琥珀金柔和徽章，禁用点击与抬升 */
+#aiModelReasonerBtn,
+#aiModelReasonerBtn.active {
   cursor: default !important;
   transform: none !important;
   pointer-events: none !important;
   user-select: none !important;
+  background: rgba(254, 243, 199, 0.85) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  color: #b45309 !important;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.1) !important;
+  filter: none !important;
 }
 
-#aiScopeBtn {
+#aiModelReasonerBtn:hover,
+#aiModelReasonerBtn:active,
+#aiModelReasonerBtn:focus-visible {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* 范围指示胶囊：统一磨砂冷灰，禁用点击与抬升 */
+#aiScopeBtn,
+.ai-model-pill.subtle#aiScopeBtn,
+.ai-model-pill.subtle {
   margin-left: auto;
   max-width: 220px;
   white-space: nowrap;
+  cursor: default !important;
+  transform: none !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  background: rgba(241, 245, 249, 0.92) !important;
+  border: 1px solid rgba(203, 213, 225, 0.75) !important;
+  color: #334155 !important;
+  box-shadow: none !important;
 }
 
 #aiScopeBtn .pill-label {
@@ -2410,34 +2441,33 @@ td:nth-child(5) {
   max-width: 165px;
 }
 
-#aiModelReasonerBtn:hover,
-#aiModelReasonerBtn:active,
-#aiModelReasonerBtn:focus-visible {
-  transform: none !important;
-  filter: none !important;
-}
-
 #aiScopeBtn:hover,
 #aiScopeBtn:active,
 #aiScopeBtn:focus-visible {
   transform: none !important;
   filter: none !important;
-  color: #1769e0 !important;
-  border-color: rgba(23, 105, 224, 0.28) !important;
-  background: linear-gradient(180deg, #f0f7ff, #e6f0ff) !important;
+  color: #334155 !important;
+  border-color: rgba(203, 213, 225, 0.75) !important;
+  background: rgba(241, 245, 249, 0.92) !important;
   box-shadow: none !important;
 }
 
-/* Web search toggle — active state */
-.ai-model-pill.ai-web-search-toggle[aria-pressed="true"] {
-  border-color: rgba(20, 187, 176, 0.4);
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.5), transparent 30%),
-    linear-gradient(135deg, #e0fbf8, #ccf5f0);
-  color: #007c70;
-  box-shadow:
-    0 6px 16px rgba(20, 187, 176, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.68) inset;
+/* 联网检索开关状态 */
+#aiWebSearchToggleBtn.ai-model-pill {
+  cursor: pointer;
+}
+
+#aiWebSearchToggleBtn.ai-model-pill:hover {
+  background: rgba(226, 232, 240, 0.92);
+  color: #1e293b;
+}
+
+.ai-model-pill.ai-web-search-toggle[aria-pressed="true"],
+#aiWebSearchToggleBtn.ai-model-pill[aria-pressed="true"] {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12) !important;
 }
 
 .ai-context-card {
@@ -5269,6 +5299,28 @@ tbody tr.drop-target-row {
 .row-actions .danger {
   min-height: 32px;
   padding-inline: 12px;
+}
+
+/* 操作列危险按钮视觉节奏收敛 (建议 3) */
+.row-actions button.danger,
+.row-actions .danger {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(254, 202, 202, 0.85) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.row-actions button.danger:hover,
+.row-actions button.danger:focus-visible,
+.row-actions .danger:hover,
+.row-actions .danger:focus-visible {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25) !important;
+  transform: translateY(-1px) !important;
 }
 
 .progress-track {
