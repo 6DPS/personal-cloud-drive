@@ -1288,7 +1288,8 @@ select {
   padding: 0 10px;
   box-sizing: border-box;
   border-radius: 999px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1321,8 +1322,8 @@ select {
     radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.42), transparent 24%),
     linear-gradient(90deg, #16b9df 0%, #14bbb0 38%, #f0b429 72%, #f07a22 100%);
   color: #ffffff;
-  font-weight: 800;
-  font-size: inherit;
+  font-weight: 700;
+  font-size: 14px;
   font-family: inherit;
   letter-spacing: normal;
   line-height: normal;
@@ -1348,16 +1349,17 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 700;
   letter-spacing: 0.1px;
   line-height: 1;
   transition: font-size 0.16s ease, letter-spacing 0.16s ease;
 }
 
-/* 处于文件夹模式时：字体自适应，7个字符在124px固定大小按钮内完美居中展示且不撑大按钮 */
+/* 无论处于全库问答还是文件夹对话，字号均完全统一为 14px，与 AI模式 开 完全对齐 */
 .ai-global-search.is-folder span {
-  font-size: 11.5px;
-  letter-spacing: -0.32px;
+  font-size: 14px;
+  letter-spacing: 0.1px;
 }
 
 
@@ -4854,6 +4856,11 @@ td:nth-child(5) {
     min-height: 36px;
     padding-inline: 10px;
     font-size: 12.5px;
+  }
+
+  .ai-global-search span,
+  .ai-global-search.is-folder span {
+    font-size: inherit;
   }
 
   .ai-drawer {

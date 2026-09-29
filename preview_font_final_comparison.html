@@ -1,0 +1,191 @@
+
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #f8fafc;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+        color: #0f172a;
+      }
+      .card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 28px 32px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 21px;
+        color: #0f172a;
+        font-weight: 800;
+      }
+      p.subtitle {
+        margin: 0 0 24px;
+        color: #64748b;
+        font-size: 14px;
+      }
+      .section-badge {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .badge-before {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .badge-after {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .compare-block {
+        border-radius: 12px;
+        padding: 18px 20px;
+        margin-bottom: 22px;
+        border: 1px solid #e2e8f0;
+      }
+      .compare-block.before {
+        background: #fffafa;
+        border-color: #fecaca;
+      }
+      .compare-block.after {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+      .block-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .block-title {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .img-wrap {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,0.08);
+        background: #ffffff;
+      }
+      .img-wrap img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .metric-item {
+        background: rgba(255,255,255,0.85);
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 8px;
+        padding: 8px 12px;
+      }
+      .metric-label {
+        font-size: 11.5px;
+        color: #64748b;
+      }
+      .metric-val {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-top: 2px;
+      }
+      .tag-ok {
+        color: #16a34a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>顶部 AI 按钮字体大小统一优化报告</h2>
+      <p class="subtitle">采用方案 1：去除「AI」冗余前缀，双胶囊按钮字号严格 100% 统一为 14px（加粗 700）</p>
+
+      <div class="compare-block before">
+        <div class="block-header">
+          <div class="block-title">优化前（旧版）：字号不统一，子目录下文字缩至 11.5px 显挤</div>
+          <span class="section-badge badge-before">优化前</span>
+        </div>
+        <div class="img-wrap">
+          <img src="preview_font_current.png">
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">左侧「AI模式 开」</div>
+            <div class="metric-val">16px / 14px</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">右侧「✦ AI文件夹对话」</div>
+            <div class="metric-val" style="color:#dc2626;">11.5px（缩水显小）</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">视觉体验</div>
+            <div class="metric-val" style="color:#dc2626;">两边字号落差超 20%，看着别扭</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-block after">
+        <div class="block-header">
+          <div class="block-title">优化后（新版）：进入文件夹展示「✦ 文件夹对话」，字号 14px 绝对统一</div>
+          <span class="section-badge badge-after">当前优化效果</span>
+        </div>
+        <div class="img-wrap">
+          <img src="final_folder_toolbar.png">
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">左侧「AI模式 开」</div>
+            <div class="metric-val tag-ok">14px（加粗 700）</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">右侧「✦ 文件夹对话」</div>
+            <div class="metric-val tag-ok">14px（加粗 700）</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">两按钮字体比例</div>
+            <div class="metric-val tag-ok">1:1 绝对统一、舒展饱满</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-block after" style="margin-bottom:0;">
+        <div class="block-header">
+          <div class="block-title">根目录下效果：展示「✦ 全库问答」，字号同样锁定 14px，按钮固定 124px 不抖动</div>
+          <span class="section-badge badge-after">根目录效果</span>
+        </div>
+        <div class="img-wrap">
+          <img src="final_root_toolbar.png">
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">根目录右侧按钮</div>
+            <div class="metric-val tag-ok">✦ 全库问答（14px）</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">固定按钮宽度</div>
+            <div class="metric-val tag-ok">严格锁死 124px（0像素偏移抖动）</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">AI 抽屉交互</div>
+            <div class="metric-val tag-ok">支持「‹ 全库问答」一键切换全库检索</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </body>
+  </html>
+  

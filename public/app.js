@@ -309,11 +309,11 @@ function syncAiGlobalBtnUi() {
   const textSpan = aiGlobalSearchBtn.querySelector("span");
   if (isFolder) {
     const folderName = displayFolder(state.path || "") || "当前文件夹";
-    if (textSpan) textSpan.textContent = "AI文件夹对话";
+    if (textSpan) textSpan.textContent = "文件夹对话";
     aiGlobalSearchBtn.classList.add("is-folder");
     aiGlobalSearchBtn.title = `使用满血 AI 旗舰大模型（deepseek-v4-pro）围绕当前文件夹（${folderName}）进行对话与梳理`;
   } else {
-    if (textSpan) textSpan.textContent = "AI全库问答";
+    if (textSpan) textSpan.textContent = "全库问答";
     aiGlobalSearchBtn.classList.remove("is-folder");
     aiGlobalSearchBtn.title = "使用满血 AI 旗舰大模型（deepseek-v4-pro）进行全库问答与检索";
   }
