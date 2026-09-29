@@ -305,7 +305,7 @@ function setStatus(message) {
 
 function syncAiGlobalBtnUi() {
   if (!aiGlobalSearchBtn) return;
-  const isFolder = Boolean(state.path);
+  const isFolder = Boolean(state.path) && !state.trashMode;
   const textSpan = aiGlobalSearchBtn.querySelector("span");
   if (isFolder) {
     const folderName = displayFolder(state.path || "") || "当前文件夹";
@@ -7095,6 +7095,7 @@ function exitTrashMode() {
   state.selectionMode = false;
   updateSelectionUi();
   syncSelectionRows();
+  syncAiGlobalBtnUi();
   const uploadBtn = $("#uploadBtn");
   const newFolderBtn = $("#newFolderBtn");
   const selectModeBtn = $("#selectModeBtn");
@@ -7118,6 +7119,7 @@ async function loadTrash(options = {}) {
     state.selectionMode = false;
   }
   updateSelectionUi();
+  syncAiGlobalBtnUi();
 
   const uploadBtn = $("#uploadBtn");
   const newFolderBtn = $("#newFolderBtn");
