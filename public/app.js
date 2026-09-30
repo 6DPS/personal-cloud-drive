@@ -1030,12 +1030,16 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
   renderAiDrawer();
-  driveView?.classList.add("ai-drawer-docked");
-  document.body.classList.add("ai-drawer-open");
   aiDrawer?.classList.remove("closing");
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
+
+  // Decouple full-page grid docked reflow and trigger slide-in on pristine compositor frame
+  requestAnimationFrame(() => {
+    driveView?.classList.add("ai-drawer-docked");
+    document.body.classList.add("ai-drawer-open");
+  });
 
   // Schedule auto-resize and focus AFTER the 380ms GPU animation completes smoothly!
   window.setTimeout(() => {
@@ -1970,7 +1974,9 @@ function renderAiMessages() {
   state.aiDrawer.messages.forEach((message, index) => {
     aiMessages.append(createAiMessageBubble(message, index, total, lastCompletedAssistantIndex, false));
   });
-  aiMessages.scrollTop = aiMessages.scrollHeight;
+  requestAnimationFrame(() => {
+    if (aiMessages) aiMessages.scrollTop = aiMessages.scrollHeight;
+  });
 }
 
 function renderAiWebSources(sources = []) {
@@ -6515,19 +6521,19 @@ async function enterDrive(user = state.currentUser) {
   await refreshHealthStatus();
   startAccessInfoRefresh();
   startRealtimeRefresh();
-  // Idle pre-warm of AI drawer DOM so first click opens with zero hitch
+  // Idle pre-warm of AI drawer DOM & GPU pipeline so first click opens with zero hitch
+  const prewarmAiDrawer = () => {
+    state.aiDrawer.key = aiConversationKey("global", null, state.path);
+    state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
+    renderAiDrawer();
+    if (aiDrawer) {
+      void aiDrawer.offsetHeight;
+    }
+  };
   if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(() => {
-      state.aiDrawer.key = aiConversationKey("global", null, state.path);
-      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
-      renderAiDrawer();
-    });
+    window.requestIdleCallback(prewarmAiDrawer, { timeout: 1500 });
   } else {
-    window.setTimeout(() => {
-      state.aiDrawer.key = aiConversationKey("global", null, state.path);
-      state.aiDrawer.messages = loadAiConversation("global", null, state.aiDrawer.key);
-      renderAiDrawer();
-    }, 600);
+    window.setTimeout(prewarmAiDrawer, 400);
   }
 }
 
