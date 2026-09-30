@@ -1016,6 +1016,7 @@ function pulseAiSendButton() {
 function openAiDrawer(mode = "global", item = null, options = {}) {
   window.clearTimeout(aiDrawerCloseTimer);
   closeAiHistoryPanel();
+  closeRowActionMenus();
   const previous = options.returnToCurrent ? aiDrawerSnapshot() : null;
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
   state.aiDrawer.item = state.aiDrawer.mode === "item" ? item : null;
@@ -1121,6 +1122,7 @@ function handleAiDrawerBackOrSwitch() {
 
 function closeAiDrawer() {
   closeAiHistoryPanel();
+  closeRowActionMenus();
   if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
   aiPromptInput?.blur();
   driveView?.classList.remove("ai-drawer-docked");

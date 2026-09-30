@@ -6599,6 +6599,32 @@ select:focus {
     padding-inline: 10px;
     font-size: 13px;
   }
+
+  /* 更多操作下拉菜单：在 AI 抽屉打开时跟随文件列表自适应缩放与统一字号 */
+  body.ai-drawer-open .row-action-menu {
+    min-width: 90px;
+    padding: 5px;
+    gap: 3.5px;
+    border-radius: 13px;
+    box-shadow: 0 12px 24px rgba(20, 36, 62, 0.14);
+  }
+
+  body.ai-drawer-open .row-action-menu button {
+    width: 100%;
+    min-height: 26px;
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12.5px !important;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  body.ai-drawer-open .row-action-menu[data-placement="bottom-end"]::before,
+  body.ai-drawer-open .row-action-menu[data-placement="bottom-end"]::after,
+  body.ai-drawer-open .row-action-menu[data-placement="top-end"]::before,
+  body.ai-drawer-open .row-action-menu[data-placement="top-end"]::after {
+    right: 14px;
+  }
 }
 
 /* =========================================================================
@@ -6705,6 +6731,21 @@ select:focus {
   .drive-shell.ai-drawer-docked .row-actions .ai-chat-action .btn-icon {
     width: 12px !important;
     height: 12px !important;
+  }
+
+  body.ai-drawer-open .row-action-menu {
+    min-width: 94px;
+    padding: 5.5px;
+    gap: 4px;
+    border-radius: 14px;
+  }
+
+  body.ai-drawer-open .row-action-menu button {
+    min-height: 27px;
+    height: 27px;
+    padding: 0 10px;
+    font-size: 13px !important;
+    font-weight: 600;
   }
 }
 
@@ -6829,6 +6870,21 @@ select:focus {
     width: 11.5px !important;
     height: 11.5px !important;
   }
+
+  body.ai-drawer-open .row-action-menu {
+    min-width: 88px;
+    padding: 5px;
+    gap: 3.5px;
+    border-radius: 13px;
+  }
+
+  body.ai-drawer-open .row-action-menu button {
+    min-height: 26px;
+    height: 26px;
+    padding: 0 9px;
+    font-size: 12.5px !important;
+    font-weight: 600;
+  }
 }
 
 /* =========================================================================
@@ -6951,6 +7007,21 @@ select:focus {
   .drive-shell.ai-drawer-docked .row-actions .ai-chat-action .btn-icon {
     width: 11px !important;
     height: 11px !important;
+  }
+
+  body.ai-drawer-open .row-action-menu {
+    min-width: 84px;
+    padding: 4px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+
+  body.ai-drawer-open .row-action-menu button {
+    min-height: 25px;
+    height: 25px;
+    padding: 0 8px;
+    font-size: 12px !important;
+    font-weight: 600;
   }
 }
 
