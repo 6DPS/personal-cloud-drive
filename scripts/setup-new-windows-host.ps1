@@ -224,6 +224,7 @@ if ($lanTask) {
         } catch {}
         Start-Sleep -Seconds 1
     }
+}
 
 if ($serviceReady) {
     Write-Host "  ✓ 网盘核心服务已成功就绪并正常监听 8081 端口！" -ForegroundColor Green
