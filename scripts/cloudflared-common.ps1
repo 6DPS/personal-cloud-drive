@@ -1,4 +1,4 @@
-function Get-Cloudflared {
+﻿function Get-Cloudflared {
   param([Parameter(Mandatory = $true)][string]$Root)
 
   $tools = Join-Path $Root "tools"

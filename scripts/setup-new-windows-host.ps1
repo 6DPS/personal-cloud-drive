@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # DPSir 个人网盘 - Windows 小主机/新电脑一键部署与迁移配置脚本
 # ==============================================================================
 
@@ -159,24 +159,29 @@ if (-not (Test-Path -LiteralPath $modulesPath)) {
 }
 Write-Host "  ✓ 运行依赖已完整就绪" -ForegroundColor Green
 
-# 4. 配置 Windows 防火墙（放行 8081 局域网访问）
+# 4. 配置 Windows 防火墙（放行 8081 局域网访问，公用+专用+所有网络全放行）
 Write-Host ""
-Write-Host "[4/5] 正在配置 Windows 防火墙规则..." -ForegroundColor Green
+Write-Host "[4/5] 正在配置 Windows 防火墙全网络放行规则..." -ForegroundColor Green
 try {
-    $rule = Get-NetFirewallRule -Name "DPSir-CloudDrive-LAN" -ErrorAction SilentlyContinue
-    if (-not $rule) {
-        New-NetFirewallRule `
-            -Name "DPSir-CloudDrive-LAN" `
-            -DisplayName "DPSir 个人网盘 (8081 局域网放行)" `
-            -Direction Inbound `
-            -Action Allow `
-            -Protocol TCP `
-            -LocalPort 8081 `
-            -Profile Any `
-            -ErrorAction SilentlyContinue | Out-Null
-        Write-Host "  ✓ 已成功创建防火墙入站放行规则 (TCP 8081)" -ForegroundColor Green
+    $allowScript = Join-Path $PSScriptRoot "allow-lan-firewall.ps1"
+    if (Test-Path -LiteralPath $allowScript) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $allowScript
     } else {
-        Write-Host "  ✓ 防火墙入站规则已存在 (TCP 8081)" -ForegroundColor Green
+        $rule = Get-NetFirewallRule -Name "DPSir-CloudDrive-LAN" -ErrorAction SilentlyContinue
+        if (-not $rule) {
+            New-NetFirewallRule `
+                -Name "DPSir-CloudDrive-LAN" `
+                -DisplayName "DPSir 个人网盘 (8081 局域网放行)" `
+                -Direction Inbound `
+                -Action Allow `
+                -Protocol TCP `
+                -LocalPort 8081 `
+                -Profile Any `
+                -ErrorAction SilentlyContinue | Out-Null
+        } else {
+            Set-NetFirewallRule -InputObject $rule -Enabled True -Direction Inbound -Action Allow -Profile Any -ErrorAction SilentlyContinue
+        }
+        Write-Host "  ✓ 已成功创建/刷新防火墙入站放行规则 (TCP 8081, 所有网络通用)" -ForegroundColor Green
     }
 } catch {
     Write-Host "  [提示] 自动添加防火墙规则跳过（非管理员权限），后续可右键以管理员身份运行 allow-lan-firewall-as-admin.bat" -ForegroundColor Yellow

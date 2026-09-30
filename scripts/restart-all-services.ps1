@@ -33,6 +33,15 @@ Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 Write-Host "  ✓ 旧进程已安全释放" -ForegroundColor Green
 
+# 智能自愈：核验防火墙规则是否覆盖全网络 (Profile: Any)
+$fw = Get-NetFirewallRule -Name "DPSir-CloudDrive-LAN" -ErrorAction SilentlyContinue
+if (-not $fw -or $fw.Profile -ne "Any") {
+    $allowScript = Join-Path $PSScriptRoot "allow-lan-firewall.ps1"
+    if (Test-Path -LiteralPath $allowScript) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $allowScript
+    }
+}
+
 Write-Host ""
 Write-Host "[2/3] 正在重新唤醒网盘核心服务与 Cloudflare 公网隧道..." -ForegroundColor Yellow
 

@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $storageRoot = if ($env:STORAGE_ROOT) { $env:STORAGE_ROOT } else { "D:\PersonalCloudDrive\files" }
 $storageRoot = [System.IO.Path]::GetFullPath($storageRoot)

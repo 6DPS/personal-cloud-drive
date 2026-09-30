@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $taskName = "DPSir Personal Cloud Drive Cloudflare Tunnel"
 
