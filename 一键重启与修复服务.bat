@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 cd /d "%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\restart-all-services.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\restart-all-services.ps1"
 pause

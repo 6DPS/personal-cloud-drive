@@ -50,8 +50,8 @@ Write-Host "  ② 数据文件夹: $storageDir" -ForegroundColor White
 Write-Host ""
 Write-Host "  拷贝完成后：" -ForegroundColor Gray
 Write-Host "  在新主机/新电脑上插上移动硬盘：" -ForegroundColor Cyan
-Write-Host "  • 若新电脑是 Windows 系统：双击代码文件夹里的【一键部署新电脑(Windows).bat】" -ForegroundColor Cyan
-Write-Host "  • 若新电脑是 苹果 Mac 系统：双击代码文件夹里的【一键部署新电脑(Mac).command】" -ForegroundColor Cyan
+Write-Host "  - 若新电脑是 Windows 系统：双击代码文件夹里的【一键部署新电脑(Windows).bat】" -ForegroundColor Cyan
+Write-Host "  - 若新电脑是 苹果 Mac 系统：双击代码文件夹里的【一键部署新电脑(Mac).command】" -ForegroundColor Cyan
 Write-Host ""
 
 $open = Read-Host "是否现在为你自动打开这两个文件夹所在的资源管理器窗口？(Y/N) [默认 Y]"

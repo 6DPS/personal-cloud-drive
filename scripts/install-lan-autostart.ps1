@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $taskName = "DPSir Personal Cloud Drive LAN"
@@ -29,7 +29,7 @@ Register-ScheduledTask `
   -Description "Start DPSir Personal Cloud Drive on LAN after user logon." `
   -Force | Out-Null
 
-Start-ScheduledTask -TaskName $taskName
+Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 
 $computerName = $env:COMPUTERNAME
 

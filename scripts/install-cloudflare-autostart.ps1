@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $taskName = "DPSir Personal Cloud Drive Cloudflare Tunnel"
@@ -31,7 +31,7 @@ Register-ScheduledTask `
   -Description "Start DPSir Personal Cloud Drive Cloudflare Tunnel after user logon." `
   -Force | Out-Null
 
-Start-ScheduledTask -TaskName $taskName
+Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "Cloudflare tunnel auto-start installed and started."

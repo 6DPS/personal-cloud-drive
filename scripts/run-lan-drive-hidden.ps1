@@ -1,23 +1,25 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $port = if ($env:PORT) { [int]$env:PORT } else { 8081 }
 
-function Test-PortOpen {
-  param([int]$Port)
-  try {
-    $client = [Net.Sockets.TcpClient]::new()
-    $async = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
-    if (-not $async.AsyncWaitHandle.WaitOne(500)) {
-      $client.Close()
-      return $false
+# 自动适配常见 Node.js 安装路径，防止计划任务环境下 PATH 缺失
+$nodeExe = "node.exe"
+$commonNodeDirs = @(
+    "C:\Program Files\nodejs",
+    "C:\Program Files (x86)\nodejs",
+    "$env:LOCALAPPDATA\Programs\nodejs",
+    "$env:APPDATA\nvm"
+)
+foreach ($dir in $commonNodeDirs) {
+    $candidate = Join-Path $dir "node.exe"
+    if (Test-Path -LiteralPath $candidate) {
+        $nodeExe = $candidate
+        if ($env:Path -notlike "*$dir*") {
+            $env:Path = "$dir;" + $env:Path
+        }
+        break
     }
-    $client.EndConnect($async)
-    $client.Close()
-    return $true
-  } catch {
-    return $false
-  }
 }
 
 $env:HOST = "0.0.0.0"
@@ -30,7 +32,7 @@ $logDir = Join-Path $root "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 Start-Process `
-  -FilePath "node.exe" `
+  -FilePath $nodeExe `
   -ArgumentList "scripts\server-watchdog.js" `
   -WorkingDirectory $root `
   -WindowStyle Hidden `
