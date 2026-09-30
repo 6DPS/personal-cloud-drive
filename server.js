@@ -357,10 +357,10 @@ app.get("/", async (req, res, next) => {
     );
     const html = await fsp.readFile(path.join(PUBLIC_ROOT, "index.html"), "utf8");
     const versionedHtml = html
-      .replace('href="/styles.css"', `href="/styles.css?v=${version}"`)
-      .replace('src="/cache-cleanup.js"', `src="/cache-cleanup.js?v=${version}"`)
-      .replace('src="/app.js"', `src="/app.js?v=${version}"`)
-      .replace('src="/login-fx.js"', `src="/login-fx.js?v=${version}"`);
+      .replace(/href="\/styles\.css(\?[^"]*)?"/, `href="/styles.css?v=${version}"`)
+      .replace(/src="\/cache-cleanup\.js(\?[^"]*)?"/, `src="/cache-cleanup.js?v=${version}"`)
+      .replace(/src="\/app\.js(\?[^"]*)?"/, `src="/app.js?v=${version}"`)
+      .replace(/src="\/login-fx\.js(\?[^"]*)?"/, `src="/login-fx.js?v=${version}"`);
 
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0");
     res.setHeader("Pragma", "no-cache");
