@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$NoPause
 )
 
@@ -63,4 +63,5 @@ Write-Host "===============================================================" -Fo
 if (-not $NoPause) {
   Write-Host ""
   Read-Host "按回车键退出..."
+  exit 0
 }
