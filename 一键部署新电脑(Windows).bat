@@ -1,22 +1,29 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
+title DPSir 个人网盘 - Windows 部署向导
 
 net session >nul 2>&1
-if %errorlevel% == 0 goto :RUN_ADMIN
+if %errorlevel% neq 0 (
+    echo ===============================================================
+    echo       DPSir 个人网盘 - Windows 部署向导
+    echo ===============================================================
+    echo.
+    echo [提示] 正在请求管理员权限以配置系统防火墙与开机自启...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Start-Process powershell.exe -ArgumentList '-NoExit -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0scripts\setup-new-windows-host.ps1\"\"' -Verb RunAs -ErrorAction Stop; exit 0 } catch { Write-Host '  [提示] 未获取管理员权限，正在以当前用户权限继续运行部署向导...' -ForegroundColor Yellow; & powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\setup-new-windows-host.ps1\" }"
+    if %errorlevel% neq 0 (
+        echo.
+        echo [提示] 向导执行遇到问题，请按任意键退出...
+        pause >nul
+    )
+    exit /b
+)
 
-echo ===============================================================
-echo   DPSir 个人网盘 - Windows 小主机/新电脑 一键部署向导
-echo ===============================================================
+:: 已具有管理员权限
+powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-new-windows-host.ps1"
 echo.
-echo [提示] 正在请求管理员权限以全自动配置防火墙与开机自启...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Start-Process -FilePath '%~f0' -Verb RunAs } catch { Write-Host '[提示] 已取消管理员授权。若要全自动配置，请重新双击并点击【是】。' -ForegroundColor Yellow; Start-Sleep -Seconds 3 }"
-exit /b
-
-:RUN_ADMIN
-cd /d "%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-new-windows-host.ps1"
-echo.
-echo [向导执行完毕] 按回车键退出...
+echo ===============================================================
+echo   向导执行完毕，按任意键退出...
+echo ===============================================================
 pause >nul
 exit /b
