@@ -35,16 +35,31 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOM
 
 if ! command -v node >/dev/null 2>&1; then
     echo -e "${YELLOW}  未检测到 Node.js 运行环境。${NC}"
-    if command -v brew >/dev/null 2>&1; then
+    echo -e "${CYAN}  正在尝试通过【国内极速镜像源】自动下载官方 LTS 安装包...${NC}"
+    PKG_PATH="/tmp/node-v20.18.0.pkg"
+    curl -fSL -A "Mozilla/5.0" "https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0.pkg" -o "$PKG_PATH" 2>/dev/null || \
+    curl -fSL -A "Mozilla/5.0" "https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0.pkg" -o "$PKG_PATH" 2>/dev/null
+    
+    if [ -f "$PKG_PATH" ] && [ -s "$PKG_PATH" ]; then
+        echo -e "${GREEN}  ✓ 国内镜像极速下载完成，正在自动调起系统安装向导...${NC}"
+        open "$PKG_PATH" 2>/dev/null
+        echo -e "${GRAY}  提示: 请在弹出的 macOS 安装窗口中点击【继续】并输入开机密码完成安装。${NC}"
+        read -p "安装完成后，请在此按回车键继续向导..."
+        rm -f "$PKG_PATH"
+    elif command -v brew >/dev/null 2>&1; then
         echo -e "${GRAY}  检测到 Homebrew，正在尝试通过 brew 自动安装 Node.js LTS...${NC}"
         brew install node
     fi
+    export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-    echo -e "${RED}  [提示] 自动安装未能就绪，请手动下载安装 Node.js LTS (macOS 版)：${NC}"
-    echo -e "${YELLOW}  官方下载地址: https://nodejs.org/${NC}"
-    echo -e "${YELLOW}  下载并双击安装 .pkg 安装包后，重新运行本脚本即可！${NC}"
+    echo ""
+    echo -e "${RED}  [提示] 未能检测到已安装的 Node.js，建议直接在浏览器中打开以下国内秒速直链 (2~3秒下完):${NC}"
+    echo -e "${YELLOW}  👉 华为云极速直链: https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0.pkg${NC}"
+    echo -e "${YELLOW}  👉 阿里云极速直链: https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0.pkg${NC}"
+    echo -e "${GRAY}  👉 官方主页地址: https://nodejs.org/${NC}"
+    echo -e "${YELLOW}  下载后双击安装，然后重新双击本向导即可！${NC}"
     echo ""
     read -p "按回车键退出..."
     exit 1
@@ -123,6 +138,8 @@ echo -e "${GREEN}  ✓ 存储配置已锁定: ${CURRENT_STORAGE}${NC}"
 echo ""
 echo -e "${GREEN}[3/5] 正在检查程序运行依赖...${NC}"
 if [ ! -d "$ROOT_DIR/node_modules" ]; then
+    echo -e "${CYAN}  正在设置 npm 镜像为国内阿里云加速源 (npmmirror.com)...${NC}"
+    npm config set registry https://registry.npmmirror.com >/dev/null 2>&1
     echo -e "${YELLOW}  正在安装运行依赖包 (npm install --omit=dev)...${NC}"
     npm install --omit=dev
 fi

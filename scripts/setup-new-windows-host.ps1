@@ -31,24 +31,64 @@ foreach ($dir in $commonNodeDirs) {
 
 $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
-    Write-Host "  未检测到 Node.js，正在尝试通过 Windows 自带的 winget 自动安装 LTS 版本..." -ForegroundColor Yellow
-    $wingetCmd = Get-Command "winget" -ErrorAction SilentlyContinue
-    if ($wingetCmd) {
-        Write-Host "  正在执行: winget install OpenJS.NodeJS.LTS ..." -ForegroundColor Gray
-        Start-Process "winget" -ArgumentList "install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -Wait
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        foreach ($dir in $commonNodeDirs) {
-            if ((Test-Path -LiteralPath (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
-                $env:Path = "$dir;" + $env:Path
+    # 优先检测当前目录或 tools 目录下是否已有离线安装包（0秒离线直装）
+    $localMsi = Get-ChildItem -Path $root, (Join-Path $root "tools") -Filter "node*x64.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($localMsi) {
+        Write-Host "  [离线加速] 检测到本地安装包: $($localMsi.Name)，正在进行极速安装..." -ForegroundColor Green
+        Start-Process "msiexec.exe" -ArgumentList "/i `"$($localMsi.FullName)`" /passive /norestart" -Wait
+    } else {
+        # 优先使用国内极速镜像源 (华为云/阿里云 CDN，25MB 仅需 2~5 秒)
+        Write-Host "  未检测到 Node.js，正在通过【国内极速镜像源】自动下载官方 LTS 安装包..." -ForegroundColor Cyan
+        $msiPath = Join-Path $env:TEMP "node-v20.18.0-x64.msi"
+        $mirrors = @(
+            "https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi",
+            "https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-x64.msi"
+        )
+        $dlSuccess = $false
+        foreach ($url in $mirrors) {
+            try {
+                Write-Host "  正在极速下载: $url ..." -ForegroundColor Gray
+                $wc = New-Object System.Net.WebClient
+                $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                $wc.DownloadFile($url, $msiPath)
+                if ((Test-Path -LiteralPath $msiPath) -and (Get-Item -LiteralPath $msiPath).Length -gt 15MB) {
+                    $dlSuccess = $true
+                    break
+                }
+            } catch {}
+        }
+
+        if ($dlSuccess) {
+            Write-Host "  [OK] 下载完成，正在进行无感知静默安装 (约需 10 秒)..." -ForegroundColor Green
+            Start-Process "msiexec.exe" -ArgumentList "/i `"$msiPath`" /passive /norestart" -Wait
+            Remove-Item -LiteralPath $msiPath -Force -ErrorAction SilentlyContinue
+        } else {
+            # 备用方案：尝试系统自带 winget
+            $wingetCmd = Get-Command "winget" -ErrorAction SilentlyContinue
+            if ($wingetCmd) {
+                Write-Host "  正在尝试通过系统 winget 安装 LTS 版本..." -ForegroundColor Gray
+                Start-Process "winget" -ArgumentList "install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -Wait
             }
         }
-        $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
     }
     
+    # 重新加载系统环境变量
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    foreach ($dir in $commonNodeDirs) {
+        if ((Test-Path -LiteralPath (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
+            $env:Path = "$dir;" + $env:Path
+        }
+    }
+    $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
+    
     if (-not $nodeCmd) {
-        Write-Host "  [错误] 自动安装未能就绪，请手动下载安装 Node.js LTS 官方安装包:" -ForegroundColor Red
-        Write-Host "  官方下载地址: https://nodejs.org/" -ForegroundColor Yellow
-        Write-Host "  安装完成后重新双击运行本向导即可！" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  [提示] 自动下载未能完成，建议直接用浏览器打开以下国内秒速直链 (25MB，2~3秒下完):" -ForegroundColor Yellow
+        Write-Host "  👉 华为云极速直链: https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
+        Write-Host "  👉 阿里云极速直链: https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
+        Write-Host "  👉 官方主页地址: https://nodejs.org/" -ForegroundColor Gray
+        Write-Host "  下载安装后重新双击【一键部署新电脑.bat】即可！" -ForegroundColor Yellow
+        Write-Host ""
         Read-Host "按回车键退出..."
         exit 1
     }
@@ -153,6 +193,8 @@ Write-Host ""
 Write-Host "[3/5] 正在检查程序运行依赖..." -ForegroundColor Green
 $modulesPath = Join-Path $root "node_modules"
 if (-not (Test-Path -LiteralPath $modulesPath)) {
+    Write-Host "  正在配置 npm 为国内阿里云镜像加速 (npmmirror.com)..." -ForegroundColor Cyan
+    & npm config set registry https://registry.npmmirror.com
     Write-Host "  正在一键安装必需依赖包 (npm install)..." -ForegroundColor Yellow
     npm install
 }
