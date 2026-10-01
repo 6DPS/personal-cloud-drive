@@ -27,11 +27,16 @@ if ($remoteUrl) {
 
 $changes = git status --porcelain
 if ($changes) {
-    Write-Host "[1/2] 检测到本地代码有改动，正在自动打包提交..." -ForegroundColor Yellow
-    git add .
+    Write-Host "[1/2] 检测到本地代码有改动，正在准备同步..." -ForegroundColor Yellow
     $nowStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    git commit -m "update: $nowStr 代码更新迭代"
-    Write-Host "  ✓ 本地更新已记录" -ForegroundColor Green
+    Write-Host "💡 提示: 您输入的文字将直接显示在 GitHub 文件列表右侧作为【功能描述】。" -ForegroundColor Cyan
+    $customMsg = Read-Host "请输入本次提交的功能描述 [直接回车使用默认: update: $nowStr 代码更新]"
+    if (-not $customMsg.Trim()) {
+        $customMsg = "update: $nowStr 代码更新"
+    }
+    git add .
+    git commit -m "$customMsg"
+    Write-Host "  ✓ 本地更新已记录: $customMsg" -ForegroundColor Green
     Write-Host ""
 } else {
     Write-Host "[1/2] 本地代码处于最新提交状态，无需重复打包。" -ForegroundColor Green

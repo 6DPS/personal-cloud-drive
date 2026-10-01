@@ -36,11 +36,16 @@ fi
 
 CHANGES=$(git status --porcelain)
 if [ -n "$CHANGES" ]; then
-    echo -e "${YELLOW}[1/2] 检测到本地代码有改动，正在自动打包提交...${NC}"
-    git add .
+    echo -e "${YELLOW}[1/2] 检测到本地代码有改动，正在准备同步...${NC}"
     NOW_STR=$(date '+%Y-%m-%d %H:%M:%S')
-    git commit -m "update: ${NOW_STR} 代码更新迭代"
-    echo -e "${GREEN}  ✓ 本地更新已记录${NC}"
+    echo -e "${CYAN}💡 提示: 您输入的文字将直接显示在 GitHub 文件列表右侧作为【功能描述】。${NC}"
+    read -p "请输入本次提交的功能描述 [直接回车使用默认: update: $NOW_STR 代码更新]: " CUSTOM_MSG
+    if [ -z "$CUSTOM_MSG" ]; then
+        CUSTOM_MSG="update: $NOW_STR 代码更新"
+    fi
+    git add .
+    git commit -m "$CUSTOM_MSG"
+    echo -e "${GREEN}  ✓ 本地更新已记录: ${CUSTOM_MSG}${NC}"
     echo ""
 else
     echo -e "${GREEN}[1/2] 本地代码处于最新提交状态，无需重复打包。${NC}"
