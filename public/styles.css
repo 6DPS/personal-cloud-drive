@@ -3260,25 +3260,21 @@ body.ai-drawer-open .ai-drawer,
   gap: 10px;
   align-items: flex-end;
   padding: 8px 10px 8px 16px;
-  border: 1.5px solid rgba(20, 187, 176, 0.32);
+  border: 1px solid rgba(20, 187, 176, 0.2);
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,252,250,0.94));
   box-shadow:
-    0 2px 10px rgba(15, 23, 42, 0.04),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
+    0 4px 16px rgba(20, 187, 176, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .ai-prompt-wrap:focus-within {
-  border-color: #0d9488;
-  background: #ffffff;
+  border-color: rgba(20, 187, 176, 0.45);
   box-shadow:
-    0 0 0 3px rgba(13, 148, 136, 0.15),
-    0 4px 16px rgba(13, 148, 136, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    0 0 0 3px rgba(20, 187, 176, 0.1),
+    0 8px 24px rgba(20, 187, 176, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
 }
 
 .ai-prompt-box {
@@ -3289,9 +3285,9 @@ body.ai-drawer-open .ai-drawer,
 }
 
 .ai-prompt-box span {
-  color: #64748b;
+  color: #7a879c;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.01em;
 }
 
@@ -3306,7 +3302,7 @@ body.ai-drawer-open .ai-drawer,
   border: none;
   border-radius: 0;
   background: transparent;
-  color: #1e293b;
+  color: #24334d;
   font: inherit;
   font-size: 14px;
   line-height: 20px;
@@ -3315,7 +3311,7 @@ body.ai-drawer-open .ai-drawer,
   box-shadow: none;
   transition: height 70ms ease-out;
   scrollbar-width: thin;
-  scrollbar-color: rgba(20, 187, 176, 0.35) transparent;
+  scrollbar-color: rgba(20, 187, 176, 0.3) transparent;
 }
 
 .ai-prompt-box textarea::-webkit-scrollbar {
@@ -3323,12 +3319,12 @@ body.ai-drawer-open .ai-drawer,
 }
 
 .ai-prompt-box textarea::-webkit-scrollbar-thumb {
-  background: rgba(20, 187, 176, 0.35);
+  background: rgba(20, 187, 176, 0.3);
   border-radius: 4px;
 }
 
 .ai-prompt-box textarea::placeholder {
-  color: #94a3b8;
+  color: #a0aec0;
 }
 
 .ai-prompt-form.has-text .ai-prompt-box textarea,
@@ -3350,9 +3346,9 @@ body.ai-drawer-open .ai-drawer,
   height: 36px;
   min-height: 36px;
   border-radius: 50%;
-  border: 1.5px solid rgba(20, 187, 176, 0.3);
+  border: 1px solid rgba(20, 187, 176, 0.25);
   background: rgba(20, 187, 176, 0.08);
-  color: #0d9488;
+  color: #14bbb0;
   cursor: pointer;
   padding: 0;
   overflow: hidden;
@@ -3363,37 +3359,35 @@ body.ai-drawer-open .ai-drawer,
     background 160ms ease,
     color 160ms ease,
     border-color 160ms ease,
-    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 160ms ease,
     box-shadow 160ms ease;
   flex-shrink: 0;
 }
 
 .ai-send-btn .send-icon {
   display: block;
-  width: 17px;
-  height: 17px;
-  stroke-width: 2.8;
-  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 18px;
+  height: 18px;
+  transition: transform 160ms ease;
 }
 
 .ai-prompt-form.has-text .ai-send-btn:not(:disabled) {
   opacity: 1;
-  background: linear-gradient(135deg, #00bca8 0%, #008f83 100%);
+  background: linear-gradient(135deg, #14bbb0 0%, #0d9488 100%);
   color: #ffffff;
   border-color: transparent;
   box-shadow:
-    0 3px 12px rgba(0, 143, 131, 0.38),
-    0 0 0 1px rgba(255, 255, 255, 0.28) inset;
+    0 4px 14px rgba(20, 187, 176, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   transform: translateY(-1px);
 }
 
 .ai-prompt-form.has-text .ai-send-btn:not(:disabled):hover,
 .ai-prompt-form.has-text .ai-send-btn:not(:disabled):focus-visible {
-  transform: translateY(-2px) scale(1.06);
-  background: linear-gradient(135deg, #05cca8 0%, #00a093 100%);
+  transform: translateY(-2px) scale(1.05);
   box-shadow:
-    0 6px 18px rgba(0, 143, 131, 0.46),
-    0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+    0 6px 18px rgba(20, 187, 176, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
 }
 
 .ai-prompt-form.has-text .ai-send-btn:not(:disabled):hover .send-icon {
@@ -3402,8 +3396,7 @@ body.ai-drawer-open .ai-drawer,
 
 .ai-send-btn:active:not(:disabled),
 .ai-send-btn.is-pressing {
-  transform: translateY(0) scale(0.92) !important;
-  box-shadow: 0 1px 4px rgba(0, 143, 131, 0.28) !important;
+  transform: translateY(0) scale(0.94);
 }
 
 .ai-send-btn:disabled:not(.is-generating) {
@@ -3433,7 +3426,7 @@ body.ai-drawer-open .ai-drawer,
 }
 
 .ai-send-btn.is-generating:active {
-  transform: scale(0.92) !important;
+  transform: scale(0.93) !important;
 }
 
 .ai-send-btn.is-generating .stop-icon {
