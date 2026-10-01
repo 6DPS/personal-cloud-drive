@@ -1,8 +1,8 @@
 {
   "name": "personal-cloud-drive",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "A small personal cloud drive for local file storage.",
+  "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

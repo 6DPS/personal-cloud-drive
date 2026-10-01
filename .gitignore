@@ -19,3 +19,5 @@ Desktop.ini
 .DS_Store
 dist/
 health-check-report.md
+__pycache__/
+*.pyc
