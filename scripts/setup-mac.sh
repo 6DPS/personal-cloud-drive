@@ -220,3 +220,7 @@ echo ""
 if command -v open >/dev/null 2>&1; then
     open "http://127.0.0.1:8081" 2>/dev/null
 fi
+
+echo ""
+read -p "向导执行完毕，按回车键退出..."
+
