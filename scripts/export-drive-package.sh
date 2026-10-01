@@ -58,7 +58,7 @@ echo -e "${WHITE}  ② 数据文件夹: ${STORAGE_DIR}${NC}"
 echo ""
 echo -e "${GRAY}  拷贝完成后：${NC}"
 echo -e "${CYAN}  在目标电脑上插上移动硬盘：${NC}"
-echo -e "${CYAN}  • 若目标是 Windows 电脑：双击【一键部署新电脑(Windows).bat】${NC}"
+echo -e "${CYAN}  • 若目标是 Windows 电脑：双击【一键部署新电脑.bat】${NC}"
 echo -e "${CYAN}  • 若目标是 Mac 电脑：双击【一键部署新电脑(Mac).command】${NC}"
 echo ""
 
@@ -73,3 +73,5 @@ fi
 echo ""
 echo -e "${GREEN}助手已就绪，随时可以开始拷贝迁移。${NC}"
 echo ""
+read -p "按回车键退出..."
+

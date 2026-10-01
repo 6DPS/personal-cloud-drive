@@ -21,3 +21,5 @@ dist/
 health-check-report.md
 __pycache__/
 *.pyc
+*.msi
+*.pkg
