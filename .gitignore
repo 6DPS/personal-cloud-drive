@@ -1,9 +1,20 @@
+# ==============================================================================
+# DPSir 个人网盘 - 运行时日志、用户私有数据与缓存隔离配置
+# ==============================================================================
+
+# 运行时依赖与日志
 node_modules/
 logs/
 tmp/
-*.traineddata
-.cloudflared/
+
+# 用户私有环境配置与网络证书
 .env
+.cloudflared/
+
+# OCR 离线数据包
+*.traineddata
+
+# 历史备份与构建临时产物
 backup_*/
 backups/
 preview-*.html
@@ -14,6 +25,8 @@ contest-build/
 contest-analysis/
 soft-copyright-screenshots*/
 silky-verification-screenshots/
+
+# 操作系统与中间缓存文件
 Thumbs.db
 Desktop.ini
 .DS_Store
