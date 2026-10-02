@@ -7444,8 +7444,8 @@ select:focus {
    ========================================================================= */
 
 .conflict-modal-card {
-  width: min(580px, 94vw) !important;
-  max-width: 580px !important;
+  width: min(600px, 94vw) !important;
+  max-width: 600px !important;
   padding: 24px 26px !important;
   background: rgba(255, 255, 255, 0.94) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
@@ -7453,6 +7453,8 @@ select:focus {
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
   border-radius: 26px !important;
   box-shadow: 0 32px 80px rgba(12, 35, 75, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .conflict-modal-card .modal-header {
@@ -7471,88 +7473,116 @@ select:focus {
   color: #0f172a !important;
   font-weight: 700 !important;
   word-break: break-all !important;
+  overflow-wrap: anywhere !important;
 }
 
 .conflict-comparison-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 18px;
-}
-
-@media (max-width: 520px) {
-  .conflict-comparison-grid {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .conflict-file-box {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 16px;
-  background: rgba(246, 249, 254, 0.85);
-  border: 1.5px solid rgba(215, 228, 245, 0.85);
+  background: rgba(248, 250, 253, 0.9);
+  border: 1.5px solid rgba(218, 228, 242, 0.9);
   box-shadow: 0 2px 8px rgba(15, 30, 60, 0.04);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .conflict-file-box.existing {
-  background: rgba(248, 250, 253, 0.9);
-  border-color: rgba(218, 228, 242, 0.9);
+  background: rgba(248, 250, 253, 0.92);
+  border-color: rgba(218, 228, 242, 0.95);
 }
 
 .conflict-file-box.incoming {
   background: rgba(240, 247, 255, 0.95);
-  border-color: rgba(186, 218, 255, 0.85);
+  border-color: rgba(186, 218, 255, 0.9);
 }
 
 .conflict-box-badge {
-  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: #475569;
+  background: rgba(100, 116, 139, 0.08);
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  width: fit-content;
   letter-spacing: 0.02em;
 }
 
 .conflict-box-badge.new-badge {
   color: #0284c7;
+  background: rgba(2, 132, 199, 0.1);
 }
 
 .conflict-file-info {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .conflict-file-icon {
   font-size: 26px;
   line-height: 1;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .conflict-file-meta {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .conflict-file-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #1e293b;
-  white-space: nowrap;
+  color: #0f172a;
+  line-height: 1.45;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .conflict-file-sub {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11.5px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  font-size: 12px;
   color: #64748b;
+  line-height: 1.4;
+}
+
+.conflict-file-sub span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
 }
 
 .conflict-action-list {
@@ -7574,6 +7604,7 @@ select:focus {
   text-align: left;
   transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(15, 30, 60, 0.05);
+  box-sizing: border-box;
 }
 
 .conflict-action-card .action-card-icon {
@@ -7594,6 +7625,7 @@ select:focus {
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  flex: 1;
 }
 
 .conflict-action-card .action-card-title {
@@ -7606,7 +7638,9 @@ select:focus {
   margin: 0;
   font-size: 12px;
   color: #64748b;
-  line-height: 1.4;
+  line-height: 1.45;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* 选项 1: 替换（高亮推荐） */

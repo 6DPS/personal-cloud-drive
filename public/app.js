@@ -5706,11 +5706,17 @@ function promptUploadConflicts(conflicts) {
       const remainingCount = conflicts.length - currentIndex;
 
       if (conflictCurrentFileName) conflictCurrentFileName.textContent = `“${item.name}”`;
-      if (conflictExistingName) conflictExistingName.textContent = item.existing.name;
+      if (conflictExistingName) {
+        conflictExistingName.textContent = item.existing.name;
+        conflictExistingName.title = item.existing.name;
+      }
       if (conflictExistingSize) conflictExistingSize.textContent = formatSize(item.existing.size);
       if (conflictExistingMtime) conflictExistingMtime.textContent = formatTime(item.existing.mtime);
 
-      if (conflictIncomingName) conflictIncomingName.textContent = item.incoming.name;
+      if (conflictIncomingName) {
+        conflictIncomingName.textContent = item.incoming.name;
+        conflictIncomingName.title = item.incoming.name;
+      }
       if (conflictIncomingSize) conflictIncomingSize.textContent = formatSize(item.incoming.size);
       if (conflictIncomingMtime) conflictIncomingMtime.textContent = formatTime(item.incoming.mtime);
 
