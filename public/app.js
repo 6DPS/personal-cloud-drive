@@ -4307,28 +4307,40 @@ function actionButton(label, className, handler) {
   return button;
 }
 
-function aiActionSlot(item, options = {}, index = 0) {
-  const aiSvgHtml = `<svg class="btn-icon" width="14" height="14" style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 1L8.2 4.7C8.4 5.3 8.9 5.8 9.5 6L13.2 7.2L9.5 8.4C8.9 8.6 8.4 9.1 8.2 9.7L7 13.4L5.8 9.7C5.6 9.1 5.1 8.6 4.5 8.4L0.8 7.2L4.5 6C5.1 5.8 5.6 5.3 5.8 4.7L7 1Z" fill="currentColor"/></svg><span>AI对话</span>`;
-  if (state.aiModeEnabled) {
-    const btn = document.createElement("button");
-    btn.className = "ai-chat-action";
-    btn.innerHTML = aiSvgHtml;
-    btn.addEventListener("click", () => openAiChatPlaceholder(item));
-    if (options.animateAi) {
-      btn.classList.add("ai-animate-in");
-      btn.style.animationDelay = `${Math.min(index * 24, 200)}ms`;
-      btn.addEventListener("animationend", () => {
-        btn.classList.remove("ai-animate-in");
-        btn.style.animationDelay = "";
-      }, { once: true });
-    }
-    return btn;
+function actionIconButton({ iconSvg, title, className = "", handler }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `row-action-icon-btn ${className}`.trim();
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.innerHTML = iconSvg;
+  if (handler) {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handler(event);
+    });
   }
-  const slot = document.createElement("span");
-  slot.className = "ai-chat-action ai-chat-placeholder";
-  slot.setAttribute("aria-hidden", "true");
-  slot.innerHTML = aiSvgHtml;
-  return slot;
+  return button;
+}
+
+function aiActionSlot(item, options = {}, index = 0) {
+  if (!state.aiModeEnabled) return null;
+  const aiSvgHtml = `<svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z"/></svg>`;
+  const btn = actionIconButton({
+    iconSvg: aiSvgHtml,
+    title: "AI 智能对话 / 提炼分析",
+    className: "ai-action-btn",
+    handler: () => openAiChatPlaceholder(item),
+  });
+  if (options.animateAi) {
+    btn.classList.add("ai-animate-in");
+    btn.style.animationDelay = `${Math.min(index * 24, 200)}ms`;
+    btn.addEventListener("animationend", () => {
+      btn.classList.remove("ai-animate-in");
+      btn.style.animationDelay = "";
+    }, { once: true });
+  }
+  return btn;
 }
 
 function prefersClickRowActionMenu() {
@@ -4360,6 +4372,10 @@ function closeRowActionMenus(exceptMenu = null) {
     const menuId = button.getAttribute("aria-controls");
     if (exceptMenu && exceptMenu.id === menuId) return;
     button.setAttribute("aria-expanded", "false");
+  });
+  document.querySelectorAll(".row-actions.has-active-menu").forEach((el) => {
+    if (exceptMenu && el.querySelector(`[aria-controls='${exceptMenu.id}']`)) return;
+    el.classList.remove("has-active-menu");
   });
 }
 
@@ -4447,6 +4463,7 @@ function moreActionsMenu(items = []) {
     hoverBounds = null;
     document.removeEventListener("pointermove", handlePointerMove);
     trigger.setAttribute("aria-expanded", "false");
+    wrapper.closest(".row-actions")?.classList.remove("has-active-menu");
   }
 
   function isInsideHoverBounds(event) {
@@ -4472,6 +4489,7 @@ function moreActionsMenu(items = []) {
     hoverBounds = positionRowActionMenu(trigger, menu, bridge);
     if (!useClickMode) document.addEventListener("pointermove", handlePointerMove);
     trigger.setAttribute("aria-expanded", "true");
+    wrapper.closest(".row-actions")?.classList.add("has-active-menu");
     openedByPointerAt = Date.now();
   }
 
@@ -4489,8 +4507,13 @@ function moreActionsMenu(items = []) {
   }
 
   const menuId = `row-action-menu-${Math.random().toString(36).slice(2, 10)}`;
-  const trigger = actionButton("更多", "ghost row-actions-more", toggleMenu);
-  trigger.type = "button";
+  const moreSvg = `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>`;
+  const trigger = actionIconButton({
+    iconSvg: moreSvg,
+    title: "更多操作",
+    className: "ghost row-actions-more more-action-btn",
+    handler: toggleMenu,
+  });
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
   trigger.setAttribute("aria-controls", menuId);
@@ -4976,41 +4999,51 @@ function renderRows(options = {}) {
       const actions = document.createElement("div");
       actions.className = "row-actions";
 
-      const restoreBtn = actionButton("还原", "primary", async (event) => {
-        if (event) event.stopPropagation();
-        const id = item.id || item.trashId;
-        try {
-          suppressNextRealtimeRefresh();
-          const res = await api("/api/trash/restore", {
-            method: "POST",
-            body: JSON.stringify({ id, trashId: id }),
-          });
-          setStatus(res.message || `已还原“${item.name}”`);
-          clearFolderCaches();
-          scheduleStorageUsageRefresh({ force: true });
-          await loadTrash();
-        } catch (err) {
-          showErrorDialog(err.message || "还原失败");
-        }
+      const restoreBtn = actionIconButton({
+        iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><path d="M7 6L3 10l4 4"/></svg>`,
+        title: "还原项目",
+        className: "restore-action-btn",
+        handler: async (event) => {
+          if (event) event.stopPropagation();
+          const id = item.id || item.trashId;
+          try {
+            suppressNextRealtimeRefresh();
+            const res = await api("/api/trash/restore", {
+              method: "POST",
+              body: JSON.stringify({ id, trashId: id }),
+            });
+            setStatus(res.message || `已还原“${item.name}”`);
+            clearFolderCaches();
+            scheduleStorageUsageRefresh({ force: true });
+            await loadTrash();
+          } catch (err) {
+            showErrorDialog(err.message || "还原失败");
+          }
+        },
       });
 
-      const permanentDeleteBtn = actionButton("彻底删除", "danger", async (event) => {
-        if (event) event.stopPropagation();
-        const ok = await showConfirmDialog("彻底删除", `确认永久删除“${item.name}”吗？此操作无法撤销。`);
-        if (!ok) return;
-        const id = item.id || item.trashId;
-        try {
-          suppressNextRealtimeRefresh();
-          const res = await api("/api/trash/permanent", {
-            method: "DELETE",
-            body: JSON.stringify({ id, trashId: id }),
-          });
-          setStatus(res.message || `已彻底删除“${item.name}”`);
-          scheduleStorageUsageRefresh({ force: true });
-          await loadTrash();
-        } catch (err) {
-          showErrorDialog(err.message || "删除失败");
-        }
+      const permanentDeleteBtn = actionIconButton({
+        iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>`,
+        title: "彻底删除 (不可恢复)",
+        className: "danger-action-btn",
+        handler: async (event) => {
+          if (event) event.stopPropagation();
+          const ok = await showConfirmDialog("彻底删除", `确认永久删除“${item.name}”吗？此操作无法撤销。`);
+          if (!ok) return;
+          const id = item.id || item.trashId;
+          try {
+            suppressNextRealtimeRefresh();
+            const res = await api("/api/trash/permanent", {
+              method: "DELETE",
+              body: JSON.stringify({ id, trashId: id }),
+            });
+            setStatus(res.message || `已彻底删除“${item.name}”`);
+            scheduleStorageUsageRefresh({ force: true });
+            await loadTrash();
+          } catch (err) {
+            showErrorDialog(err.message || "删除失败");
+          }
+        },
       });
 
       actions.append(restoreBtn, permanentDeleteBtn);
@@ -5213,14 +5246,33 @@ function renderRows(options = {}) {
         }));
       };
 
-    actions.append(aiActionSlot(item, options, index));
-    actions.append(actionButton("下载", "", () => downloadFile(item)));
+    const aiBtn = aiActionSlot(item, options, index);
+    if (aiBtn) actions.append(aiBtn);
+
+    actions.append(actionIconButton({
+      iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.6 2.1A2 2 0 0 0 4.5 21h15a2 2 0 0 0 1.9-1.9L22 17"/></svg>`,
+      title: item.type === "folder" ? "下载文件夹 (打包为 ZIP)" : "下载文件",
+      className: "download-action-btn",
+      handler: () => downloadFile(item),
+    }));
+
     if (item.type === "folder") {
-      actions.append(actionButton(item.locked ? "修改密码" : "加密", "ghost", async () => {
-        await runAction(() => openFolderPasswordSettings(item));
+      actions.append(actionIconButton({
+        iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+        title: item.locked ? "修改文件夹密码" : "加密文件夹",
+        className: "lock-action-btn",
+        handler: async () => {
+          await runAction(() => openFolderPasswordSettings(item));
+        },
       }));
     }
-    actions.append(actionButton("删除", "danger", deleteAction));
+
+    actions.append(actionIconButton({
+      iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>`,
+      title: "删除",
+      className: "danger-action-btn",
+      handler: deleteAction,
+    }));
     const moreMenuOptions = [
       {
         label: item.starred ? "☆ 取消星标" : "⭐ 设为星标",
