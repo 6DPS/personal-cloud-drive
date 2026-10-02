@@ -7508,29 +7508,35 @@ select:focus {
    ========================================================================= */
 
 .conflict-modal-card {
-  width: min(620px, 94vw) !important;
-  max-width: 620px !important;
-  padding: 24px 26px !important;
+  width: min(580px, 94vw) !important;
+  max-width: 580px !important;
+  padding: 20px 22px 16px !important;
   background: rgba(255, 255, 255, 0.96) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  border-radius: 26px !important;
+  border-radius: 22px !important;
   box-shadow: 0 32px 80px rgba(12, 35, 75, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
 
 .conflict-modal-card .modal-header {
-  padding: 0 0 12px !important;
+  padding: 0 0 8px !important;
   border-bottom: 0 !important;
 }
 
+.conflict-modal-card .modal-header h2 {
+  font-size: 17px !important;
+  margin: 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
 .conflict-desc {
-  margin: 0 0 16px !important;
-  font-size: 13.5px !important;
+  margin: 0 0 10px !important;
+  font-size: 12.5px !important;
   color: #475569 !important;
-  line-height: 1.55 !important;
+  line-height: 1.45 !important;
 }
 
 .conflict-desc strong {
@@ -7541,7 +7547,7 @@ select:focus {
 }
 
 /* =========================================================================
-   区域 1: 一体化信息对比看板 (只读内嵌区)
+   区域 1: 一体化信息对比看板 (紧凑精细版)
    ========================================================================= */
 
 .conflict-board {
@@ -7549,9 +7555,9 @@ select:focus {
   flex-direction: column;
   background: rgba(243, 246, 251, 0.85);
   border: 1.5px solid rgba(222, 230, 242, 0.9);
-  border-radius: 20px;
-  padding: 13px 18px;
-  margin-bottom: 18px;
+  border-radius: 15px;
+  padding: 9px 13px;
+  margin-bottom: 11px;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -7562,9 +7568,9 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 10px;
-  margin-bottom: 11px;
+  gap: 10px;
+  padding-bottom: 7px;
+  margin-bottom: 7px;
   border-bottom: 1px dashed rgba(203, 213, 225, 0.9);
   min-width: 0;
 }
@@ -7576,24 +7582,24 @@ select:focus {
 .conflict-multi-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }
 
 .conflict-multi-counter {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #2563eb;
   background: rgba(37, 99, 235, 0.1);
-  padding: 2.5px 8px;
-  border-radius: 6px;
+  padding: 1.5px 6.5px;
+  border-radius: 5px;
   white-space: nowrap;
   letter-spacing: 0.02em;
 }
 
 .conflict-multi-path {
-  font-size: 12px;
+  font-size: 11.5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: #64748b;
   overflow: hidden;
@@ -7605,15 +7611,15 @@ select:focus {
 .conflict-nav-btns {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .conflict-nav-arrow {
-  width: 28px !important;
-  height: 28px !important;
-  min-height: 28px !important;
-  max-height: 28px !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
   padding: 0 !important;
   border-radius: 50% !important;
   border: 1px solid rgba(203, 213, 225, 0.9) !important;
@@ -7629,8 +7635,8 @@ select:focus {
 }
 
 .conflict-nav-arrow svg {
-  width: 14px !important;
-  height: 14px !important;
+  width: 12px !important;
+  height: 12px !important;
   stroke: currentColor !important;
   display: block !important;
   pointer-events: none !important;
@@ -7657,24 +7663,45 @@ select:focus {
 
 .conflict-board-item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 10px;
   min-width: 0;
   width: 100%;
 }
 
-.conflict-item-header {
+.conflict-item-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.conflict-item-meta {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.conflict-item-headline {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
 }
 
 .conflict-tag {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 2px 7.5px;
-  border-radius: 6px;
+  padding: 1.5px 6px;
+  border-radius: 5px;
   letter-spacing: 0.02em;
   display: inline-block;
+  flex-shrink: 0;
+  line-height: 1.25;
+  margin-top: 1px;
 }
 
 .conflict-tag.existing-tag {
@@ -7687,35 +7714,11 @@ select:focus {
   color: #0284c7;
 }
 
-.conflict-item-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
-  width: 100%;
-}
-
-.conflict-item-icon {
-  font-size: 26px;
-  line-height: 1;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.conflict-item-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
 .conflict-item-name {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
-  line-height: 1.4;
+  line-height: 1.35;
   word-break: break-all;
   overflow-wrap: anywhere;
   display: -webkit-box;
@@ -7729,10 +7732,10 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 14px;
-  font-size: 12px;
+  gap: 4px 10px;
+  font-size: 11px;
   color: #64748b;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .conflict-item-sub span {
@@ -7747,22 +7750,22 @@ select:focus {
 .conflict-board-divider {
   height: 1px;
   background: rgba(222, 230, 242, 0.9);
-  margin: 11px 0;
+  margin: 6px 0;
 }
 
 /* =========================================================================
-   区域 2: 行动决策区 (按钮区)
+   区域 2: 行动决策区 (紧凑精细版)
    ========================================================================= */
 
 .conflict-action-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   width: 100%;
 }
 
 .conflict-section-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #64748b;
   letter-spacing: 0.03em;
@@ -7772,70 +7775,71 @@ select:focus {
 .conflict-action-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
   width: 100%;
 }
 
 .conflict-action-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 11px;
   width: 100%;
-  padding: 12px 18px;
-  border-radius: 16px;
+  padding: 8px 14px;
+  border-radius: 13px;
   border: 1.5px solid transparent;
   background: #ffffff;
   cursor: pointer;
   text-align: left;
-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(15, 30, 60, 0.05);
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1.5px 6px rgba(15, 30, 60, 0.04);
   box-sizing: border-box;
   position: relative;
 }
 
 .conflict-action-card .action-card-icon {
-  font-size: 22px;
+  font-size: 17px;
   line-height: 1;
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: rgba(241, 245, 249, 0.9);
-  transition: transform 180ms ease, background 180ms ease;
+  transition: transform 160ms ease, background 160ms ease;
 }
 
 .conflict-action-card .action-card-content {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1.5px;
   min-width: 0;
   flex: 1;
 }
 
 .conflict-action-card .action-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
+  line-height: 1.35;
 }
 
 .conflict-action-card .action-card-desc {
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #64748b;
-  line-height: 1.45;
+  line-height: 1.35;
   word-break: break-all;
   overflow-wrap: anywhere;
 }
 
 .conflict-action-card .action-card-arrow {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 400;
   color: #cbd5e1;
   margin-left: auto;
   flex-shrink: 0;
-  transition: transform 180ms ease, color 180ms ease;
+  transition: transform 160ms ease, color 160ms ease;
   line-height: 1;
 }
 
@@ -7859,7 +7863,7 @@ select:focus {
   background: #ffffff;
   border-color: #2563eb;
   transform: translateY(-1.5px);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.16);
 }
 
 .conflict-action-card.replace-action:hover .action-card-icon {
@@ -7886,7 +7890,7 @@ select:focus {
   background: #ffffff;
   border-color: #0d9488;
   transform: translateY(-1.5px);
-  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.16);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.16);
 }
 
 .conflict-action-card.keep-both-action:hover .action-card-icon {
@@ -7913,7 +7917,7 @@ select:focus {
   background: #ffffff;
   border-color: #94a3b8;
   transform: translateY(-1.5px);
-  box-shadow: 0 6px 18px rgba(100, 116, 139, 0.12);
+  box-shadow: 0 5px 14px rgba(100, 116, 139, 0.12);
 }
 
 .conflict-action-card.skip-action:hover .action-card-arrow {
@@ -7927,9 +7931,9 @@ select:focus {
 .conflict-modal-footer {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 18px;
-  padding-top: 14px;
+  gap: 12px;
+  margin-top: 11px;
+  padding-top: 9px;
   border-top: 1px solid rgba(226, 232, 240, 0.8);
 }
 
