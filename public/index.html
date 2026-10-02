@@ -565,8 +565,16 @@
                 <span id="conflictMultiPath" class="conflict-multi-path" title=""></span>
               </div>
               <div class="conflict-nav-btns">
-                <button id="conflictPrevBtn" class="conflict-nav-arrow" type="button" title="上一个冲突文件">◀</button>
-                <button id="conflictNextBtn" class="conflict-nav-arrow" type="button" title="下一个冲突文件">▶</button>
+                <button id="conflictPrevBtn" class="conflict-nav-arrow" type="button" aria-label="上一个冲突文件" title="上一个冲突文件">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 13L5 8l5-5" />
+                  </svg>
+                </button>
+                <button id="conflictNextBtn" class="conflict-nav-arrow" type="button" aria-label="下一个冲突文件" title="下一个冲突文件">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 3l5 5-5 5" />
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -645,7 +653,7 @@
               <input type="checkbox" id="conflictApplyAllCheck" checked />
               <span id="conflictApplyAllText">为其余冲突文件执行相同操作</span>
             </label>
-            <button id="cancelConflictUploadBtn" class="ghost cancel-all-btn" type="button">取消全部上传</button>
+            <button id="cancelConflictUploadBtn" class="danger cancel-all-btn" type="button">取消全部上传</button>
           </footer>
         </div>
       </section>

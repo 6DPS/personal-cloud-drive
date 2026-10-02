@@ -7541,35 +7541,54 @@ select:focus {
 .conflict-nav-btns {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .conflict-nav-arrow {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  background: #ffffff;
-  color: #475569;
-  font-size: 11px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: all 140ms ease;
-  user-select: none;
+  width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+  transition: all 180ms ease !important;
+  user-select: none !important;
+}
+
+.conflict-nav-arrow svg {
+  width: 14px !important;
+  height: 14px !important;
+  stroke: currentColor !important;
+  display: block !important;
+  pointer-events: none !important;
 }
 
 .conflict-nav-arrow:hover:not(:disabled) {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
-  transform: scale(1.05);
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25) !important;
+  transform: scale(1.08) !important;
+}
+
+.conflict-nav-arrow:active:not(:disabled) {
+  transform: scale(0.95) !important;
 }
 
 .conflict-nav-arrow:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  background: rgba(241, 245, 249, 0.7) !important;
+  border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 .conflict-board-item {
@@ -7853,7 +7872,7 @@ select:focus {
 .conflict-apply-all-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-size: 13px;
   font-weight: 600;
   color: #475569;
@@ -7866,21 +7885,75 @@ select:focus {
 }
 
 .conflict-apply-all-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1.8px solid #94a3b8 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+  outline: none !important;
 }
 
+.conflict-apply-all-label:hover input[type="checkbox"] {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+.conflict-apply-all-label input[type="checkbox"]:checked {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+.conflict-apply-all-label input[type="checkbox"]:checked::after {
+  content: "" !important;
+  width: 4.5px !important;
+  height: 9px !important;
+  border: solid #ffffff !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) translate(-0.5px, -1px) !important;
+  display: block !important;
+}
+
+/* 取消全部上传按钮 (与文件列表删除按钮样式完全一致) */
 .cancel-all-btn {
   margin-left: auto !important;
-  padding: 6px 14px !important;
+  min-height: 32px !important;
+  padding: 0 14px !important;
   font-size: 13px !important;
-  color: #64748b !important;
-  border-radius: 10px !important;
+  font-weight: 600 !important;
+  border-radius: 999px !important;
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(254, 202, 202, 0.85) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.cancel-all-btn:hover {
-  background: rgba(241, 245, 249, 0.9) !important;
-  color: #0f172a !important;
+.cancel-all-btn:hover,
+.cancel-all-btn:focus-visible {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+.cancel-all-btn:active {
+  transform: translateY(0) scale(0.97) !important;
 }
