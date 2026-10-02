@@ -4325,7 +4325,7 @@ function actionIconButton({ iconSvg, title, className = "", handler }) {
 
 function aiActionSlot(item, options = {}, index = 0) {
   if (!state.aiModeEnabled) return null;
-  const aiSvgHtml = `<svg class="action-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L13.8 8.2L20 10L13.8 11.8L12 18L10.2 11.8L4 10L10.2 8.2L12 2Z"/></svg>`;
+  const aiSvgHtml = `<svg class="action-btn-svg ai-sparkle-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 3C9.5 7.42 6.42 10.5 2 10.5C6.42 10.5 9.5 13.58 9.5 18C9.5 13.58 12.58 10.5 17 10.5C12.58 10.5 9.5 7.42 9.5 3Z"/><path d="M17.5 2C17.5 4.21 15.71 6 13.5 6C15.71 6 17.5 7.79 17.5 10C17.5 7.79 19.29 6 21.5 6C19.29 6 17.5 4.21 17.5 2Z"/><path d="M18 15C18 16.38 16.88 17.5 15.5 17.5C16.88 17.5 18 18.62 18 20C18 18.62 19.12 17.5 20.5 17.5C19.12 17.5 18 16.38 18 15Z"/></svg>`;
   const btn = actionIconButton({
     iconSvg: aiSvgHtml,
     title: "AI 智能对话 / 提炼分析",

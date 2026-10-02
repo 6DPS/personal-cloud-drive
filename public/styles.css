@@ -5757,19 +5757,25 @@ tbody tr.drop-target-row {
   pointer-events: none;
 }
 
-/* AI 对话智能操作按钮 (仅在开启 AI 模式时渲染，高饱和微渐变) */
+/* AI 对话智能操作按钮 (苹果级高阶毛玻璃质感 + 灵动 AI 晶蓝晶彩微光) */
 .row-action-icon-btn.ai-action-btn {
-  background: linear-gradient(135deg, #1769e0 0%, #00c1b8 48%, #f0b429 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(23, 105, 224, 0.28), 0 0 10px rgba(0, 193, 184, 0.2) !important;
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.95) 0%, rgba(245, 243, 255, 0.95) 100%) !important;
+  border: 1px solid rgba(165, 180, 252, 0.65) !important;
+  color: #4f46e5 !important;
+  box-shadow:
+    0 1px 3px rgba(79, 70, 229, 0.08),
+    0 0 6px rgba(129, 140, 248, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
 }
 
 .row-action-icon-btn.ai-action-btn:hover {
-  filter: saturate(1.15) brightness(1.08) !important;
-  box-shadow: 0 4px 14px rgba(23, 105, 224, 0.38), 0 0 14px rgba(240, 180, 41, 0.3) !important;
-  transform: translateY(-1px) scale(1.08) !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+  border-color: transparent !important;
   color: #ffffff !important;
+  box-shadow:
+    0 4px 14px rgba(99, 102, 241, 0.35),
+    0 0 12px rgba(139, 92, 246, 0.28) !important;
+  transform: translateY(-1px) scale(1.08) !important;
 }
 
 .row-action-icon-btn.ai-action-btn.ai-animate-in {
@@ -5817,6 +5823,95 @@ tbody tr.drop-target-row {
   color: #ffffff !important;
   border-color: #1769e0 !important;
   box-shadow: 0 3px 10px rgba(23, 105, 224, 0.28) !important;
+}
+
+/* =========================================================================
+   模态框顶部统一纯图标操作按钮 (全局统一无文字设计)
+   ========================================================================= */
+.modal-action-icon-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 9px !important;
+  border: 1px solid rgba(168, 187, 214, 0.48) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  outline: none !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.modal-action-icon-btn:hover {
+  background: #ffffff !important;
+  color: #1769e0 !important;
+  border-color: rgba(23, 105, 224, 0.45) !important;
+  box-shadow: 0 3px 10px rgba(23, 105, 224, 0.15) !important;
+  transform: translateY(-1px) scale(1.06) !important;
+}
+
+.modal-action-icon-btn:active {
+  transform: translateY(0) scale(0.95) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.modal-action-icon-btn .action-btn-svg,
+.modal-action-icon-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 模态框顶部 AI 总结图标按钮 */
+.modal-action-icon-btn.ai-action-btn {
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.95) 0%, rgba(245, 243, 255, 0.95) 100%) !important;
+  border: 1px solid rgba(165, 180, 252, 0.65) !important;
+  color: #4f46e5 !important;
+  box-shadow:
+    0 1px 3px rgba(79, 70, 229, 0.08),
+    0 0 6px rgba(129, 140, 248, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+}
+
+.modal-action-icon-btn.ai-action-btn:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 4px 14px rgba(99, 102, 241, 0.35),
+    0 0 12px rgba(139, 92, 246, 0.28) !important;
+  transform: translateY(-1px) scale(1.08) !important;
+}
+
+/* 模态框顶部下载按钮 */
+.modal-action-icon-btn.download-action-btn:hover {
+  background: #ffffff !important;
+  color: #1769e0 !important;
+  border-color: rgba(23, 105, 224, 0.45) !important;
+  box-shadow: 0 3px 10px rgba(23, 105, 224, 0.18) !important;
+}
+
+/* 模态框顶部关闭按钮 */
+.modal-action-icon-btn.modal-close-btn:hover {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.15) !important;
 }
 
 .progress-track {
