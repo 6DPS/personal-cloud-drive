@@ -5064,7 +5064,11 @@ function renderRows(options = {}) {
     });
 
     const icon = renderFileIcon(item);
+    const nameWrap = document.createElement("div");
+    nameWrap.className = "name-title-wrap";
+
     const nameBtn = document.createElement("button");
+    nameBtn.className = "name-btn";
     if (state.searchActive) {
       appendHighlightedText(nameBtn, itemName(item), state.searchTokens);
     } else {
@@ -5084,7 +5088,9 @@ function renderRows(options = {}) {
         openPreview(item);
       }
     });
-    nameCell.append(starBtn, icon, nameBtn);
+
+    nameWrap.append(nameBtn, starBtn);
+    nameCell.append(icon, nameWrap);
     if (state.searchActive || state.starredMode) {
       const meta = document.createElement("div");
       meta.className = "match-meta";

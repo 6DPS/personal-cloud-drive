@@ -896,12 +896,34 @@ select {
   color: #ffffff;
 }
 
-.star-toggle-btn {
+.name-title-wrap {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: calc(100% - 48px);
+}
+
+.name-title-wrap .name-btn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  box-shadow: none;
+  border: none;
+  cursor: pointer;
+  color: #172033;
+}
+
+.star-toggle-btn {
+  display: none;
+  align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   background: transparent;
@@ -914,21 +936,19 @@ select {
 }
 
 tr:hover .star-toggle-btn {
+  display: inline-flex;
   opacity: 0.6;
+}
+
+.star-toggle-btn.active {
+  display: inline-flex !important;
+  opacity: 1;
+  color: #f59e0b;
 }
 
 .star-toggle-btn:hover {
   opacity: 1 !important;
   color: #f59e0b;
-  transform: scale(1.18);
-}
-
-.star-toggle-btn.active {
-  opacity: 1;
-  color: #f59e0b;
-}
-
-.star-toggle-btn.active:hover {
   transform: scale(1.22);
 }
 
@@ -944,25 +964,34 @@ tr:hover .star-toggle-btn {
 }
 
 .name-cell .star-toggle-btn {
-  min-width: 24px !important;
-  max-width: 24px !important;
-  width: 24px !important;
-  height: 24px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
   padding: 0 !important;
   margin: 0 !important;
   overflow: visible !important;
   white-space: normal !important;
-  display: inline-flex !important;
+  display: none;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
 }
 
+tr:hover .name-cell .star-toggle-btn {
+  display: inline-flex !important;
+}
+
+.name-cell .star-toggle-btn.active {
+  display: inline-flex !important;
+}
+
 @media (hover: none) {
-  .star-toggle-btn {
-    opacity: 0.35;
+  .name-cell .star-toggle-btn {
+    display: none;
   }
-  .star-toggle-btn.active {
+  .name-cell .star-toggle-btn.active {
+    display: inline-flex !important;
     opacity: 1;
   }
 }
