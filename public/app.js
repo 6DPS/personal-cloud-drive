@@ -214,7 +214,15 @@ const closeUploadModalBtn = $("#closeUploadModalBtn");
 const cancelUploadTargetBtn = $("#cancelUploadTargetBtn");
 const uploadConflictModal = $("#uploadConflictModal");
 const closeConflictModalBtn = $("#closeConflictModalBtn");
+const conflictEyebrow = $("#conflictEyebrow");
+const conflictModalTitle = $("#conflictModalTitle");
+const conflictFileNameDesc = $("#conflictFileNameDesc");
 const conflictCurrentFileName = $("#conflictCurrentFileName");
+const conflictMultiBanner = $("#conflictMultiBanner");
+const conflictMultiCounter = $("#conflictMultiCounter");
+const conflictMultiPath = $("#conflictMultiPath");
+const conflictPrevBtn = $("#conflictPrevBtn");
+const conflictNextBtn = $("#conflictNextBtn");
 const conflictExistingIcon = $("#conflictExistingIcon");
 const conflictExistingName = $("#conflictExistingName");
 const conflictExistingSize = $("#conflictExistingSize");
@@ -224,9 +232,14 @@ const conflictIncomingName = $("#conflictIncomingName");
 const conflictIncomingSize = $("#conflictIncomingSize");
 const conflictIncomingMtime = $("#conflictIncomingMtime");
 const conflictReplaceBtn = $("#conflictReplaceBtn");
+const conflictReplaceTitle = $("#conflictReplaceTitle");
+const conflictReplaceDesc = $("#conflictReplaceDesc");
 const conflictKeepBothBtn = $("#conflictKeepBothBtn");
+const conflictKeepBothTitle = $("#conflictKeepBothTitle");
 const conflictKeepBothDesc = $("#conflictKeepBothDesc");
 const conflictSkipBtn = $("#conflictSkipBtn");
+const conflictSkipTitle = $("#conflictSkipTitle");
+const conflictSkipDesc = $("#conflictSkipDesc");
 const conflictApplyAllWrap = $("#conflictApplyAllWrap");
 const conflictApplyAllCheck = $("#conflictApplyAllCheck");
 const conflictApplyAllText = $("#conflictApplyAllText");
@@ -5692,8 +5705,58 @@ function promptUploadConflicts(conflicts) {
       return;
     }
 
+    const totalCount = conflicts.length;
     let currentIndex = 0;
     const decisions = {};
+
+    if (totalCount > 1) {
+      if (conflictEyebrow) conflictEyebrow.textContent = `批量冲突检测 (${totalCount} 项)`;
+      if (conflictModalTitle) conflictModalTitle.textContent = `检测到 ${totalCount} 个同名文件冲突`;
+      conflictMultiBanner?.classList.remove("hidden");
+      conflictApplyAllWrap?.classList.remove("hidden");
+      if (conflictApplyAllText) conflictApplyAllText.textContent = `为全部 ${totalCount} 个冲突文件应用此操作`;
+      if (conflictApplyAllCheck) conflictApplyAllCheck.checked = true;
+    } else {
+      if (conflictEyebrow) conflictEyebrow.textContent = "上传文件冲突检测";
+      if (conflictModalTitle) conflictModalTitle.textContent = "目标位置已包含同名文件";
+      conflictMultiBanner?.classList.add("hidden");
+      conflictApplyAllWrap?.classList.add("hidden");
+    }
+
+    function updateActionCardLabels() {
+      const item = conflicts[currentIndex];
+      const isMulti = totalCount > 1;
+      const applyAll = isMulti && conflictApplyAllCheck && conflictApplyAllCheck.checked;
+
+      if (applyAll) {
+        if (conflictReplaceTitle) conflictReplaceTitle.textContent = `全部替换 (${totalCount} 个文件)`;
+        if (conflictReplaceDesc) conflictReplaceDesc.textContent = `用准备上传的 ${totalCount} 个新文件覆盖网盘已有同名文件，不产生多余副本`;
+
+        if (conflictKeepBothTitle) conflictKeepBothTitle.textContent = `全部保留两者 (${totalCount} 个文件)`;
+        if (conflictKeepBothDesc) conflictKeepBothDesc.textContent = `所有新文件自动添加编号如 (1)，与网盘原文件共同保留`;
+
+        if (conflictSkipTitle) conflictSkipTitle.textContent = `全部跳过 (${totalCount} 个文件)`;
+        if (conflictSkipDesc) conflictSkipDesc.textContent = `不上传这 ${totalCount} 个冲突文件，网盘已有文件保持不变`;
+      } else if (isMulti) {
+        if (conflictReplaceTitle) conflictReplaceTitle.textContent = "仅替换当前文件";
+        if (conflictReplaceDesc) conflictReplaceDesc.textContent = `用当前上传文件覆盖网盘中的“${item?.name || "原文件"}”`;
+
+        if (conflictKeepBothTitle) conflictKeepBothTitle.textContent = "仅保留当前两者";
+        if (conflictKeepBothDesc) conflictKeepBothDesc.textContent = `当前新文件自动重命名为：“${item?.suggestedKeepBothName || item?.name || "新文件 (1)"}”，两者共同保留`;
+
+        if (conflictSkipTitle) conflictSkipTitle.textContent = "仅跳过当前文件";
+        if (conflictSkipDesc) conflictSkipDesc.textContent = `不上传当前文件，网盘中原有文件保持不变`;
+      } else {
+        if (conflictReplaceTitle) conflictReplaceTitle.textContent = "替换目标中的文件";
+        if (conflictReplaceDesc) conflictReplaceDesc.textContent = "用正在上传的新文件覆盖现有文件，保留原文件名，不产生多余副本";
+
+        if (conflictKeepBothTitle) conflictKeepBothTitle.textContent = "同时保留两个文件";
+        if (conflictKeepBothDesc) conflictKeepBothDesc.textContent = `新文件将自动重命名为：“${item?.suggestedKeepBothName || item?.name || "新文件 (1)"}”，两者共同保留`;
+
+        if (conflictSkipTitle) conflictSkipTitle.textContent = "跳过此文件";
+        if (conflictSkipDesc) conflictSkipDesc.textContent = "不上传该文件，目标文件夹中的原有文件保持不变";
+      }
+    }
 
     function renderCurrentConflict() {
       if (currentIndex >= conflicts.length) {
@@ -5703,9 +5766,20 @@ function promptUploadConflicts(conflicts) {
       }
 
       const item = conflicts[currentIndex];
-      const remainingCount = conflicts.length - currentIndex;
 
-      if (conflictCurrentFileName) conflictCurrentFileName.textContent = `“${item.name}”`;
+      if (totalCount > 1) {
+        if (conflictCurrentFileName) conflictCurrentFileName.textContent = `“${item.relativePath || item.name}”`;
+        if (conflictMultiCounter) conflictMultiCounter.textContent = `冲突项目 ${currentIndex + 1} / ${totalCount}`;
+        if (conflictMultiPath) {
+          conflictMultiPath.textContent = item.relativePath || item.name;
+          conflictMultiPath.title = item.relativePath || item.name;
+        }
+        if (conflictPrevBtn) conflictPrevBtn.disabled = currentIndex === 0;
+        if (conflictNextBtn) conflictNextBtn.disabled = currentIndex === totalCount - 1;
+      } else {
+        if (conflictCurrentFileName) conflictCurrentFileName.textContent = `“${item.name}”`;
+      }
+
       if (conflictExistingName) {
         conflictExistingName.textContent = item.existing.name;
         conflictExistingName.title = item.existing.name;
@@ -5725,27 +5799,13 @@ function promptUploadConflicts(conflicts) {
       if (conflictExistingIcon) conflictExistingIcon.textContent = existingMeta.label || "📄";
       if (conflictIncomingIcon) conflictIncomingIcon.textContent = incomingMeta.label || "📄";
 
-      if (conflictKeepBothDesc) {
-        conflictKeepBothDesc.textContent = `新文件将自动重命名为：“${item.suggestedKeepBothName || item.name}”，两者共同保留`;
-      }
-
-      if (conflictApplyAllWrap) {
-        if (remainingCount > 1) {
-          conflictApplyAllWrap.classList.remove("hidden");
-          if (conflictApplyAllText) {
-            conflictApplyAllText.textContent = `为其余 ${remainingCount} 个冲突文件执行相同操作`;
-          }
-          if (conflictApplyAllCheck) conflictApplyAllCheck.checked = false;
-        } else {
-          conflictApplyAllWrap.classList.add("hidden");
-        }
-      }
+      updateActionCardLabels();
     }
 
     function handleAction(action) {
-      const applyAll = conflictApplyAllCheck && conflictApplyAllCheck.checked;
+      const applyAll = totalCount > 1 && conflictApplyAllCheck && conflictApplyAllCheck.checked;
       if (applyAll) {
-        for (let i = currentIndex; i < conflicts.length; i++) {
+        for (let i = 0; i < conflicts.length; i++) {
           const c = conflicts[i];
           decisions[c.relativePath] = action;
           decisions[c.name] = action;
@@ -5758,8 +5818,14 @@ function promptUploadConflicts(conflicts) {
       const c = conflicts[currentIndex];
       decisions[c.relativePath] = action;
       decisions[c.name] = action;
-      currentIndex += 1;
-      renderCurrentConflict();
+
+      if (currentIndex < conflicts.length - 1) {
+        currentIndex += 1;
+        renderCurrentConflict();
+      } else {
+        closeModal();
+        resolve(decisions);
+      }
     }
 
     function closeModal() {
@@ -5777,6 +5843,19 @@ function promptUploadConflicts(conflicts) {
     const onKeepBoth = () => handleAction("keep_both");
     const onSkip = () => handleAction("skip");
     const onCancel = () => cancelAll();
+    const onPrev = () => {
+      if (currentIndex > 0) {
+        currentIndex -= 1;
+        renderCurrentConflict();
+      }
+    };
+    const onNext = () => {
+      if (currentIndex < totalCount - 1) {
+        currentIndex += 1;
+        renderCurrentConflict();
+      }
+    };
+    const onApplyAllChange = () => updateActionCardLabels();
 
     function cleanup() {
       conflictReplaceBtn?.removeEventListener("click", onReplace);
@@ -5784,6 +5863,9 @@ function promptUploadConflicts(conflicts) {
       conflictSkipBtn?.removeEventListener("click", onSkip);
       cancelConflictUploadBtn?.removeEventListener("click", onCancel);
       closeConflictModalBtn?.removeEventListener("click", onCancel);
+      conflictPrevBtn?.removeEventListener("click", onPrev);
+      conflictNextBtn?.removeEventListener("click", onNext);
+      conflictApplyAllCheck?.removeEventListener("change", onApplyAllChange);
     }
 
     conflictReplaceBtn?.addEventListener("click", onReplace);
@@ -5791,6 +5873,9 @@ function promptUploadConflicts(conflicts) {
     conflictSkipBtn?.addEventListener("click", onSkip);
     cancelConflictUploadBtn?.addEventListener("click", onCancel);
     closeConflictModalBtn?.addEventListener("click", onCancel);
+    conflictPrevBtn?.addEventListener("click", onPrev);
+    conflictNextBtn?.addEventListener("click", onNext);
+    conflictApplyAllCheck?.addEventListener("change", onApplyAllChange);
 
     uploadConflictModal.classList.remove("hidden");
     uploadConflictModal.setAttribute("aria-hidden", "false");

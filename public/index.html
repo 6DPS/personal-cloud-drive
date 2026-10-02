@@ -543,8 +543,8 @@
         <div class="modal-card conflict-modal-card">
           <header class="modal-header">
             <div>
-              <p class="eyebrow">上传文件冲突检测</p>
-              <h2>目标位置已包含同名文件</h2>
+              <p class="eyebrow" id="conflictEyebrow">上传文件冲突检测</p>
+              <h2 id="conflictModalTitle">目标位置已包含同名文件</h2>
             </div>
             <button id="closeConflictModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭" type="button">
               <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -557,29 +557,49 @@
             目标文件夹中已存在名为 <strong id="conflictCurrentFileName"></strong> 的文件，请选择处理方式：
           </p>
 
-          <div class="conflict-comparison-grid">
-            <div class="conflict-file-box existing">
-              <div class="conflict-box-badge">目标中的已有文件</div>
-              <div class="conflict-file-info">
-                <span id="conflictExistingIcon" class="conflict-file-icon">📄</span>
-                <div class="conflict-file-meta">
-                  <strong id="conflictExistingName" class="conflict-file-title"></strong>
-                  <div class="conflict-file-sub">
+          <!-- 区域 1：一体化信息对比看板 (只读展示区，内嵌浅灰底，与下方按钮彻底区分) -->
+          <div class="conflict-board">
+            <div id="conflictMultiBanner" class="conflict-multi-banner hidden">
+              <div class="conflict-multi-left">
+                <span id="conflictMultiCounter" class="conflict-multi-counter">冲突项目 1 / 1</span>
+                <span id="conflictMultiPath" class="conflict-multi-path" title=""></span>
+              </div>
+              <div class="conflict-nav-btns">
+                <button id="conflictPrevBtn" class="conflict-nav-arrow" type="button" title="上一个冲突文件">◀</button>
+                <button id="conflictNextBtn" class="conflict-nav-arrow" type="button" title="下一个冲突文件">▶</button>
+              </div>
+            </div>
+
+            <div class="conflict-board-item existing">
+              <div class="conflict-item-header">
+                <span class="conflict-tag existing-tag">网盘已有</span>
+              </div>
+              <div class="conflict-item-body">
+                <span id="conflictExistingIcon" class="conflict-item-icon">📄</span>
+                <div class="conflict-item-meta">
+                  <strong id="conflictExistingName" class="conflict-item-name"></strong>
+                  <div class="conflict-item-sub">
                     <span>大小：<span id="conflictExistingSize"></span></span>
+                    <span class="meta-dot">·</span>
                     <span>修改时间：<span id="conflictExistingMtime"></span></span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="conflict-file-box incoming">
-              <div class="conflict-box-badge new-badge">准备上传的新文件</div>
-              <div class="conflict-file-info">
-                <span id="conflictIncomingIcon" class="conflict-file-icon">📄</span>
-                <div class="conflict-file-meta">
-                  <strong id="conflictIncomingName" class="conflict-file-title"></strong>
-                  <div class="conflict-file-sub">
+            <div class="conflict-board-divider"></div>
+
+            <div class="conflict-board-item incoming">
+              <div class="conflict-item-header">
+                <span class="conflict-tag incoming-tag">准备上传</span>
+              </div>
+              <div class="conflict-item-body">
+                <span id="conflictIncomingIcon" class="conflict-item-icon">📄</span>
+                <div class="conflict-item-meta">
+                  <strong id="conflictIncomingName" class="conflict-item-name"></strong>
+                  <div class="conflict-item-sub">
                     <span>大小：<span id="conflictIncomingSize"></span></span>
+                    <span class="meta-dot">·</span>
                     <span>修改时间：<span id="conflictIncomingMtime"></span></span>
                   </div>
                 </div>
@@ -587,35 +607,42 @@
             </div>
           </div>
 
-          <div class="conflict-action-list">
-            <button id="conflictReplaceBtn" class="conflict-action-card replace-action" type="button">
-              <div class="action-card-icon">🔄</div>
-              <div class="action-card-content">
-                <strong class="action-card-title">替换目标中的文件</strong>
-                <p class="action-card-desc">用正在上传的新文件覆盖现有文件，保留原文件名，不产生多余副本</p>
-              </div>
-            </button>
+          <!-- 区域 2：行动决策区 (操作按钮区，清晰标题 + 按钮质感 + 引导箭头) -->
+          <div class="conflict-action-section">
+            <div class="conflict-section-title">选择处理方案</div>
+            <div class="conflict-action-list">
+              <button id="conflictReplaceBtn" class="conflict-action-card replace-action" type="button">
+                <div class="action-card-icon">🔄</div>
+                <div class="action-card-content">
+                  <strong id="conflictReplaceTitle" class="action-card-title">替换目标中的文件</strong>
+                  <p id="conflictReplaceDesc" class="action-card-desc">用正在上传的新文件覆盖现有文件，保留原文件名，不产生多余副本</p>
+                </div>
+                <span class="action-card-arrow">›</span>
+              </button>
 
-            <button id="conflictKeepBothBtn" class="conflict-action-card keep-both-action" type="button">
-              <div class="action-card-icon">📋</div>
-              <div class="action-card-content">
-                <strong class="action-card-title">同时保留两个文件</strong>
-                <p id="conflictKeepBothDesc" class="action-card-desc">新文件将自动重命名并保存，两者共同保留</p>
-              </div>
-            </button>
+              <button id="conflictKeepBothBtn" class="conflict-action-card keep-both-action" type="button">
+                <div class="action-card-icon">📋</div>
+                <div class="action-card-content">
+                  <strong id="conflictKeepBothTitle" class="action-card-title">同时保留两个文件</strong>
+                  <p id="conflictKeepBothDesc" class="action-card-desc">新文件将自动重命名并保存，两者共同保留</p>
+                </div>
+                <span class="action-card-arrow">›</span>
+              </button>
 
-            <button id="conflictSkipBtn" class="conflict-action-card skip-action" type="button">
-              <div class="action-card-icon">✕</div>
-              <div class="action-card-content">
-                <strong class="action-card-title">跳过此文件</strong>
-                <p class="action-card-desc">不上传该文件，目标文件夹中的原有文件保持不变</p>
-              </div>
-            </button>
+              <button id="conflictSkipBtn" class="conflict-action-card skip-action" type="button">
+                <div class="action-card-icon">✕</div>
+                <div class="action-card-content">
+                  <strong id="conflictSkipTitle" class="action-card-title">跳过此文件</strong>
+                  <p id="conflictSkipDesc" class="action-card-desc">不上传该文件，目标文件夹中的原有文件保持不变</p>
+                </div>
+                <span class="action-card-arrow">›</span>
+              </button>
+            </div>
           </div>
 
           <footer class="conflict-modal-footer">
             <label id="conflictApplyAllWrap" class="conflict-apply-all-label">
-              <input type="checkbox" id="conflictApplyAllCheck" />
+              <input type="checkbox" id="conflictApplyAllCheck" checked />
               <span id="conflictApplyAllText">为其余冲突文件执行相同操作</span>
             </label>
             <button id="cancelConflictUploadBtn" class="ghost cancel-all-btn" type="button">取消全部上传</button>
