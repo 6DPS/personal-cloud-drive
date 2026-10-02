@@ -5757,25 +5757,25 @@ tbody tr.drop-target-row {
   pointer-events: none;
 }
 
-/* AI 对话智能操作按钮 (与 AI 对话框同色系：青绿/天蓝渐变 + 水青毛玻璃质感) */
+/* AI 对话智能操作按钮 (与 AI 对话框同色系：清透水青/薄荷毛玻璃，轻盈通透且与整行完全协调) */
 .row-action-icon-btn.ai-action-btn {
-  background: linear-gradient(135deg, rgba(240, 253, 250, 0.96) 0%, rgba(236, 253, 245, 0.96) 100%) !important;
-  border: 1px solid rgba(20, 187, 176, 0.48) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(20, 187, 176, 0.42) !important;
   color: #0d9488 !important;
   box-shadow:
-    0 1px 3px rgba(20, 187, 176, 0.1),
-    0 0 6px rgba(20, 187, 176, 0.16),
+    0 1px 3px rgba(20, 187, 176, 0.08),
+    0 0 6px rgba(20, 187, 176, 0.12),
     0 0 0 1px rgba(255, 255, 255, 0.85) inset !important;
 }
 
 .row-action-icon-btn.ai-action-btn:hover {
-  background: linear-gradient(135deg, #0284c7 0%, #14bbb0 52%, #10b981 100%) !important;
-  border-color: transparent !important;
-  color: #ffffff !important;
+  background: #f0fdfa !important;
+  color: #0f766e !important;
+  border-color: #14bbb0 !important;
   box-shadow:
-    0 4px 14px rgba(20, 187, 176, 0.38),
-    0 0 12px rgba(14, 165, 233, 0.28) !important;
-  transform: translateY(-1px) scale(1.08) !important;
+    0 3px 10px rgba(20, 187, 176, 0.22),
+    0 0 8px rgba(20, 187, 176, 0.15) !important;
+  transform: translateY(-1px) scale(1.06) !important;
 }
 
 .row-action-icon-btn.ai-action-btn.ai-animate-in {
@@ -5900,23 +5900,23 @@ tbody tr.drop-target-row {
 
 /* 模态框顶部 AI 总结图标按钮 (与 AI 对话框同色系) */
 .modal-action-icon-btn.ai-action-btn {
-  background: linear-gradient(135deg, rgba(240, 253, 250, 0.96) 0%, rgba(236, 253, 245, 0.96) 100%) !important;
-  border: 1px solid rgba(20, 187, 176, 0.48) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(20, 187, 176, 0.42) !important;
   color: #0d9488 !important;
   box-shadow:
-    0 1px 3px rgba(20, 187, 176, 0.1),
-    0 0 6px rgba(20, 187, 176, 0.16),
+    0 1px 3px rgba(20, 187, 176, 0.08),
+    0 0 6px rgba(20, 187, 176, 0.12),
     0 0 0 1px rgba(255, 255, 255, 0.85) inset !important;
 }
 
 .modal-action-icon-btn.ai-action-btn:hover {
-  background: linear-gradient(135deg, #0284c7 0%, #14bbb0 52%, #10b981 100%) !important;
-  border-color: transparent !important;
-  color: #ffffff !important;
+  background: #f0fdfa !important;
+  color: #0f766e !important;
+  border-color: #14bbb0 !important;
   box-shadow:
-    0 4px 14px rgba(20, 187, 176, 0.38),
-    0 0 12px rgba(14, 165, 233, 0.28) !important;
-  transform: translateY(-1px) scale(1.08) !important;
+    0 3px 10px rgba(20, 187, 176, 0.22),
+    0 0 8px rgba(20, 187, 176, 0.15) !important;
+  transform: translateY(-1px) scale(1.06) !important;
 }
 
 /* 模态框顶部下载按钮 */
