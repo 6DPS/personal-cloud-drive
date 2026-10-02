@@ -5853,15 +5853,16 @@ tbody tr.drop-target-row {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
   padding: 0 !important;
   margin: 0 !important;
-  border-radius: 9px !important;
+  border-radius: 11px !important;
   border: 1px solid rgba(168, 187, 214, 0.48) !important;
   background: rgba(255, 255, 255, 0.9) !important;
   color: #334155 !important;
@@ -5891,8 +5892,12 @@ tbody tr.drop-target-row {
 
 .modal-action-icon-btn .action-btn-svg,
 .modal-action-icon-btn svg {
-  width: 15px !important;
-  height: 15px !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
   display: block !important;
   flex-shrink: 0 !important;
   pointer-events: none !important;
@@ -6052,17 +6057,17 @@ tbody tr.drop-target-row {
     transform 160ms ease !important;
 }
 
-/* 预览与紧凑模态框顶部操作栏中的关闭按钮，严格保留纯正圆形 (border-radius: 50%)，尺寸对齐为 32x32px */
+/* 预览与紧凑模态框顶部操作栏中的关闭按钮，严格保留纯正圆形 (border-radius: 50%)，尺寸对齐为 38x38px */
 .preview-header-actions #closePreviewBtn,
 .modal-actions.compact #closePreviewBtn,
 .modal-actions.compact #closeZipArchiveBtn {
-  flex: 0 0 32px !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  max-width: 32px !important;
-  max-height: 32px !important;
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
   border-radius: 50% !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -6071,12 +6076,12 @@ tbody tr.drop-target-row {
 .preview-header-actions #closePreviewBtn svg,
 .modal-actions.compact #closePreviewBtn svg,
 .modal-actions.compact #closeZipArchiveBtn svg {
-  width: 15px !important;
-  height: 15px !important;
-  min-width: 15px !important;
-  min-height: 15px !important;
-  max-width: 15px !important;
-  max-height: 15px !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
 }
 
 .modal .icon-button svg,

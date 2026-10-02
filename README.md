@@ -21,7 +21,7 @@
 
 ### 📑 文档在线高清原生预览与 AI 一键智能提炼总结
 <p align="center">
-  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002_v3" width="100%" />
+  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002_v4" width="100%" />
 </p>
 
 ---
@@ -46,7 +46,7 @@
   - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与排版预览；
   - **PDF 与文本**：支持 PDF 在线分页阅读、Markdown、代码、TXT 原生语法高亮与排版；
   - **多媒体与图片**：图片高清灯箱浏览、音视频在线流畅播放与流式拖拽；
-  - **纯图标全局统一操作栏**：预览弹窗与压缩包弹窗统一无文字纯图标设计，AI 一键总结采用 DeepSeek 专属水青色微光质感，尺寸与下载、关闭按钮完美统一 32px 规格对齐。
+  - **纯图标全局统一操作栏**：预览弹窗与压缩包弹窗统一无文字纯图标设计，AI 一键总结采用 DeepSeek 专属水青色微光质感，尺寸与下载、关闭按钮完美统一 38px 规格对齐。
 
 - **🔍 AI 智能辅助与全文搜索 (DeepSeek 驱动)**
   - 支持毫秒级文件名检索与文本/文档全文关键词搜索；
