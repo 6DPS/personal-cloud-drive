@@ -5847,19 +5847,12 @@ tbody tr.drop-target-row {
 }
 
 /* =========================================================================
-   模态框顶部统一纯图标操作按钮 (全局统一 32x32，圆角 9px，内图标 15x15，居中对齐)
+   模态框顶部统一纯图标操作按钮 (全局统一无文字设计)
    ========================================================================= */
-.modal-action-icon-btn,
-.preview-header-actions .modal-action-icon-btn,
-#previewAiSummarizeBtn.modal-action-icon-btn,
-#previewDownloadLink.modal-action-icon-btn,
-#closePreviewBtn.modal-action-icon-btn,
-#zipDownloadAllBtn.modal-action-icon-btn,
-#closeZipArchiveBtn.modal-action-icon-btn {
+.modal-action-icon-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 0 0 32px !important;
   width: 32px !important;
   height: 32px !important;
   min-height: 32px !important;
@@ -5897,21 +5890,12 @@ tbody tr.drop-target-row {
 }
 
 .modal-action-icon-btn .action-btn-svg,
-.modal-action-icon-btn svg,
-.preview-header-actions .modal-action-icon-btn svg,
-#previewAiSummarizeBtn svg,
-#previewDownloadLink svg,
-#closePreviewBtn.modal-action-icon-btn svg {
-  width: 15px !important;
-  height: 15px !important;
-  min-width: 15px !important;
-  min-height: 15px !important;
-  max-width: 15px !important;
-  max-height: 15px !important;
+.modal-action-icon-btn svg {
+  width: 16px !important;
+  height: 16px !important;
   display: block !important;
   flex-shrink: 0 !important;
   pointer-events: none !important;
-  margin: auto !important;
 }
 
 /* 模态框顶部 AI 总结图标按钮 (与 AI 对话框同色系) */
@@ -6030,16 +6014,18 @@ tbody tr.drop-target-row {
   padding: 0 !important;
 }
 
-.modal-actions button:not(.icon-button):not(.small-icon):not(.modal-action-icon-btn) {
+.modal-actions button:not(.icon-button):not(.small-icon) {
   min-height: 38px !important;
   padding: 0 18px !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
 }
 
-.modal .icon-button:not(.modal-action-icon-btn),
-.modal .small-icon:not(.modal-action-icon-btn),
-.modal-close-btn:not(.modal-action-icon-btn),
+.modal .icon-button,
+.modal .small-icon,
+.modal-close-btn,
+#closePreviewBtn,
+#closeZipArchiveBtn,
 .ai-drawer-header-btn,
 .ai-drawer-close-btn {
   flex: 0 0 38px !important;
@@ -6066,9 +6052,11 @@ tbody tr.drop-target-row {
     transform 160ms ease !important;
 }
 
-.modal .icon-button:not(.modal-action-icon-btn) svg,
-.modal .small-icon:not(.modal-action-icon-btn) svg,
-.modal-close-btn:not(.modal-action-icon-btn) svg,
+.modal .icon-button svg,
+.modal .small-icon svg,
+.modal-close-btn svg,
+#closePreviewBtn svg,
+#closeZipArchiveBtn svg,
 .ai-drawer-header-btn svg,
 .ai-drawer-close-btn svg {
   width: 17px !important;
@@ -6077,9 +6065,11 @@ tbody tr.drop-target-row {
   display: block !important;
 }
 
-.modal .icon-button:not(.modal-action-icon-btn):hover,
-.modal .small-icon:not(.modal-action-icon-btn):hover,
-.modal-close-btn:not(.modal-action-icon-btn):hover,
+.modal .icon-button:hover,
+.modal .small-icon:hover,
+.modal-close-btn:hover,
+#closePreviewBtn:hover,
+#closeZipArchiveBtn:hover,
 .ai-drawer-close-btn:hover {
   background: rgba(255, 242, 242, 0.98) !important;
   border-color: rgba(239, 63, 55, 0.35) !important;
