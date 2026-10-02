@@ -18,6 +18,7 @@ tmp/
 backup_*/
 backups/
 preview-*.html
+preview_modal_*.png
 恢复至*.bat
 report-output/
 output/

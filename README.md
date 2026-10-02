@@ -8,15 +8,20 @@
 
 | 🎨 专属视觉登录界面 | 🖥️ 现代化网盘管理主界面（全新存储看板） |
 | :---: | :---: |
-| <img src="docs/screenshots/01_login_view.png?v=20260930_ui" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20260930_ui" width="100%" /> |
+| <img src="docs/screenshots/01_login_view.png?v=20261002" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20261002" width="100%" /> |
 
 | 👥 子账号存储配额可视化调控 | 🔒 普通用户空间绝对隔离与配额保护 |
 | :---: | :---: |
-| <img src="docs/screenshots/04_user_quota_management.png?v=20260930_ui" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20260930_ui" width="100%" /> |
+| <img src="docs/screenshots/04_user_quota_management.png?v=20261002" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20261002" width="100%" /> |
 
 ### 🤖 智能 AI 全库问答与深度检索 (DeepSeek 驱动)
 <p align="center">
-  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20260930_ui" width="100%" />
+  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20261002" width="100%" />
+</p>
+
+### 📑 文档在线高清原生预览与 AI 一键智能提炼总结
+<p align="center">
+  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002" width="100%" />
 </p>
 
 ---
@@ -33,18 +38,23 @@
   - **角色级数据隔离**：普通用户严格按个人配额（如 20.0 GB）计算余量与百分比，后端自动脱敏宿主机硬件参数，100% 杜绝服务器物理磁盘泄露；
   - **动态可视化调控**：管理员后台一键调整任意账号配额（10GB、20GB、50GB、100GB、不限或自定义），超额上传毫秒级安全拦截阻断。
 
-- **📑 强大的文档与多媒体原生预览**
+- **⭐ 文件与文件夹星标收藏**
+  - 支持对高频、重要文件及文件夹一键标星（⭐），快速置顶；
+  - 侧边栏专属「我的星标」视图，毫秒级快速筛选聚合所有星标资产，支持多选批量加星与取消。
+
+- **📑 强大的文档与多媒体原生预览 & 极简纯图标设计**
   - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与排版预览；
   - **PDF 与文本**：支持 PDF 在线分页阅读、Markdown、代码、TXT 原生语法高亮与排版；
-  - **多媒体与图片**：图片高清灯箱浏览、音视频在线流畅播放与流式拖拽。
+  - **多媒体与图片**：图片高清灯箱浏览、音视频在线流畅播放与流式拖拽；
+  - **纯图标全局统一操作栏**：预览弹窗与压缩包弹窗统一无文字纯图标设计，AI 一键总结采用 DeepSeek 专属水青色微光质感，尺寸与下载、关闭按钮完美统一 32px 规格对齐。
 
-- **🔍 AI 智能辅助与全文搜索**
+- **🔍 AI 智能辅助与全文搜索 (DeepSeek 驱动)**
   - 支持毫秒级文件名检索与文本/文档全文关键词搜索；
-  - 侧边 AI 智能抽屉面板，与个人知识库对话、文档解析提炼。
+  - 侧边 AI 智能抽屉面板，与个人知识库全库深度问答、文档一键极速提炼总结。
 
 - **🔒 安全权限与回收站机制**
   - 单用户/多用户 JWT 安全鉴权，防爆破安全频控；
-  - 支持对指定机密文件夹设置独立密码加锁；
+  - **多状态加密文件夹挂锁**：直观区分普通目录与已加锁机密目录，支持独立安全密码；
   - 完善的回收站防误删机制，支持随时还原或彻底粉碎。
 
 - **🛠️ 专为家庭服务器 / Windows 小主机优化**
