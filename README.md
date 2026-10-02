@@ -8,20 +8,20 @@
 
 | 🎨 专属视觉登录界面 | 🖥️ 现代化网盘管理主界面（全新存储看板） |
 | :---: | :---: |
-| <img src="docs/screenshots/01_login_view.png?v=20261002_v5" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20261002_v5" width="100%" /> |
+| <img src="docs/screenshots/01_login_view.png?v=20261002_v6" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20261002_v6" width="100%" /> |
 
 | 👥 子账号存储配额可视化调控 | 🔒 普通用户空间绝对隔离与配额保护 |
 | :---: | :---: |
-| <img src="docs/screenshots/04_user_quota_management.png?v=20261002_v5" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20261002_v5" width="100%" /> |
+| <img src="docs/screenshots/04_user_quota_management.png?v=20261002_v6" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20261002_v6" width="100%" /> |
 
 ### 🤖 智能 AI 全库问答与深度检索 (DeepSeek 驱动)
 <p align="center">
-  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20261002_v5" width="100%" />
+  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20261002_v6" width="100%" />
 </p>
 
 ### 📑 文档在线高清原生预览与 AI 一键智能提炼总结
 <p align="center">
-  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002_v5" width="100%" />
+  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002_v6" width="100%" />
 </p>
 
 ---
@@ -41,7 +41,7 @@
 - **⭐ 文件与文件夹星标收藏 & 侧边栏极简收纳**
   - 支持对高频、重要文件及文件夹一键标星（⭐），快速置顶；
   - 侧边栏专属「我的星标」视图，毫秒级快速筛选聚合所有星标资产，支持多选批量加星与取消；
-  - **访问地址原生收纳折叠**：侧边栏访问地址卡片支持原生平滑手风琴收纳，收起时仅占 36px 一行并常驻呼吸绿灯状态微胶囊，大幅释放侧边栏垂直视野，用户偏好本地持久记忆。
+  - **访问与存储原生收纳折叠**：一体化整合「存储位置」与「网络访问」，支持原生平滑手风琴收纳；收起时仅占 36px 极简单行，动态呈现呼吸状态微胶囊（本机科技蓝、局域网翡翠绿、公网暖金橙三色精准映射），大幅释放侧边栏垂直视野，展开/收起偏好本地持久记忆。
 
 - **📑 强大的文档与多媒体原生预览 & 极简纯图标设计**
   - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与排版预览；

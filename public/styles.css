@@ -507,9 +507,6 @@ select {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  background: rgba(240, 253, 244, 0.95);
-  color: #059669;
   transition: all 0.2s ease;
 }
 
@@ -517,41 +514,90 @@ select {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 1. 局域网访问 - 翡翠绿/水青 */
+.access-status-badge.status-lan {
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  background: rgba(240, 253, 244, 0.95);
+  color: #059669;
+}
+.access-status-badge.status-lan .status-dot {
   background-color: #10b981;
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  animation: accessDotPulse 2s infinite ease-in-out;
+  animation: accessDotPulseGreen 2s infinite ease-in-out;
 }
 
-@keyframes accessDotPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  }
-  70% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
+@keyframes accessDotPulseGreen {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  70% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.access-status-badge.status-public {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(239, 246, 255, 0.95);
-  color: #2563eb;
-}
-.access-status-badge.status-public .status-dot {
-  background-color: #3b82f6;
-  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
-}
-
+/* 2. 本机访问 - 科技蓝 (与当前访问卡片本机蓝色呼应) */
 .access-status-badge.status-local {
-  border-color: rgba(13, 148, 136, 0.3);
-  background: rgba(240, 253, 250, 0.95);
-  color: #0d9488;
+  border: 1px solid rgba(37, 99, 235, 0.32);
+  background: rgba(239, 246, 255, 0.95);
+  color: #1d4ed8;
 }
 .access-status-badge.status-local .status-dot {
-  background-color: #0d9488;
-  box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.6);
+  background-color: #2563eb;
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6);
+  animation: accessDotPulseBlue 2s infinite ease-in-out;
+}
+
+@keyframes accessDotPulseBlue {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6); }
+  70% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+/* 3. 公网访问 - 暖橙黄 (与当前访问卡片公网金橙色呼应) */
+.access-status-badge.status-public {
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  background: rgba(254, 243, 199, 0.95);
+  color: #b45309;
+}
+.access-status-badge.status-public .status-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  animation: accessDotPulseAmber 2s infinite ease-in-out;
+}
+
+@keyframes accessDotPulseAmber {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+  70% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* 存储位置嵌入行 */
+.storage-location-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 1px 0;
+}
+
+.storage-location-label {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #69778d !important;
+}
+
+.storage-location-path {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #1267d6 !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.4 !important;
+}
+
+.access-body-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(200, 218, 240, 0.55);
+  margin: 2px 0 1px 0;
 }
 
 /* 旋转小箭头 */
