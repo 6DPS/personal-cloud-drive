@@ -5257,10 +5257,15 @@ function renderRows(options = {}) {
     }));
 
     if (item.type === "folder") {
+      const isLocked = Boolean(item.locked);
+      const lockSvg = isLocked
+        ? `<svg class="action-btn-svg lock-closed-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15" r="1.2" fill="currentColor"/><path d="M12 16.2v1.8"/></svg>`
+        : `<svg class="action-btn-svg lock-open-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 7.8-1.2"/></svg>`;
+
       actions.append(actionIconButton({
-        iconSvg: `<svg class="action-btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
-        title: item.locked ? "修改文件夹密码" : "加密文件夹",
-        className: "lock-action-btn",
+        iconSvg: lockSvg,
+        title: isLocked ? "修改文件夹密码 / 密码管理" : "加密文件夹 (设置访问密码)",
+        className: `lock-action-btn ${isLocked ? "is-locked" : "is-unlocked"}`,
         handler: async () => {
           await runAction(() => openFolderPasswordSettings(item));
         },
