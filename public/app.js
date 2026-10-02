@@ -56,14 +56,6 @@ const state = {
   currentAiSessionId: null,
   aiConversations: new Map(),
   trashMode: false,
-  editorActive: false,
-  editorMode: "preview",
-  editorOriginalContent: "",
-  editorDirty: false,
-  editorSaving: false,
-  editorTextarea: null,
-  editorPreviewPane: null,
-  editorWrap: true,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -278,15 +270,9 @@ const confirmBulkMoveBtn = $("#confirmBulkMoveBtn");
 const previewModal = $("#previewModal");
 const previewTitle = $("#previewTitle");
 const previewBody = $("#previewBody");
-const previewCard = $("#previewCard") || previewModal.querySelector(".preview-card");
+const previewCard = previewModal.querySelector(".preview-card");
 const previewDownloadLink = $("#previewDownloadLink");
 const closePreviewBtn = $("#closePreviewBtn");
-const previewEyebrow = $("#previewEyebrow");
-const previewEditStatusBadge = $("#previewEditStatusBadge");
-const previewMdModeSwitch = $("#previewMdModeSwitch");
-const previewEditToggleBtn = $("#previewEditToggleBtn");
-const previewSaveBtn = $("#previewSaveBtn");
-const previewSaveBtnText = $("#previewSaveBtnText");
 const folderPasswordModal = $("#folderPasswordModal");
 const folderPasswordEyebrow = $("#folderPasswordEyebrow");
 const folderPasswordTitle = $("#folderPasswordTitle");
@@ -4202,23 +4188,6 @@ function isExternalFileDrag(event) {
   return Array.from(types).includes("Files") && !state.draggedItemPath;
 }
 
-function isTextEditableExt(filename) {
-  const ext = fileExt(filename);
-  return [
-    "txt", "text", "md", "markdown", "json", "js", "mjs", "cjs", "jsx", "ts", "tsx",
-    "html", "htm", "css", "scss", "sass", "less",
-    "py", "pyw", "sh", "bash", "zsh", "bat", "cmd", "ps1",
-    "sql", "xml", "svg", "yaml", "yml", "ini", "conf", "config", "env", "toml",
-    "log", "c", "cpp", "cc", "cxx", "h", "hpp", "cs", "java", "go", "rs", "php",
-    "rb", "lua", "properties", "gradle", "dockerfile", "makefile"
-  ].includes(ext);
-}
-
-function isMarkdownExt(filename) {
-  const ext = fileExt(filename);
-  return ext === "md" || ext === "markdown";
-}
-
 function previewKind(name) {
   const ext = fileExt(name);
   if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)) return "image";
@@ -4227,7 +4196,7 @@ function previewKind(name) {
   if (ext === "pdf") return "pdf";
   if (["xlsx", "xls", "csv"].includes(ext)) return "spreadsheet";
   if (["doc", "docx", "ppt", "pptx"].includes(ext)) return "office";
-  if (isTextEditableExt(name)) return "text";
+  if (["txt", "md", "json", "js", "css", "html", "xml", "log"].includes(ext)) return "text";
   return "unsupported";
 }
 
@@ -5200,12 +5169,6 @@ function renderRows(options = {}) {
       { label: "移动", handler: moveAction },
       { label: "🔗 分享", handler: () => openShareModal(item) },
     ];
-    if (item.type === "file" && isTextEditableExt(item.name)) {
-      moreMenuOptions.unshift({
-        label: "✏️ 在线编辑",
-        handler: () => openPreview(item, { initialMode: "edit" }),
-      });
-    }
     if (fileExt(item.name) === "zip") {
       moreMenuOptions.unshift({ label: "📦 查看压缩包内容", handler: () => openZipArchiveModal(item) });
     }
@@ -6166,391 +6129,13 @@ function renderImagePreviewControls(item) {
   previewCard.append(counter);
 }
 
-function resetEditorState() {
-  state.editorActive = false;
-  state.editorDirty = false;
-  state.editorOriginalContent = "";
-  state.editorSaving = false;
-  state.editorTextarea = null;
-  state.editorPreviewPane = null;
-  if (previewCard) previewCard.classList.remove("is-editor-mode");
-  if (previewEditStatusBadge) previewEditStatusBadge.classList.add("hidden");
-  if (previewMdModeSwitch) previewMdModeSwitch.classList.add("hidden");
-  if (previewEditToggleBtn) previewEditToggleBtn.classList.add("hidden");
-  if (previewSaveBtn) {
-    previewSaveBtn.classList.add("hidden");
-    previewSaveBtn.disabled = false;
-  }
-  if (previewSaveBtnText) previewSaveBtnText.textContent = "💾 保存";
-}
-
-function setEditorStatusBadge(type, text) {
-  if (!previewEditStatusBadge) return;
-  previewEditStatusBadge.className = `preview-edit-status-badge ${type}`;
-  previewEditStatusBadge.textContent = text;
-  previewEditStatusBadge.classList.remove("hidden");
-}
-
-function setEditorDirty(dirty) {
-  state.editorDirty = dirty;
-  if (dirty) {
-    setEditorStatusBadge("unsaved", "● 未保存");
-  } else {
-    setEditorStatusBadge("saved", "✓ 已保存");
-    window.setTimeout(() => {
-      if (!state.editorDirty && previewEditStatusBadge) {
-        previewEditStatusBadge.classList.add("hidden");
-      }
-    }, 2500);
-  }
-}
-
-function applyEditorMode(mode) {
-  state.editorMode = mode;
-  const isMd = isMarkdownExt(state.previewItem?.name || "");
-  const gutter = $("#editorGutter");
-  const textarea = $("#editorTextarea");
-  const previewPane = $("#editorPreviewPane");
-
-  if (isMd && previewMdModeSwitch) {
-    previewMdModeSwitch.querySelectorAll(".segmented-item").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.mode === mode);
-    });
-  } else if (previewEditToggleBtn) {
-    previewEditToggleBtn.textContent = mode === "edit" ? "👁️ 只读预览" : "✏️ 在线编辑";
-  }
-
-  if (previewSaveBtn) {
-    previewSaveBtn.classList.toggle("hidden", mode === "preview");
-  }
-
-  if (mode === "edit") {
-    gutter?.classList.remove("hidden");
-    textarea?.classList.remove("hidden");
-    previewPane?.classList.add("hidden");
-    previewPane?.classList.remove("is-split", "is-full");
-    if (textarea) textarea.readOnly = false;
-  } else if (mode === "split") {
-    gutter?.classList.remove("hidden");
-    textarea?.classList.remove("hidden");
-    previewPane?.classList.remove("hidden", "is-full");
-    previewPane?.classList.add("is-split");
-    if (textarea) textarea.readOnly = false;
-    if (previewPane && textarea) {
-      previewPane.innerHTML = "";
-      previewPane.append(renderInnerMarkdown(textarea.value));
-    }
-  } else if (mode === "preview") {
-    if (isMd) {
-      gutter?.classList.add("hidden");
-      textarea?.classList.add("hidden");
-      previewPane?.classList.remove("hidden", "is-split");
-      previewPane?.classList.add("is-full");
-      if (previewPane && textarea) {
-        previewPane.innerHTML = "";
-        previewPane.append(renderInnerMarkdown(textarea.value));
-      }
-    } else {
-      gutter?.classList.remove("hidden");
-      textarea?.classList.remove("hidden");
-      previewPane?.classList.add("hidden");
-      if (textarea) textarea.readOnly = true;
-    }
-  }
-}
-
-async function saveCurrentEditorContent() {
-  if (state.editorSaving || !state.previewItem) return;
-  const textarea = $("#editorTextarea");
-  if (!textarea) return;
-
-  state.editorSaving = true;
-  if (previewSaveBtn) previewSaveBtn.disabled = true;
-  if (previewSaveBtnText) previewSaveBtnText.textContent = "⏳ 保存中...";
-  setEditorStatusBadge("saving", "⏳ 保存中...");
-
-  try {
-    const data = await api("/api/file-content", {
-      method: "POST",
-      body: JSON.stringify({
-        path: state.previewItem.path,
-        content: textarea.value,
-      }),
-    });
-
-    state.editorOriginalContent = textarea.value;
-    state.previewItem.size = data.size;
-    state.previewItem.modifiedAt = data.mtime;
-    setEditorDirty(false);
-
-    const matched = state.items.find((it) => it.path === state.previewItem.path);
-    if (matched) {
-      matched.size = data.size;
-      matched.modifiedAt = data.mtime;
-      renderItems();
-    }
-
-    if (previewSaveBtnText) previewSaveBtnText.textContent = "✓ 已保存";
-    setEditorStatusBadge("saved", "✓ 已保存");
-    setStatus("文件已成功保存并写回网盘");
-
-    window.setTimeout(() => {
-      if (previewSaveBtnText) previewSaveBtnText.textContent = "💾 保存";
-      if (previewSaveBtn) previewSaveBtn.disabled = false;
-    }, 1500);
-
-    window.setTimeout(() => {
-      if (!state.editorDirty && previewEditStatusBadge) {
-        previewEditStatusBadge.classList.add("hidden");
-      }
-    }, 2500);
-  } catch (error) {
-    if (previewSaveBtnText) previewSaveBtnText.textContent = "💾 保存";
-    if (previewSaveBtn) previewSaveBtn.disabled = false;
-    setEditorStatusBadge("unsaved", "● 保存失败");
-    setStatus(`保存失败：${error.message}`);
-    await openDialog({
-      eyebrow: "保存失败",
-      title: "无法保存文件修改",
-      description: error.message || "网络请求失败或存储配额不足，请稍后重试。",
-      confirmText: "我知道了",
-      danger: true,
-    });
-  } finally {
-    state.editorSaving = false;
-  }
-}
-
-function renderTextEditor(item, content, mode = "edit") {
-  state.editorActive = true;
-  state.editorOriginalContent = content;
-  state.editorDirty = false;
-  state.editorMode = mode;
-  setEditorDirty(false);
-
-  previewCard?.classList.add("is-editor-mode");
-  previewBody.innerHTML = "";
-
-  const isMd = isMarkdownExt(item.name);
-  if (isMd) {
-    previewMdModeSwitch?.classList.remove("hidden");
-    previewEditToggleBtn?.classList.add("hidden");
-    previewMdModeSwitch?.querySelectorAll(".segmented-item").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.mode === mode);
-    });
-  } else {
-    previewMdModeSwitch?.classList.add("hidden");
-    previewEditToggleBtn?.classList.remove("hidden");
-    if (previewEditToggleBtn) previewEditToggleBtn.textContent = mode === "edit" ? "👁️ 只读预览" : "✏️ 在线编辑";
-  }
-
-  const container = document.createElement("div");
-  container.className = "editor-container";
-
-  const toolbar = document.createElement("div");
-  toolbar.className = "editor-toolbar";
-
-  const tbLeft = document.createElement("div");
-  tbLeft.className = "editor-toolbar-left";
-  const cursorStat = document.createElement("span");
-  cursorStat.id = "editorCursorStat";
-  cursorStat.className = "editor-stat-item";
-  cursorStat.textContent = "第 1 行，第 1 列";
-  const dot1 = document.createElement("span");
-  dot1.className = "meta-dot";
-  dot1.textContent = "·";
-  const lengthStat = document.createElement("span");
-  lengthStat.id = "editorLengthStat";
-  lengthStat.className = "editor-stat-item";
-  lengthStat.textContent = "0 行 · 0 字符";
-  const dot2 = document.createElement("span");
-  dot2.className = "meta-dot";
-  dot2.textContent = "·";
-  const encodingStat = document.createElement("span");
-  encodingStat.className = "editor-stat-item";
-  encodingStat.textContent = "UTF-8";
-  tbLeft.append(cursorStat, dot1, lengthStat, dot2, encodingStat);
-
-  const tbRight = document.createElement("div");
-  tbRight.className = "editor-toolbar-right";
-
-  const wrapLabel = document.createElement("label");
-  wrapLabel.className = "editor-wrap-label";
-  const wrapCheck = document.createElement("input");
-  wrapCheck.type = "checkbox";
-  wrapCheck.id = "editorWrapToggle";
-  wrapCheck.checked = state.editorWrap;
-  const wrapText = document.createElement("span");
-  wrapText.textContent = "自动换行";
-  wrapLabel.append(wrapCheck, wrapText);
-
-  const hintTip = document.createElement("span");
-  hintTip.className = "editor-hint-tip";
-  hintTip.textContent = "Tab 缩进 · Ctrl+S 极速保存";
-  tbRight.append(wrapLabel, hintTip);
-
-  toolbar.append(tbLeft, tbRight);
-
-  const main = document.createElement("div");
-  main.className = "editor-main";
-
-  const gutter = document.createElement("div");
-  gutter.className = "editor-gutter";
-  gutter.id = "editorGutter";
-
-  const textarea = document.createElement("textarea");
-  textarea.className = "editor-textarea";
-  textarea.id = "editorTextarea";
-  textarea.spellcheck = false;
-  textarea.autocomplete = "off";
-  textarea.autocapitalize = "off";
-  textarea.value = content;
-  if (state.editorWrap) textarea.classList.add("is-wrapped");
-
-  state.editorTextarea = textarea;
-
-  const previewPane = document.createElement("div");
-  previewPane.className = "editor-preview-pane markdown-body";
-  previewPane.id = "editorPreviewPane";
-  state.editorPreviewPane = previewPane;
-
-  main.append(gutter, textarea, previewPane);
-  container.append(toolbar, main);
-  previewBody.append(container);
-
-  const updateGutter = () => {
-    const lines = textarea.value.split("\n").length;
-    let numbers = "";
-    for (let i = 1; i <= lines; i++) {
-      numbers += i + "\n";
-    }
-    gutter.textContent = numbers;
-  };
-
-  const updateStats = () => {
-    const val = textarea.value;
-    const lines = val.split("\n").length;
-    const chars = val.length;
-    lengthStat.textContent = `${lines} 行 · ${chars.toLocaleString()} 字符`;
-
-    const selStart = textarea.selectionStart;
-    const textBefore = val.slice(0, selStart);
-    const lineNum = textBefore.split("\n").length;
-    const colNum = selStart - textBefore.lastIndexOf("\n");
-    cursorStat.textContent = `第 ${lineNum} 行，第 ${colNum} 列`;
-  };
-
-  let mdRenderTimer = null;
-  const updateMarkdownPreview = () => {
-    if (!isMd || state.editorMode === "edit") return;
-    clearTimeout(mdRenderTimer);
-    mdRenderTimer = setTimeout(() => {
-      previewPane.innerHTML = "";
-      previewPane.append(renderInnerMarkdown(textarea.value));
-    }, 150);
-  };
-
-  textarea.addEventListener("scroll", () => {
-    gutter.scrollTop = textarea.scrollTop;
-  });
-
-  textarea.addEventListener("input", () => {
-    updateGutter();
-    updateStats();
-    setEditorDirty(textarea.value !== state.editorOriginalContent);
-    updateMarkdownPreview();
-  });
-
-  textarea.addEventListener("click", updateStats);
-  textarea.addEventListener("keyup", updateStats);
-
-  wrapCheck.addEventListener("change", () => {
-    state.editorWrap = wrapCheck.checked;
-    textarea.classList.toggle("is-wrapped", state.editorWrap);
-  });
-
-  textarea.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const value = textarea.value;
-      if (e.shiftKey) {
-        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-        if (value.slice(lineStart, lineStart + 2) === "  ") {
-          textarea.value = value.slice(0, lineStart) + value.slice(lineStart + 2);
-          textarea.selectionStart = Math.max(lineStart, start - 2);
-          textarea.selectionEnd = Math.max(lineStart, end - 2);
-        }
-      } else {
-        textarea.value = value.substring(0, start) + "  " + value.substring(end);
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      }
-      updateGutter();
-      updateStats();
-      setEditorDirty(textarea.value !== state.editorOriginalContent);
-      updateMarkdownPreview();
-    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-      e.preventDefault();
-      void saveCurrentEditorContent();
-    }
-  });
-
-  applyEditorMode(mode);
-  updateGutter();
-  updateStats();
-  if (isMd && (mode === "split" || mode === "preview")) {
-    previewPane.innerHTML = "";
-    previewPane.append(renderInnerMarkdown(textarea.value));
-  }
-
-  if (mode === "edit" || mode === "split") {
-    window.setTimeout(() => textarea.focus(), 0);
-  }
-}
-
-async function requestClosePreview() {
-  if (state.editorActive && state.editorDirty) {
-    const result = await openDialog({
-      eyebrow: "未保存提醒",
-      title: "放弃未保存的修改？",
-      description: `文件“${itemName(state.previewItem || { name: "当前文件" })}”中有尚未保存的修改。\n关闭后这些修改将会丢失，确定要放弃修改并退出吗？`,
-      confirmText: "放弃修改并退出",
-      danger: true,
-    });
-    if (result === null) {
-      state.editorTextarea?.focus();
-      return;
-    }
-  }
-  forceClosePreview();
-}
-
-function forceClosePreview() {
-  resetEditorState();
-  state.previewController?.abort();
-  state.previewController = null;
-  previewModal.classList.add("hidden");
-  previewModal.setAttribute("aria-hidden", "true");
-  previewBody.innerHTML = "";
-  clearImagePreviewControls();
-  if (previewAiSummarizeBtn) previewAiSummarizeBtn.classList.add("hidden");
-  if (previewDownloadLink) previewDownloadLink.classList.remove("hidden");
-  state.previewItem = null;
-  void flushPendingRealtimeRefresh();
-}
-
-async function closePreview() {
-  await requestClosePreview();
-}
-
-async function openPreview(item, options = {}) {
+async function openPreview(item) {
   if (fileExt(item.name) === "zip") {
     openZipArchiveModal(item);
     return;
   }
-  const isDirectEdit = options.initialMode === "edit" && isTextEditableExt(item.name);
-  const kind = isDirectEdit ? "text" : previewKind(item.name);
+  const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
+  const kind = previewKind(item.name);
   const requestSeq = ++state.previewRequestSeq;
   state.previewController?.abort();
   const controller = new AbortController();
@@ -6565,17 +6150,8 @@ async function openPreview(item, options = {}) {
   };
   previewBody.innerHTML = "";
   clearImagePreviewControls();
-  resetEditorState();
   previewModal.classList.remove("hidden");
   previewModal.setAttribute("aria-hidden", "false");
-
-  if (previewEyebrow) {
-    const isMd = isMarkdownExt(item.name);
-    const isText = isTextEditableExt(item.name);
-    if (isMd) previewEyebrow.textContent = "Markdown 编辑与预览";
-    else if (isText) previewEyebrow.textContent = `${fileExt(item.name).toUpperCase()} 在线编辑`;
-    else previewEyebrow.textContent = "Preview";
-  }
 
   // AI Document Summarize button toggle
   const canSummarize = ["txt", "md", "json", "js", "ts", "html", "css", "py", "csv", "log", "pdf", "doc", "docx", "ppt", "pptx"].includes(fileExt(item.name));
@@ -6589,21 +6165,18 @@ async function openPreview(item, options = {}) {
   }
 
   if (kind === "image") {
-    const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
     const image = document.createElement("img");
     image.src = url;
     image.alt = item.name;
     previewBody.append(image);
     renderImagePreviewControls(item);
   } else if (kind === "video") {
-    const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
     const video = document.createElement("video");
     video.src = url;
     video.controls = true;
     video.autoplay = false;
     previewBody.append(video);
   } else if (kind === "audio") {
-    const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
     const audioWrap = document.createElement("div");
     audioWrap.className = "audio-preview";
     const audio = document.createElement("audio");
@@ -6612,7 +6185,6 @@ async function openPreview(item, options = {}) {
     audioWrap.append(audio);
     previewBody.append(audioWrap);
   } else if (kind === "pdf") {
-    const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
     const iframe = document.createElement("iframe");
     iframe.src = url;
     iframe.title = item.name;
@@ -6622,7 +6194,6 @@ async function openPreview(item, options = {}) {
     });
     previewBody.append(iframe);
   } else if (kind === "office") {
-    const url = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
     const loading = document.createElement("div");
     loading.className = "sheet-empty";
     loading.textContent = "Loading Office preview...";
@@ -6700,21 +6271,16 @@ async function openPreview(item, options = {}) {
       loading.textContent = error.message || "Office 预览加载失败。";
     }
   } else if (kind === "text") {
-    const loading = document.createElement("div");
-    loading.className = "sheet-empty";
-    loading.textContent = "正在读取文本内容...";
-    previewBody.append(loading);
+    const pre = document.createElement("pre");
+    pre.textContent = "正在加载文本...";
+    previewBody.append(pre);
     try {
-      const data = await api(`/api/file-content?path=${encodeURIComponent(item.path)}`, { signal: controller.signal });
+      const response = await fetch(url, { signal: controller.signal });
       if (requestSeq !== state.previewRequestSeq || controller.signal.aborted) return;
-      previewBody.innerHTML = "";
-      const isMd = isMarkdownExt(item.name);
-      const defaultMode = options.initialMode || (isMd ? "preview" : "edit");
-      renderTextEditor(item, data.content, defaultMode);
+      pre.textContent = await response.text();
     } catch (error) {
       if (isAbortError(error) || controller.signal.aborted || requestSeq !== state.previewRequestSeq) return;
-      previewBody.innerHTML = "";
-      renderPreviewFallback(item, "文本读取失败", error.message || "无法读取文件文本内容");
+      pre.textContent = "文本预览加载失败。";
     }
   } else {
     const fallback = document.createElement("div");
@@ -6727,6 +6293,19 @@ async function openPreview(item, options = {}) {
     `;
     previewBody.append(fallback);
   }
+}
+
+function closePreview() {
+  state.previewController?.abort();
+  state.previewController = null;
+  previewModal.classList.add("hidden");
+  previewModal.setAttribute("aria-hidden", "true");
+  previewBody.innerHTML = "";
+  clearImagePreviewControls();
+  if (previewAiSummarizeBtn) previewAiSummarizeBtn.classList.add("hidden");
+  if (previewDownloadLink) previewDownloadLink.classList.remove("hidden");
+  state.previewItem = null;
+  void flushPendingRealtimeRefresh();
 }
 
 function setAuthMode(mode) {
@@ -7488,43 +7067,14 @@ $("#refreshBtn").addEventListener("click", () => {
   }
   loadFolder(state.path, { replaceHistory: true, forceRefresh: true, animateAi: state.aiModeEnabled });
 });
-closePreviewBtn.addEventListener("click", () => {
-  void requestClosePreview();
-});
-
-previewMdModeSwitch?.querySelectorAll(".segmented-item").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    applyEditorMode(btn.dataset.mode);
-  });
-});
-
-previewEditToggleBtn?.addEventListener("click", () => {
-  applyEditorMode(state.editorMode === "edit" ? "preview" : "edit");
-});
-
-previewSaveBtn?.addEventListener("click", () => {
-  void saveCurrentEditorContent();
-});
-
-window.addEventListener("beforeunload", (event) => {
-  if (state.editorActive && state.editorDirty) {
-    event.preventDefault();
-    event.returnValue = "当前文件有未保存的修改，离开本页这些修改将丢失。";
-    return event.returnValue;
-  }
-});
+closePreviewBtn.addEventListener("click", closePreview);
 
 for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal]) {
   if (!modal) continue;
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
     if (modal === uploadModal) return;
-    if (modal === previewModal) {
-      if (state.editorActive && state.editorDirty) {
-        void requestClosePreview();
-      }
-      return;
-    }
+    if (modal === previewModal) return;
     if (modal === bulkMoveModal) return;
     if (modal === folderPasswordModal) return;
     if (modal === dialogModal) return;
@@ -7564,15 +7114,6 @@ function handleEnterConfirm(event) {
 }
 
 document.addEventListener("keydown", (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-    if (isModalOpen(previewModal) && state.editorActive) {
-      event.preventDefault();
-      event.stopPropagation();
-      void saveCurrentEditorContent();
-      return;
-    }
-  }
-
   if (handleEnterConfirm(event)) {
     event.preventDefault();
     event.stopPropagation();
@@ -7591,12 +7132,6 @@ document.addEventListener("keydown", (event) => {
     }
   }
   if (event.key !== "Escape") return;
-  if (isModalOpen(previewModal) && state.editorActive && state.editorDirty) {
-    event.preventDefault();
-    event.stopPropagation();
-    void requestClosePreview();
-    return;
-  }
   if (closeAllFolderDropdowns()) {
     event.preventDefault();
     event.stopPropagation();

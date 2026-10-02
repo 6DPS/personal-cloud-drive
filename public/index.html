@@ -706,32 +706,13 @@
 
 
       <section id="previewModal" class="modal hidden" aria-hidden="true">
-        <div id="previewCard" class="modal-card preview-card">
-          <header class="modal-header preview-header">
-            <div class="preview-header-info">
-              <p id="previewEyebrow" class="eyebrow">Preview</p>
-              <div class="preview-title-row">
-                <h2 id="previewTitle">文件预览</h2>
-                <span id="previewEditStatusBadge" class="preview-edit-status-badge hidden">● 未保存</span>
-              </div>
+        <div class="modal-card preview-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h2 id="previewTitle">文件预览</h2>
             </div>
-            <div class="modal-actions compact preview-header-actions">
-              <!-- Markdown 视图模式切换 (编辑 / 双栏 / 渲染预览) -->
-              <div id="previewMdModeSwitch" class="segmented-control hidden" role="tablist">
-                <button type="button" class="segmented-item active" data-mode="edit" title="文本代码编辑模式">✍️ 编辑</button>
-                <button type="button" class="segmented-item" data-mode="split" title="左侧编辑，右侧实时对照">◫ 双栏</button>
-                <button type="button" class="segmented-item" data-mode="preview" title="Markdown 渲染效果">👁️ 预览</button>
-              </div>
-
-              <!-- 普通文本编辑/预览切换按钮 -->
-              <button id="previewEditToggleBtn" class="ghost small-btn hidden" type="button" title="切换编辑/只读预览">✏️ 在线编辑</button>
-
-              <!-- 保存按钮 (支持快捷键 Ctrl + S) -->
-              <button id="previewSaveBtn" class="primary small-btn hidden" type="button" title="保存文件修改 (Ctrl + S)">
-                <span id="previewSaveBtnText">💾 保存</span>
-                <kbd class="shortcut-kbd">Ctrl+S</kbd>
-              </button>
-
+            <div class="modal-actions compact">
               <button id="previewAiSummarizeBtn" class="ghost small-btn hidden" type="button" title="使用 DeepSeek AI 总结此文档">✨ AI 总结</button>
               <a id="previewDownloadLink" class="download-link" href="#">下载</a>
               <button id="closePreviewBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
