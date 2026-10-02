@@ -212,6 +212,25 @@ const uploadModal = $("#uploadModal");
 const uploadFolderSelect = $("#uploadFolderSelect");
 const closeUploadModalBtn = $("#closeUploadModalBtn");
 const cancelUploadTargetBtn = $("#cancelUploadTargetBtn");
+const uploadConflictModal = $("#uploadConflictModal");
+const closeConflictModalBtn = $("#closeConflictModalBtn");
+const conflictCurrentFileName = $("#conflictCurrentFileName");
+const conflictExistingIcon = $("#conflictExistingIcon");
+const conflictExistingName = $("#conflictExistingName");
+const conflictExistingSize = $("#conflictExistingSize");
+const conflictExistingMtime = $("#conflictExistingMtime");
+const conflictIncomingIcon = $("#conflictIncomingIcon");
+const conflictIncomingName = $("#conflictIncomingName");
+const conflictIncomingSize = $("#conflictIncomingSize");
+const conflictIncomingMtime = $("#conflictIncomingMtime");
+const conflictReplaceBtn = $("#conflictReplaceBtn");
+const conflictKeepBothBtn = $("#conflictKeepBothBtn");
+const conflictKeepBothDesc = $("#conflictKeepBothDesc");
+const conflictSkipBtn = $("#conflictSkipBtn");
+const conflictApplyAllWrap = $("#conflictApplyAllWrap");
+const conflictApplyAllCheck = $("#conflictApplyAllCheck");
+const conflictApplyAllText = $("#conflictApplyAllText");
+const cancelConflictUploadBtn = $("#cancelConflictUploadBtn");
 const chooseFilesBtn = $("#chooseFilesBtn");
 const chooseFolderBtn = $("#chooseFolderBtn");
 const selectModeBtn = $("#selectModeBtn");
@@ -3425,13 +3444,14 @@ async function calculateSha256(file) {
   }
 }
 
-async function uploadFilesInChunks(files, targetPath) {
+async function uploadFilesInChunks(files, targetPath, conflictDecisions = {}) {
   const totalBytes = Math.max(totalUploadBytes(files), 1);
   let completedBytes = 0;
   for (const file of files) {
     await delay(0);
     const relativePath = fileRelativePath(file);
     const fileCompletedBytes = completedBytes;
+    const conflictAction = conflictDecisions[relativePath] || conflictDecisions[file.name] || "keep_both";
     let lastError = null;
 
     // Instant upload check (云端秒传与哈希比对)
@@ -3442,10 +3462,12 @@ async function uploadFilesInChunks(files, targetPath) {
           method: "POST",
           body: JSON.stringify({
             path: targetPath,
+            targetPath,
             name: file.name,
             relativePath,
             hash,
             size: file.size,
+            conflictAction,
           }),
         });
         if (checkRes && checkRes.instant) {
@@ -3475,6 +3497,7 @@ async function uploadFilesInChunks(files, targetPath) {
             name: file.name,
             relativePath,
             size: file.size,
+            conflictAction,
           }),
         });
         uploadId = init.uploadId;
@@ -5662,6 +5685,113 @@ function fileRelativePath(file) {
   return file.webkitRelativePath || file.relativePath || file.name;
 }
 
+function promptUploadConflicts(conflicts) {
+  return new Promise((resolve) => {
+    if (!conflicts || !conflicts.length || !uploadConflictModal) {
+      resolve({});
+      return;
+    }
+
+    let currentIndex = 0;
+    const decisions = {};
+
+    function renderCurrentConflict() {
+      if (currentIndex >= conflicts.length) {
+        closeModal();
+        resolve(decisions);
+        return;
+      }
+
+      const item = conflicts[currentIndex];
+      const remainingCount = conflicts.length - currentIndex;
+
+      if (conflictCurrentFileName) conflictCurrentFileName.textContent = `“${item.name}”`;
+      if (conflictExistingName) conflictExistingName.textContent = item.existing.name;
+      if (conflictExistingSize) conflictExistingSize.textContent = formatSize(item.existing.size);
+      if (conflictExistingMtime) conflictExistingMtime.textContent = formatTime(item.existing.mtime);
+
+      if (conflictIncomingName) conflictIncomingName.textContent = item.incoming.name;
+      if (conflictIncomingSize) conflictIncomingSize.textContent = formatSize(item.incoming.size);
+      if (conflictIncomingMtime) conflictIncomingMtime.textContent = formatTime(item.incoming.mtime);
+
+      const existingMeta = fileMeta({ name: item.existing.name });
+      const incomingMeta = fileMeta({ name: item.incoming.name });
+      if (conflictExistingIcon) conflictExistingIcon.textContent = existingMeta.label || "📄";
+      if (conflictIncomingIcon) conflictIncomingIcon.textContent = incomingMeta.label || "📄";
+
+      if (conflictKeepBothDesc) {
+        conflictKeepBothDesc.textContent = `新文件将自动重命名为：“${item.suggestedKeepBothName || item.name}”，两者共同保留`;
+      }
+
+      if (conflictApplyAllWrap) {
+        if (remainingCount > 1) {
+          conflictApplyAllWrap.classList.remove("hidden");
+          if (conflictApplyAllText) {
+            conflictApplyAllText.textContent = `为其余 ${remainingCount} 个冲突文件执行相同操作`;
+          }
+          if (conflictApplyAllCheck) conflictApplyAllCheck.checked = false;
+        } else {
+          conflictApplyAllWrap.classList.add("hidden");
+        }
+      }
+    }
+
+    function handleAction(action) {
+      const applyAll = conflictApplyAllCheck && conflictApplyAllCheck.checked;
+      if (applyAll) {
+        for (let i = currentIndex; i < conflicts.length; i++) {
+          const c = conflicts[i];
+          decisions[c.relativePath] = action;
+          decisions[c.name] = action;
+        }
+        closeModal();
+        resolve(decisions);
+        return;
+      }
+
+      const c = conflicts[currentIndex];
+      decisions[c.relativePath] = action;
+      decisions[c.name] = action;
+      currentIndex += 1;
+      renderCurrentConflict();
+    }
+
+    function closeModal() {
+      uploadConflictModal.classList.add("hidden");
+      uploadConflictModal.setAttribute("aria-hidden", "true");
+      cleanup();
+    }
+
+    function cancelAll() {
+      closeModal();
+      resolve(null);
+    }
+
+    const onReplace = () => handleAction("replace");
+    const onKeepBoth = () => handleAction("keep_both");
+    const onSkip = () => handleAction("skip");
+    const onCancel = () => cancelAll();
+
+    function cleanup() {
+      conflictReplaceBtn?.removeEventListener("click", onReplace);
+      conflictKeepBothBtn?.removeEventListener("click", onKeepBoth);
+      conflictSkipBtn?.removeEventListener("click", onSkip);
+      cancelConflictUploadBtn?.removeEventListener("click", onCancel);
+      closeConflictModalBtn?.removeEventListener("click", onCancel);
+    }
+
+    conflictReplaceBtn?.addEventListener("click", onReplace);
+    conflictKeepBothBtn?.addEventListener("click", onKeepBoth);
+    conflictSkipBtn?.addEventListener("click", onSkip);
+    cancelConflictUploadBtn?.addEventListener("click", onCancel);
+    closeConflictModalBtn?.addEventListener("click", onCancel);
+
+    uploadConflictModal.classList.remove("hidden");
+    uploadConflictModal.setAttribute("aria-hidden", "false");
+    renderCurrentConflict();
+  });
+}
+
 async function uploadFiles(files, targetPath = state.path) {
   if (!files.length) return;
   const filtered = filterUploadFiles(files);
@@ -5670,18 +5800,57 @@ async function uploadFiles(files, targetPath = state.path) {
     setStatus("未找到可上传的文件，已自动跳过临时文件与系统文件。");
     return;
   }
+
+  // Windows 风格冲突预检
+  let conflictDecisions = {};
+  try {
+    const checkRes = await api("/api/upload-check-conflicts", {
+      method: "POST",
+      body: JSON.stringify({
+        targetPath,
+        files: files.map((f) => ({
+          name: f.name,
+          relativePath: fileRelativePath(f),
+          size: f.size,
+          mtime: f.lastModified || Date.now(),
+        })),
+      }),
+    });
+    if (checkRes?.conflicts?.length > 0) {
+      const decisions = await promptUploadConflicts(checkRes.conflicts);
+      if (!decisions) {
+        setStatus("已取消上传。");
+        return;
+      }
+      conflictDecisions = decisions;
+    }
+  } catch (err) {
+    console.warn("冲突预检跳过:", err);
+  }
+
+  // 过滤用户选择跳过的文件
+  files = files.filter((f) => {
+    const rel = fileRelativePath(f);
+    return conflictDecisions[rel] !== "skip" && conflictDecisions[f.name] !== "skip";
+  });
+  if (!files.length) {
+    setStatus("已跳过所有同名文件上传。");
+    return;
+  }
+
   try {
     state.busy = true;
     state.uploadProgressMax = 0;
     showUploadProgress(0, files.length);
     if (shouldUseChunkUpload(files)) {
-      await uploadFilesInChunks(files, targetPath);
+      await uploadFilesInChunks(files, targetPath, conflictDecisions);
     } else {
       const form = new FormData();
       for (const file of files) {
         form.append("files", file);
         form.append("relativePaths", fileRelativePath(file));
       }
+      form.append("conflictActions", JSON.stringify(conflictDecisions));
       await apiUpload(`/api/upload?path=${encodeURIComponent(targetPath)}`, form, files);
     }
     hideUploadProgressSoon();

@@ -7438,3 +7438,285 @@ select:focus {
   white-space: pre-line !important;
   line-height: 1.65 !important;
 }
+
+/* =========================================================================
+   同名文件上传冲突处理弹窗 (Windows 原生风格)
+   ========================================================================= */
+
+.conflict-modal-card {
+  width: min(580px, 94vw) !important;
+  max-width: 580px !important;
+  padding: 24px 26px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 32px 80px rgba(12, 35, 75, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
+}
+
+.conflict-modal-card .modal-header {
+  padding: 0 0 14px !important;
+  border-bottom: 0 !important;
+}
+
+.conflict-desc {
+  margin: 0 0 16px !important;
+  font-size: 14px !important;
+  color: #475569 !important;
+  line-height: 1.55 !important;
+}
+
+.conflict-desc strong {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  word-break: break-all !important;
+}
+
+.conflict-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 520px) {
+  .conflict-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conflict-file-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(246, 249, 254, 0.85);
+  border: 1.5px solid rgba(215, 228, 245, 0.85);
+  box-shadow: 0 2px 8px rgba(15, 30, 60, 0.04);
+}
+
+.conflict-file-box.existing {
+  background: rgba(248, 250, 253, 0.9);
+  border-color: rgba(218, 228, 242, 0.9);
+}
+
+.conflict-file-box.incoming {
+  background: rgba(240, 247, 255, 0.95);
+  border-color: rgba(186, 218, 255, 0.85);
+}
+
+.conflict-box-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.conflict-box-badge.new-badge {
+  color: #0284c7;
+}
+
+.conflict-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.conflict-file-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.conflict-file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.conflict-file-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conflict-file-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.conflict-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conflict-action-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1.5px solid transparent;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(15, 30, 60, 0.05);
+}
+
+.conflict-action-card .action-card-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(241, 245, 249, 0.9);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.conflict-action-card .action-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.conflict-action-card .action-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.conflict-action-card .action-card-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* 选项 1: 替换（高亮推荐） */
+.conflict-action-card.replace-action {
+  background: rgba(240, 246, 255, 0.7);
+  border-color: rgba(191, 219, 254, 0.8);
+}
+
+.conflict-action-card.replace-action .action-card-icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.conflict-action-card.replace-action:hover {
+  background: #ffffff;
+  border-color: #2563eb;
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.16);
+}
+
+.conflict-action-card.replace-action:hover .action-card-icon {
+  transform: scale(1.1) rotate(-15deg);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+/* 选项 2: 保留两者 */
+.conflict-action-card.keep-both-action {
+  background: rgba(240, 253, 250, 0.7);
+  border-color: rgba(153, 246, 228, 0.8);
+}
+
+.conflict-action-card.keep-both-action .action-card-icon {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0d9488;
+}
+
+.conflict-action-card.keep-both-action:hover {
+  background: #ffffff;
+  border-color: #0d9488;
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.16);
+}
+
+.conflict-action-card.keep-both-action:hover .action-card-icon {
+  transform: scale(1.1);
+  background: rgba(13, 148, 136, 0.18);
+}
+
+/* 选项 3: 跳过此文件 */
+.conflict-action-card.skip-action {
+  background: rgba(248, 250, 252, 0.8);
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.conflict-action-card.skip-action .action-card-icon {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
+
+.conflict-action-card.skip-action:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(100, 116, 139, 0.12);
+}
+
+.conflict-action-card:active {
+  transform: scale(0.98) !important;
+}
+
+.conflict-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.conflict-apply-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.conflict-apply-all-label.hidden {
+  display: none !important;
+}
+
+.conflict-apply-all-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.cancel-all-btn {
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  color: #64748b !important;
+  border-radius: 10px !important;
+}
+
+.cancel-all-btn:hover {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #0f172a !important;
+}

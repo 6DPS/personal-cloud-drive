@@ -4412,6 +4412,53 @@ app.post("/api/folder", requireAuth, async (req, res, next) => {
   }
 });
 
+app.post("/api/upload-check-conflicts", requireAuth, async (req, res, next) => {
+  const user = req.user;
+  const userId = user?.id;
+  if (user) requestContext.enterWith({ user });
+  try {
+    const targetPath = normalizeRelative(req.body.targetPath || "");
+    rejectHiddenDrivePath(targetPath);
+    ensureFolderAccess(req, targetPath);
+    const dir = resolveDrivePathForUser(userId, targetPath);
+    const files = Array.isArray(req.body.files) ? req.body.files : [];
+    const conflicts = [];
+
+    for (const f of files) {
+      if (!f || !f.name) continue;
+      const rawRel = f.relativePath || f.name;
+      if (isHiddenDrivePath(rawRel)) continue;
+      const rel = safeUploadRelativePath(rawRel, path.basename(rawRel || f.name));
+      const targetFile = path.join(dir, rel);
+      if (fs.existsSync(targetFile)) {
+        const stat = await fsp.stat(targetFile).catch(() => null);
+        if (stat && stat.isFile()) {
+          const targetDir = path.dirname(targetFile);
+          const nextCandidate = uniqueDestination(targetDir, path.basename(targetFile));
+          conflicts.push({
+            name: path.basename(targetFile),
+            relativePath: rawRel,
+            existing: {
+              name: path.basename(targetFile),
+              size: stat.size,
+              mtime: stat.mtimeMs,
+            },
+            incoming: {
+              name: f.name,
+              size: Number(f.size) || 0,
+              mtime: Number(f.mtime) || Date.now(),
+            },
+            suggestedKeepBothName: path.basename(nextCandidate),
+          });
+        }
+      }
+    }
+    res.json({ conflicts });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/upload", requireAuth, upload.array("files"), async (req, res, next) => {
   const files = req.files || [];
   const user = req.user;
@@ -4430,22 +4477,46 @@ app.post("/api/upload", requireAuth, upload.array("files"), async (req, res, nex
       : req.body.relativePaths
         ? [req.body.relativePaths]
         : [];
+    let conflictActions = {};
+    try {
+      conflictActions = typeof req.body.conflictActions === "string"
+        ? JSON.parse(req.body.conflictActions)
+        : req.body.conflictActions || {};
+    } catch (_) {}
+
     await fsp.mkdir(dir, { recursive: true });
     let savedCount = 0;
+    let netByteChange = 0;
     for (const [index, file] of files.entries()) {
       const rawRelativePath = relativePaths[index] || file.originalname;
       if (isHiddenDrivePath(rawRelativePath)) {
         await removePath(file.path).catch(() => {});
         continue;
       }
+      const action = conflictActions[rawRelativePath] || conflictActions[file.originalname] || "keep_both";
+      if (action === "skip") {
+        await removePath(file.path).catch(() => {});
+        continue;
+      }
       const relativePath = safeUploadRelativePath(rawRelativePath, file.originalname);
       const targetDir = path.join(dir, path.dirname(relativePath));
       await fsp.mkdir(targetDir, { recursive: true });
-      const target = uniqueDestination(targetDir, path.basename(relativePath));
+      let target;
+      if (action === "replace") {
+        target = path.join(targetDir, path.basename(relativePath));
+        const oldStat = await fsp.stat(target).catch(() => null);
+        if (oldStat) {
+          netByteChange -= oldStat.size;
+          await fsp.rm(target, { force: true }).catch(() => {});
+        }
+      } else {
+        target = uniqueDestination(targetDir, path.basename(relativePath));
+      }
       await fsp.rename(file.path, target);
       savedCount += 1;
+      netByteChange += file.size;
     }
-    adjustUserStorageUsage(userId, totalIncomingBytes);
+    adjustUserStorageUsage(userId, netByteChange);
     notifyFileChange(userId);
     res.json({ ok: true, count: savedCount });
   } catch (error) {
@@ -4471,12 +4542,13 @@ app.post("/api/upload-chunk/init", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "Invalid file size." });
     }
     await ensureUserStorageQuota(req.user, size);
+    const conflictAction = req.body.conflictAction || "keep_both";
     const uploadId = crypto.randomBytes(18).toString("base64url");
     const sessionDir = path.join(currentUploadSessionRoot(userId), uploadId);
     await fsp.mkdir(sessionDir, { recursive: true });
     await fsp.writeFile(
       path.join(sessionDir, "meta.json"),
-      JSON.stringify({ userId, targetPath, relativePath, size, createdAt: Date.now() }),
+      JSON.stringify({ userId, targetPath, relativePath, size, conflictAction, createdAt: Date.now() }),
       "utf8"
     );
     res.json({ uploadId, chunkSize: CHUNK_UPLOAD_BYTES });
@@ -4535,7 +4607,11 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
       return res.status(400).json({ error: "Temporary or system files are not uploaded." });
     }
     await fsp.mkdir(dir, { recursive: true });
-    const target = uniqueDestinationForRelativePath(dir, relativePath);
+    const targetDir = path.join(dir, path.dirname(relativePath));
+    await fsp.mkdir(targetDir, { recursive: true });
+    const target = meta.conflictAction === "replace"
+      ? path.join(dir, relativePath)
+      : uniqueDestinationForRelativePath(dir, relativePath);
     const tmpTarget = `${target}.uploading-${uploadId}`;
     const output = fs.createWriteStream(tmpTarget, { flags: "wx" });
     try {
@@ -4551,9 +4627,15 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
       if (Number(meta.size) && stat.size !== Number(meta.size)) {
         throw Object.assign(new Error("Uploaded size mismatch. Please upload again."), { status: 400 });
       }
+      let netByteChange = stat.size;
+      if (meta.conflictAction === "replace" && fs.existsSync(target)) {
+        const oldStat = await fsp.stat(target).catch(() => null);
+        if (oldStat) netByteChange -= oldStat.size;
+        await fsp.rm(target, { force: true }).catch(() => {});
+      }
       await fsp.rename(tmpTarget, target);
       await removePath(sessionDir).catch(() => {});
-      adjustUserStorageUsage(userId, stat.size);
+      adjustUserStorageUsage(userId, netByteChange);
       notifyFileChange(userId);
       res.json({ ok: true, count: 1 });
     } catch (error) {
@@ -5091,7 +5173,8 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
   try {
     const hash = String(req.body.hash || "").trim().toLowerCase();
     const size = Number(req.body.size || 0);
-    const targetPath = normalizeRelative(req.body.targetPath || "");
+    const targetPath = normalizeRelative(req.body.targetPath || req.body.path || "");
+    const conflictAction = req.body.conflictAction || "keep_both";
     const name = safeName(req.body.name);
     if (!hash || !name || size <= 0) {
       return res.json({ instant: false });
@@ -5101,7 +5184,7 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
     ensureFolderAccess(req, targetPath);
     const dir = resolveDrivePathForUser(req.user.id, targetPath);
     const targetDest = path.join(dir, name);
-    if (fs.existsSync(targetDest)) {
+    if (fs.existsSync(targetDest) && conflictAction !== "replace") {
       return res.json({ instant: false, exists: true });
     }
 
@@ -5139,9 +5222,15 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
 
     if (matchedPath) {
       await fsp.mkdir(path.dirname(targetDest), { recursive: true });
+      let netByteChange = size;
+      if (conflictAction === "replace" && fs.existsSync(targetDest)) {
+        const oldStat = await fsp.stat(targetDest).catch(() => null);
+        if (oldStat) netByteChange -= oldStat.size;
+        await fsp.rm(targetDest, { force: true }).catch(() => {});
+      }
       await fsp.copyFile(matchedPath, targetDest);
       recordFileHash(req.user.id, hash, targetDest, size, Date.now());
-      adjustUserStorageUsage(req.user.id, size);
+      adjustUserStorageUsage(req.user.id, netByteChange);
       notifyFileChange(req.user.id);
       return res.json({ instant: true, name });
     }
