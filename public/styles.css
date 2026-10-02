@@ -5757,24 +5757,24 @@ tbody tr.drop-target-row {
   pointer-events: none;
 }
 
-/* AI 对话智能操作按钮 (苹果级高阶毛玻璃质感 + 灵动 AI 晶蓝晶彩微光) */
+/* AI 对话智能操作按钮 (与 AI 对话框同色系：青绿/天蓝渐变 + 水青毛玻璃质感) */
 .row-action-icon-btn.ai-action-btn {
-  background: linear-gradient(135deg, rgba(238, 242, 255, 0.95) 0%, rgba(245, 243, 255, 0.95) 100%) !important;
-  border: 1px solid rgba(165, 180, 252, 0.65) !important;
-  color: #4f46e5 !important;
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.96) 0%, rgba(236, 253, 245, 0.96) 100%) !important;
+  border: 1px solid rgba(20, 187, 176, 0.48) !important;
+  color: #0d9488 !important;
   box-shadow:
-    0 1px 3px rgba(79, 70, 229, 0.08),
-    0 0 6px rgba(129, 140, 248, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+    0 1px 3px rgba(20, 187, 176, 0.1),
+    0 0 6px rgba(20, 187, 176, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset !important;
 }
 
 .row-action-icon-btn.ai-action-btn:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, #0284c7 0%, #14bbb0 52%, #10b981 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
   box-shadow:
-    0 4px 14px rgba(99, 102, 241, 0.35),
-    0 0 12px rgba(139, 92, 246, 0.28) !important;
+    0 4px 14px rgba(20, 187, 176, 0.38),
+    0 0 12px rgba(14, 165, 233, 0.28) !important;
   transform: translateY(-1px) scale(1.08) !important;
 }
 
@@ -5877,24 +5877,24 @@ tbody tr.drop-target-row {
   pointer-events: none !important;
 }
 
-/* 模态框顶部 AI 总结图标按钮 */
+/* 模态框顶部 AI 总结图标按钮 (与 AI 对话框同色系) */
 .modal-action-icon-btn.ai-action-btn {
-  background: linear-gradient(135deg, rgba(238, 242, 255, 0.95) 0%, rgba(245, 243, 255, 0.95) 100%) !important;
-  border: 1px solid rgba(165, 180, 252, 0.65) !important;
-  color: #4f46e5 !important;
+  background: linear-gradient(135deg, rgba(240, 253, 250, 0.96) 0%, rgba(236, 253, 245, 0.96) 100%) !important;
+  border: 1px solid rgba(20, 187, 176, 0.48) !important;
+  color: #0d9488 !important;
   box-shadow:
-    0 1px 3px rgba(79, 70, 229, 0.08),
-    0 0 6px rgba(129, 140, 248, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset !important;
+    0 1px 3px rgba(20, 187, 176, 0.1),
+    0 0 6px rgba(20, 187, 176, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset !important;
 }
 
 .modal-action-icon-btn.ai-action-btn:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, #0284c7 0%, #14bbb0 52%, #10b981 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
   box-shadow:
-    0 4px 14px rgba(99, 102, 241, 0.35),
-    0 0 12px rgba(139, 92, 246, 0.28) !important;
+    0 4px 14px rgba(20, 187, 176, 0.38),
+    0 0 12px rgba(14, 165, 233, 0.28) !important;
   transform: translateY(-1px) scale(1.08) !important;
 }
 
