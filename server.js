@@ -1531,6 +1531,96 @@ function removeFolderPasswordTree(folderPath) {
   return changed;
 }
 
+// ==========================================
+// 星标收藏数据存储与操作函数
+// ==========================================
+const starredStores = new Map();
+
+function userStarredFile(userId) {
+  return path.join(userRoot(userId), ".starred.json");
+}
+
+function getStarredStore(userId = currentUserId()) {
+  if (!userId) return new Map();
+  if (!starredStores.has(userId)) {
+    const map = new Map();
+    try {
+      const file = userStarredFile(userId);
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, "utf8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (typeof item === "string") {
+              const p = normalizeRelative(item);
+              map.set(p, { path: p, starredAt: new Date().toISOString() });
+            } else if (item && typeof item.path === "string") {
+              const p = normalizeRelative(item.path);
+              map.set(p, { path: p, starredAt: item.starredAt || new Date().toISOString() });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("加载星标数据异常：", e.message);
+    }
+    starredStores.set(userId, map);
+  }
+  return starredStores.get(userId);
+}
+
+async function saveStarredStore(userId = currentUserId()) {
+  if (!userId) return;
+  const store = getStarredStore(userId);
+  const list = Array.from(store.values());
+  const filePath = userStarredFile(userId);
+  const tmpPath = `${filePath}.tmp`;
+  await fsp.mkdir(path.dirname(filePath), { recursive: true });
+  await fsp.writeFile(tmpPath, JSON.stringify(list, null, 2), "utf8");
+  await fsp.rename(tmpPath, filePath);
+}
+
+function isStarred(userId, relPath) {
+  if (!userId || !relPath) return false;
+  const norm = normalizeRelative(relPath);
+  return getStarredStore(userId).has(norm);
+}
+
+function rekeyStarredTree(userId, sourcePath, targetPath) {
+  if (!userId || !sourcePath || !targetPath) return false;
+  const src = normalizeRelative(sourcePath);
+  const tgt = normalizeRelative(targetPath);
+  const store = getStarredStore(userId);
+  let changed = false;
+  for (const [key, value] of Array.from(store.entries())) {
+    if (key === src) {
+      store.delete(key);
+      store.set(tgt, { path: tgt, starredAt: value.starredAt });
+      changed = true;
+    } else if (key.startsWith(`${src}/`)) {
+      const nextKey = `${tgt}/${key.slice(src.length + 1)}`;
+      store.delete(key);
+      store.set(nextKey, { path: nextKey, starredAt: value.starredAt });
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function removeStarredTree(userId, targetPath) {
+  if (!userId || !targetPath) return false;
+  const tgt = normalizeRelative(targetPath);
+  const store = getStarredStore(userId);
+  let changed = false;
+  for (const key of Array.from(store.keys())) {
+    if (key === tgt || key.startsWith(`${tgt}/`)) {
+      store.delete(key);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function safeUploadRelativePath(input, fallbackName) {
   const rel = normalizeRelative(input || fallbackName);
   const parts = rel.split("/").filter(Boolean).map((part) => safeName(readableName(part)));
@@ -2985,7 +3075,7 @@ async function extractSearchableContent(filePath, stat, options = {}) {
   return "";
 }
 
-function searchResultForItem({ rel, entry, stat, metadataMatches, contentMatches, contentText, lockedFolderPath = "" }) {
+function searchResultForItem({ rel, entry, stat, metadataMatches, contentMatches, contentText, lockedFolderPath = "", userId }) {
   const isDirectory = entry.isDirectory();
   const locked = isDirectory ? hasFolderPassword(rel) : false;
   const matchReason = [];
@@ -3007,6 +3097,7 @@ function searchResultForItem({ rel, entry, stat, metadataMatches, contentMatches
     requiresUnlock: Boolean(lockedFolderPath),
     lockedFolderPath,
     folderPath: isDirectory ? rel : parentWebPath(rel),
+    starred: isStarred(userId || currentUserId(), rel),
     matchReason: matchReason.join("、") || "匹配",
     matchSnippet: contentMatches.length ? searchSnippet(contentText, contentMatches) : "",
   };
@@ -3099,7 +3190,7 @@ async function searchDrive(req, options) {
         contentMatches.length ||
         Object.values(metadataMatches).some((matches) => matches.length);
       if (matched) {
-        results.push(searchResultForItem({ rel, entry, stat, metadataMatches, contentMatches, contentText, lockedFolderPath: lockedSelf }));
+        results.push(searchResultForItem({ rel, entry, stat, metadataMatches, contentMatches, contentText, lockedFolderPath: lockedSelf, userId }));
       }
       if (entry.isDirectory() && !lockedSelf) {
         await visit(rel);
@@ -4266,6 +4357,7 @@ app.get("/api/list", requireAuth, async (req, res, next) => {
             type: entry.isDirectory() ? "folder" : "file",
             locked,
             unlocked: locked ? !findLockedFolderForRequest(req, itemPath, true) : false,
+            starred: isStarred(req.user.id, itemPath),
             size: entry.isDirectory() ? null : stat.size,
             modifiedAt: stat.mtime.toISOString(),
           };
@@ -4906,6 +4998,9 @@ app.delete("/api/item", requireAuth, async (req, res, next) => {
       } else {
         invalidateUserStorageUsage(req.user.id);
       }
+      if (removeStarredTree(req.user.id, rel)) {
+        await saveStarredStore(req.user.id);
+      }
       if (removedPasswords) {
         await saveFolderPasswordStore();
         syncUnlockedFoldersAfterMutation(req, res);
@@ -4915,6 +5010,9 @@ app.delete("/api/item", requireAuth, async (req, res, next) => {
     }
 
     const trashItem = await moveToTrash(req.user.id, rel, target, stat);
+    if (removeStarredTree(req.user.id, rel)) {
+      await saveStarredStore(req.user.id);
+    }
     if (removedPasswords) {
       await saveFolderPasswordStore();
       syncUnlockedFoldersAfterMutation(req, res);
@@ -4943,6 +5041,9 @@ app.post("/api/rename", requireAuth, async (req, res, next) => {
     const targetRel = webPath(parentWebPath(sourceRel), nextName);
     const sourceStat = await fsp.stat(source);
     await fsp.rename(source, target);
+    if (rekeyStarredTree(req.user.id, sourceRel, targetRel)) {
+      await saveStarredStore(req.user.id);
+    }
     if (sourceStat.isDirectory()) {
       rekeyFolderPasswordTree(sourceRel, targetRel);
       await saveFolderPasswordStore();
@@ -5011,6 +5112,9 @@ app.post("/api/move", requireAuth, async (req, res, next) => {
     const sourceRel = normalizeRelative(req.body.source || "");
     const targetRel = webPath(normalizeRelative(req.body.targetDir || ""), name);
     await fsp.rename(source, target);
+    if (rekeyStarredTree(req.user.id, sourceRel, targetRel)) {
+      await saveStarredStore(req.user.id);
+    }
     if (sourceStat.isDirectory()) {
       rekeyFolderPasswordTree(sourceRel, targetRel);
       await saveFolderPasswordStore();
@@ -5018,6 +5122,118 @@ app.post("/api/move", requireAuth, async (req, res, next) => {
     }
     notifyFileChange(req.user.id);
     res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ==========================================
+// 星标收藏 API
+// ==========================================
+app.get("/api/starred", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const store = getStarredStore(userId);
+    const items = [];
+    let dirty = false;
+
+    for (const [relPath, meta] of Array.from(store.entries())) {
+      const target = resolveDrivePathForUser(userId, relPath);
+      const stat = await fsp.stat(target).catch(() => null);
+      if (!stat) {
+        store.delete(relPath);
+        dirty = true;
+        continue;
+      }
+      const isDir = stat.isDirectory();
+      const locked = isDir ? hasFolderPassword(relPath) : false;
+      items.push({
+        name: path.basename(target),
+        displayName: readableName(path.basename(target)),
+        path: relPath,
+        displayPath: displayWebPath(relPath),
+        type: isDir ? "folder" : "file",
+        isDirectory: isDir,
+        locked,
+        unlocked: locked ? !findLockedFolderForRequest(req, relPath, true) : false,
+        size: isDir ? null : stat.size,
+        modifiedAt: stat.mtime.toISOString(),
+        folderPath: isDir ? relPath : parentWebPath(relPath),
+        starred: true,
+        starredAt: meta.starredAt,
+      });
+    }
+
+    if (dirty) {
+      await saveStarredStore(userId);
+    }
+
+    items.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+      return a.name.localeCompare(b.name, "zh-Hans-CN");
+    });
+
+    res.json({ ok: true, items, count: items.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/starred/toggle", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const rel = normalizeRelative(req.body.path || "");
+    rejectHiddenDrivePath(rel);
+    const target = resolveDrivePathForUser(userId, rel);
+    const stat = await fsp.stat(target).catch(() => null);
+    if (!stat) {
+      return res.status(404).json({ error: "文件或文件夹不存在" });
+    }
+
+    const store = getStarredStore(userId);
+    const currentlyStarred = store.has(rel);
+    const nextStarred = !currentlyStarred;
+
+    if (nextStarred) {
+      store.set(rel, { path: rel, starredAt: new Date().toISOString() });
+    } else {
+      store.delete(rel);
+    }
+
+    await saveStarredStore(userId);
+    notifyFileChange(userId);
+
+    res.json({ ok: true, path: rel, starred: nextStarred });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/starred/batch", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const paths = Array.isArray(req.body.paths) ? req.body.paths : [];
+    const starred = Boolean(req.body.starred);
+    const store = getStarredStore(userId);
+
+    for (const rawPath of paths) {
+      const rel = normalizeRelative(rawPath || "");
+      if (isHiddenDrivePath(rel)) continue;
+      const target = resolveDrivePathForUser(userId, rel);
+      const stat = await fsp.stat(target).catch(() => null);
+      if (!stat) continue;
+
+      if (starred) {
+        store.set(rel, { path: rel, starredAt: new Date().toISOString() });
+      } else {
+        store.delete(rel);
+      }
+    }
+
+    await saveStarredStore(userId);
+    notifyFileChange(userId);
+
+    res.json({ ok: true, count: paths.length, starred });
   } catch (error) {
     next(error);
   }

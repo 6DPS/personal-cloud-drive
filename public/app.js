@@ -56,6 +56,7 @@ const state = {
   currentAiSessionId: null,
   aiConversations: new Map(),
   trashMode: false,
+  starredMode: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -69,6 +70,9 @@ const AI_PENDING_LONG_DELAY_MS = 8000;
 const AI_SEND_ARROW_SVG = '<svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
 const AI_STOP_SQUARE_SVG = '<svg class="stop-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3.5"></rect></svg>';
 
+const starredNavBtn = $("#starredNavBtn");
+const sidebarStarredCount = $("#sidebarStarredCount");
+const bulkStarBtn = $("#bulkStarBtn");
 const recycleBinBtn = $("#recycleBinBtn");
 const mySharesBtn = $("#mySharesBtn");
 
@@ -4234,6 +4238,7 @@ function renderBreadcrumb() {
   root.textContent = "全部文件";
   root.addEventListener("click", () => {
     exitTrashMode();
+    exitStarredMode();
     loadFolder("");
   });
   breadcrumb.append(root);
@@ -4246,6 +4251,17 @@ function renderBreadcrumb() {
     trashLabel.style.fontWeight = "600";
     trashLabel.textContent = "🗑️ 回收站";
     breadcrumb.append(slash, trashLabel);
+    return;
+  }
+
+  if (state.starredMode) {
+    const slash = document.createElement("span");
+    slash.textContent = "/";
+    const starredLabel = document.createElement("span");
+    starredLabel.className = "breadcrumb-current";
+    starredLabel.style.fontWeight = "600";
+    starredLabel.textContent = "⭐ 我的星标";
+    breadcrumb.append(slash, starredLabel);
     return;
   }
 
@@ -4530,7 +4546,7 @@ function clearSelection() {
   state.selectionMode = false;
   updateSelectionUi();
   syncSelectionRows();
-  if (!state.trashMode) void flushPendingRealtimeRefresh();
+  if (!state.trashMode && !state.starredMode) void flushPendingRealtimeRefresh();
 }
 
 function updateSelectionUi() {
@@ -4547,6 +4563,18 @@ function updateSelectionUi() {
   } else {
     if (normalSelectionActions) normalSelectionActions.classList.remove("hidden");
     if (trashSelectionActions) trashSelectionActions.classList.add("hidden");
+    if (bulkStarBtn) {
+      bulkStarBtn.disabled = count === 0;
+      if (count > 0) {
+        const allStarred = Array.from(state.selectedPaths).every((p) => {
+          const found = state.items.find((it) => it.path === p);
+          return found && found.starred;
+        });
+        bulkStarBtn.textContent = allStarred ? "☆ 取消星标" : "⭐ 设为星标";
+      } else {
+        bulkStarBtn.textContent = "⭐ 设为星标";
+      }
+    }
     if (bulkDownloadBtn) bulkDownloadBtn.disabled = count === 0;
     if (bulkCopyBtn) bulkCopyBtn.disabled = count === 0;
     if (bulkMoveBtn) bulkMoveBtn.disabled = count === 0;
@@ -4869,6 +4897,9 @@ function renderRows(options = {}) {
   if (state.trashMode) {
     if (emptyTitle) emptyTitle.textContent = "回收站是空的";
     if (emptyText) emptyText.textContent = "没有已删除的文件或文件夹（保留30天内删除的内容）。";
+  } else if (state.starredMode) {
+    if (emptyTitle) emptyTitle.textContent = "暂无星标内容";
+    if (emptyText) emptyText.textContent = "可以将重要的文件或文件夹设为星标，以便在此快速查找。";
   } else if (state.searchActive) {
     if (emptyTitle) emptyTitle.textContent = "没有找到匹配结果";
     if (emptyText) emptyText.textContent = "可以换一个文件名、路径、类型、日期或大小关键词再试。";
@@ -5018,6 +5049,20 @@ function renderRows(options = {}) {
     const nameTd = document.createElement("td");
     const nameCell = document.createElement("div");
     nameCell.className = "name-cell";
+
+    const starBtn = document.createElement("button");
+    starBtn.type = "button";
+    starBtn.className = `star-toggle-btn${item.starred ? " active" : ""}`;
+    starBtn.title = item.starred ? "取消星标" : "设为星标";
+    starBtn.setAttribute("aria-label", item.starred ? `取消“${itemName(item)}”的星标` : `将“${itemName(item)}”设为星标`);
+    starBtn.innerHTML = item.starred
+      ? `<svg class="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+      : `<svg class="star-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    starBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleStarItem(item);
+    });
+
     const icon = renderFileIcon(item);
     const nameBtn = document.createElement("button");
     if (state.searchActive) {
@@ -5029,21 +5074,28 @@ function renderRows(options = {}) {
     nameBtn.addEventListener("click", async () => {
       if (item.type === "folder") {
         const ok = await ensureFolderReady(item.path, itemName(item));
-        if (ok) loadFolder(item.path);
+        if (ok) {
+          if (state.starredMode) exitStarredMode();
+          loadFolder(item.path);
+        }
       } else if (fileExt(item.name) === "zip") {
         openZipArchiveModal(item);
       } else {
         openPreview(item);
       }
     });
-    nameCell.append(icon, nameBtn);
-    if (state.searchActive) {
+    nameCell.append(starBtn, icon, nameBtn);
+    if (state.searchActive || state.starredMode) {
       const meta = document.createElement("div");
       meta.className = "match-meta";
       const folderText = item.folderPath ? `位置：${item.folderPath}` : "位置：全部文件";
-      appendHighlightedText(meta, `${item.matchReason || "匹配"} · ${folderText}`, state.searchTokens);
+      if (state.starredMode) {
+        meta.textContent = folderText;
+      } else {
+        appendHighlightedText(meta, `${item.matchReason || "匹配"} · ${folderText}`, state.searchTokens);
+      }
       nameCell.append(meta);
-      if (item.matchSnippet) {
+      if (state.searchActive && item.matchSnippet) {
         const snippet = document.createElement("div");
         snippet.className = "match-snippet";
         appendHighlightedText(snippet, item.matchSnippet, state.searchTokens);
@@ -5164,6 +5216,10 @@ function renderRows(options = {}) {
     }
     actions.append(actionButton("删除", "danger", deleteAction));
     const moreMenuOptions = [
+      {
+        label: item.starred ? "☆ 取消星标" : "⭐ 设为星标",
+        handler: () => toggleStarItem(item),
+      },
       { label: "重命名", handler: renameAction },
       { label: "复制", handler: copyAction },
       { label: "移动", handler: moveAction },
@@ -5295,6 +5351,12 @@ async function loadFolder(path = state.path, options = {}) {
     const lingeringTrashBtn = document.getElementById("trashClearBtn");
     if (lingeringTrashBtn) lingeringTrashBtn.remove();
   }
+  if (state.starredMode) {
+    if (options.silent || options.preserveStarred) {
+      return loadStarred(options);
+    }
+    exitStarredMode();
+  }
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
   let cachedRendered = false;
   if (cached) {
@@ -5363,6 +5425,7 @@ function applySearchData(data) {
 
 async function performSearch() {
   exitTrashMode();
+  exitStarredMode();
   const query = searchInput?.value.trim() || "";
   if (!query) {
     setStatus("请输入搜索关键词，可以搜文件名、文件夹名、路径、类型、日期或大小。");
@@ -5402,6 +5465,7 @@ async function clearSearch() {
 
 async function refreshCurrentFolder() {
   if (driveView.classList.contains("hidden")) return;
+  void refreshStarredCount();
   if (state.trashMode) {
     if (Date.now() < state.realtimeRefreshSuppressUntil) return;
     if (isUiInteractionActive()) {
@@ -5410,6 +5474,17 @@ async function refreshCurrentFolder() {
     }
     try {
       await loadTrash({ silent: true });
+    } catch {}
+    return;
+  }
+  if (state.starredMode) {
+    if (Date.now() < state.realtimeRefreshSuppressUntil) return;
+    if (isUiInteractionActive()) {
+      state.pendingRealtimeRefresh = true;
+      return;
+    }
+    try {
+      await loadStarred({ silent: true });
     } catch {}
     return;
   }
@@ -5458,7 +5533,12 @@ async function runAction(fn) {
     await fn();
     clearFolderCaches();
     suppressNextRealtimeRefresh();
-    await loadFolder(state.path, { replaceHistory: true, forceRefresh: true });
+    if (state.starredMode) {
+      await loadStarred({ silent: true });
+    } else {
+      await loadFolder(state.path, { replaceHistory: true, forceRefresh: true });
+    }
+    refreshStarredCount();
     scheduleStorageUsageRefresh({ force: true });
   } catch (error) {
     await showErrorDialog(error.message);
@@ -6761,6 +6841,7 @@ async function submitPasswordReset() {
 async function enterDrive(user = state.currentUser) {
   state.currentUser = user || null;
   exitTrashMode();
+  exitStarredMode();
   syncAdminUi();
   loginView.classList.add("hidden");
   driveView.classList.remove("hidden");
@@ -6778,6 +6859,7 @@ async function enterDrive(user = state.currentUser) {
   await api("/api/folder-unlock-session/reset", { method: "POST" });
   const params = new URLSearchParams(window.location.search);
   await loadFolder(params.get("path") || "", { replaceHistory: true });
+  void refreshStarredCount();
   await refreshStorageUsage();
   await refreshAccessInfo();
   await refreshHealthStatus();
@@ -6899,6 +6981,7 @@ $("#logoutBtn").addEventListener("click", async () => {
   state.path = "";
   state.items = [];
   exitTrashMode();
+  exitStarredMode();
   clearSelection();
   state.unlockedFolders.clear();
   clearFolderCaches();
@@ -6925,6 +7008,11 @@ $("#logoutBtn").addEventListener("click", async () => {
 backBtn.addEventListener("click", () => {
   if (state.trashMode) {
     exitTrashMode();
+    loadFolder(state.path || "");
+    return;
+  }
+  if (state.starredMode) {
+    exitStarredMode();
     loadFolder(state.path || "");
     return;
   }
@@ -7059,6 +7147,10 @@ searchSort?.addEventListener("change", () => {
 $("#refreshBtn").addEventListener("click", () => {
   if (state.trashMode) {
     loadTrash();
+    return;
+  }
+  if (state.starredMode) {
+    loadStarred();
     return;
   }
   if (state.searchActive) {
@@ -7356,6 +7448,135 @@ document.addEventListener("visibilitychange", () => {
    新增功能逻辑：回收站、ZIP浏览、外链分享、AI总结、手势
    ========================================================= */
 
+// --- 0. 星标收藏逻辑 ---
+function exitStarredMode() {
+  if (!state.starredMode) return;
+  state.starredMode = false;
+  state.selectedPaths.clear();
+  state.selectionMode = false;
+  updateSelectionUi();
+  syncSelectionRows();
+  syncAiGlobalBtnUi();
+  const starredNavBtn = $("#starredNavBtn");
+  if (starredNavBtn) starredNavBtn.classList.remove("active");
+  const uploadBtn = $("#uploadBtn");
+  const newFolderBtn = $("#newFolderBtn");
+  const selectModeBtn = $("#selectModeBtn");
+  if (uploadBtn) uploadBtn.classList.remove("hidden");
+  if (newFolderBtn) newFolderBtn.classList.remove("hidden");
+  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+}
+
+async function loadStarred(options = {}) {
+  exitTrashMode();
+  state.starredMode = true;
+  state.searchActive = false;
+  if (!options?.preserveSelection) {
+    state.selectedPaths.clear();
+    state.selectionMode = false;
+  }
+  updateSelectionUi();
+  syncAiGlobalBtnUi();
+
+  const starredNavBtn = $("#starredNavBtn");
+  if (starredNavBtn) starredNavBtn.classList.add("active");
+
+  const uploadBtn = $("#uploadBtn");
+  const newFolderBtn = $("#newFolderBtn");
+  const selectModeBtn = $("#selectModeBtn");
+  if (uploadBtn) uploadBtn.classList.add("hidden");
+  if (newFolderBtn) newFolderBtn.classList.add("hidden");
+  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+
+  if (currentFolderLabel) currentFolderLabel.textContent = "⭐ 我的星标";
+  backBtn.disabled = false;
+  renderBreadcrumb();
+  if (!options?.silent) setStatus("正在加载星标项目...");
+
+  try {
+    const res = await api("/api/starred");
+    state.items = (res.items || []).map((item) => ({
+      ...item,
+      starred: true,
+    }));
+    const badge = $("#sidebarStarredCount");
+    if (badge) {
+      badge.textContent = state.items.length;
+      badge.classList.toggle("has-count", state.items.length > 0);
+    }
+    renderRows({ noAnimation: true });
+    if (!options?.silent) setStatus(`我的星标共有 ${state.items.length} 个项目。`);
+  } catch (err) {
+    if (!options?.silent) setStatus("加载星标项目失败: " + err.message);
+  }
+}
+
+async function toggleStarItem(item) {
+  if (!item || !item.path) return;
+  try {
+    suppressNextRealtimeRefresh();
+    const res = await api("/api/starred/toggle", {
+      method: "POST",
+      body: JSON.stringify({ path: item.path }),
+    });
+    const nowStarred = res.starred;
+    item.starred = nowStarred;
+    setStatus(nowStarred ? `已将“${itemName(item)}”设为星标` : `已取消“${itemName(item)}”的星标`);
+    refreshStarredCount();
+    if (state.starredMode) {
+      await loadStarred({ silent: true });
+    } else {
+      renderRows({ noAnimation: true });
+    }
+  } catch (err) {
+    showErrorDialog(err.message || "更新星标失败");
+  }
+}
+
+async function bulkStarSelected() {
+  const selectedPaths = Array.from(state.selectedPaths);
+  if (!selectedPaths.length) return;
+  const allStarred = selectedPaths.every((p) => {
+    const found = state.items.find((it) => it.path === p);
+    return found && found.starred;
+  });
+  const nextStarred = !allStarred;
+  try {
+    suppressNextRealtimeRefresh();
+    const res = await api("/api/starred/batch", {
+      method: "POST",
+      body: JSON.stringify({ paths: selectedPaths, starred: nextStarred }),
+    });
+    setStatus(nextStarred ? `已将选中的 ${res.count} 个项目设为星标` : `已取消选中的 ${res.count} 个项目的星标`);
+    refreshStarredCount();
+    if (state.starredMode) {
+      await loadStarred({ silent: true });
+    } else {
+      for (const it of state.items) {
+        if (state.selectedPaths.has(it.path)) {
+          it.starred = nextStarred;
+        }
+      }
+      updateSelectionUi();
+      renderRows({ noAnimation: true });
+    }
+  } catch (err) {
+    showErrorDialog(err.message || "批量更新星标失败");
+  }
+}
+
+async function refreshStarredCount() {
+  try {
+    const res = await api("/api/starred");
+    const count = Number(res.count || 0);
+    const badge = $("#sidebarStarredCount");
+    if (badge) {
+      badge.textContent = count;
+      badge.classList.toggle("has-count", count > 0);
+    }
+  } catch {}
+}
+
 // --- 1. 回收站逻辑 ---
 function exitTrashMode() {
   state.trashMode = false;
@@ -7380,6 +7601,7 @@ function exitTrashMode() {
 }
 
 async function loadTrash(options = {}) {
+  exitStarredMode();
   state.trashMode = true;
   state.searchActive = false;
   if (!options?.preserveSelection) {
@@ -8288,6 +8510,15 @@ function setupImageSwipeGestures() {
 }
 
 // 绑定全局触发事件
+starredNavBtn?.addEventListener("click", () => {
+  if (state.starredMode) {
+    exitStarredMode();
+    loadFolder(state.path || "");
+  } else {
+    loadStarred();
+  }
+});
+bulkStarBtn?.addEventListener("click", bulkStarSelected);
 recycleBinBtn?.addEventListener("click", loadTrash);
 trashSelectAllBtn?.addEventListener("click", toggleAllSelection);
 headerSelectAll?.addEventListener("click", toggleAllSelection);
