@@ -8025,3 +8025,377 @@ select:focus {
 .cancel-all-btn:active {
   transform: translateY(0) scale(0.97) !important;
 }
+
+/* =========================================================================
+   网页端文本 / Markdown / 代码 在线轻量编辑器 (iOS 质感与网盘全局统一)
+   ========================================================================= */
+
+.preview-card.is-editor-mode {
+  width: min(1240px, 95vw) !important;
+  max-width: 1240px !important;
+  height: min(90vh, 900px) !important;
+  max-height: min(90vh, 900px) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), height 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.preview-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 保存状态徽标 */
+.preview-edit-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2.5px 9px;
+  border-radius: 9999px;
+  line-height: 1.35;
+  transition: all 180ms ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.preview-edit-status-badge.unsaved {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.preview-edit-status-badge.saved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.preview-edit-status-badge.saving {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+/* 分段切换控件 (Markdown 模式) */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(241, 245, 249, 0.92);
+  padding: 2.5px;
+  border-radius: 9px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-sizing: border-box;
+}
+
+.segmented-item {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 140ms ease;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.segmented-item:hover {
+  color: #0f172a;
+}
+
+.segmented-item.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+/* 快捷键小按键指示 */
+.shortcut-kbd {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 1px 4.5px;
+  margin-left: 5px;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+/* 编辑器容器与工具条 */
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #ffffff;
+  overflow: hidden;
+  place-self: stretch;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  background: rgba(248, 250, 252, 0.95);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  font-size: 11.5px;
+  color: #64748b;
+  flex-shrink: 0;
+  user-select: none;
+  gap: 12px;
+}
+
+.editor-toolbar-left,
+.editor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor-stat-item {
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-wrap-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #475569;
+  font-weight: 500;
+  font-size: 11.5px;
+  user-select: none;
+}
+
+.editor-wrap-label input[type="checkbox"] {
+  width: 13px !important;
+  height: 13px !important;
+  min-height: 13px !important;
+  margin: 0 !important;
+  cursor: pointer;
+}
+
+.editor-hint-tip {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+/* 编辑器主体区域 */
+.editor-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* 行号栏 */
+.editor-gutter {
+  width: 48px;
+  min-width: 48px;
+  padding: 14px 10px 14px 0;
+  background: #f8fafc;
+  border-right: 1px solid rgba(226, 232, 240, 0.85);
+  color: #94a3b8;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+}
+
+/* 文本编辑区域 */
+.editor-textarea {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13.5px;
+  line-height: 1.6;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  box-sizing: border-box;
+  caret-color: #007aff;
+  overflow: auto;
+  white-space: pre;
+}
+
+.editor-textarea.is-wrapped {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+/* Markdown 实时预览面板 */
+.editor-preview-pane {
+  padding: 20px 28px;
+  overflow-y: auto;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #1e293b;
+}
+
+.editor-preview-pane.is-split {
+  width: 50%;
+  min-width: 50%;
+  border-left: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.editor-preview-pane.is-full {
+  width: 100%;
+  min-width: 100%;
+}
+
+.editor-preview-pane h1,
+.editor-preview-pane h2,
+.editor-preview-pane h3 {
+  color: #0f172a;
+  font-weight: 700;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  line-height: 1.3;
+}
+
+.editor-preview-pane h1 {
+  font-size: 22px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.editor-preview-pane h2 {
+  font-size: 18px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+}
+
+.editor-preview-pane h3 {
+  font-size: 15.5px;
+}
+
+.editor-preview-pane p {
+  margin: 0.75em 0;
+}
+
+.editor-preview-pane pre {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  padding: 14px 16px !important;
+  border-radius: 10px !important;
+  overflow-x: auto !important;
+  margin: 1em 0 !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.editor-preview-pane code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(241, 245, 249, 0.9);
+  color: #0f172a;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.88em;
+}
+
+.editor-preview-pane pre code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.editor-preview-pane blockquote {
+  margin: 1em 0;
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3.5px solid #3b82f6;
+  border-radius: 0 8px 8px 0;
+  color: #475569;
+}
+
+.editor-preview-pane table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.editor-preview-pane th,
+.editor-preview-pane td {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.editor-preview-pane th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.editor-preview-pane tr:nth-child(even) {
+  background: #fcfdfe;
+}
+
+.editor-preview-pane hr {
+  border: none;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 1.5em 0;
+}
+
+@media (max-width: 768px) {
+  .preview-card.is-editor-mode {
+    width: 98vw !important;
+    height: 94vh !important;
+  }
+  .editor-preview-pane.is-split {
+    display: none !important;
+  }
+  .editor-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
