@@ -8,20 +8,20 @@
 
 | 🎨 专属视觉登录界面 | 🖥️ 现代化网盘管理主界面（全新存储看板） |
 | :---: | :---: |
-| <img src="docs/screenshots/01_login_view.png?v=20261002" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20261002" width="100%" /> |
+| <img src="docs/screenshots/01_login_view.png?v=20261002_release" width="100%" /> | <img src="docs/screenshots/02_desktop_client_main.png?v=20261002_release" width="100%" /> |
 
 | 👥 子账号存储配额可视化调控 | 🔒 普通用户空间绝对隔离与配额保护 |
 | :---: | :---: |
-| <img src="docs/screenshots/04_user_quota_management.png?v=20261002" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20261002" width="100%" /> |
+| <img src="docs/screenshots/04_user_quota_management.png?v=20261002_release" width="100%" /> | <img src="docs/screenshots/05_user_quota_isolated_view.png?v=20261002_release" width="100%" /> |
 
 ### 🤖 智能 AI 全库问答与深度检索 (DeepSeek 驱动)
 <p align="center">
-  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20261002" width="100%" />
+  <img src="docs/screenshots/03_ai_drawer_chat.png?v=20261002_release" width="100%" />
 </p>
 
 ### 📑 文档在线高清原生预览与 AI 一键智能提炼总结
 <p align="center">
-  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002" width="100%" />
+  <img src="docs/screenshots/06_document_preview_ai.png?v=20261002_release" width="100%" />
 </p>
 
 ---
