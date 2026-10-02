@@ -2589,12 +2589,22 @@ async function submitAiPrompt() {
 }
 
 function renderAccessInfo(data) {
+  const client = data.clientNetwork || {};
+  const accessType = client.accessType || (client.isLocal ? "local" : client.sameLan ? "lan" : "public");
+  const accessLabel = accessType === "local" ? "本机访问" : accessType === "lan" ? "局域网访问" : "公网访问";
+  const badgeLabel = accessType === "local" ? "本机" : accessType === "lan" ? "局域网" : "公网";
+
+  const accessStatusBadge = document.getElementById("accessStatusBadge");
+  const accessStatusBadgeText = document.getElementById("accessStatusBadgeText");
+  if (accessStatusBadge && accessStatusBadgeText) {
+    accessStatusBadge.className = `access-status-badge status-${accessType}`;
+    accessStatusBadgeText.textContent = badgeLabel;
+    accessStatusBadge.title = `当前连接类型：${accessLabel}`;
+  }
+
   if (networkStatus) {
-    const client = data.clientNetwork || {};
-    const accessType = client.accessType || (client.isLocal ? "local" : client.sameLan ? "lan" : "public");
     networkStatus.classList.remove("local", "lan", "public");
     networkStatus.classList.add(accessType);
-    const accessLabel = accessType === "local" ? "本机访问" : accessType === "lan" ? "局域网访问" : "公网访问";
     const currentUrl = accessType === "local"
       ? `${window.location.protocol}//${window.location.host}`
       : accessType === "lan"
@@ -2639,6 +2649,54 @@ function renderAccessInfo(data) {
     link.title = entry.name || entry.address || entry.url;
     lanAccessLinks.append(link);
   }
+}
+
+const ACCESS_BOX_COLLAPSED_KEY = "dpsir_access_box_collapsed";
+
+function setupAccessBoxCollapsible() {
+  const accessBox = document.getElementById("accessBox");
+  const toggleBtn = document.getElementById("accessBoxToggle");
+  if (!accessBox || !toggleBtn) return;
+
+  // 默认收起 (collapsed = true)，若用户主动展开/收起则在 localStorage 中记忆
+  const savedState = localStorage.getItem(ACCESS_BOX_COLLAPSED_KEY);
+  const isCollapsed = savedState === null ? true : savedState === "true";
+
+  if (isCollapsed) {
+    accessBox.classList.add("collapsed");
+    toggleBtn.setAttribute("aria-expanded", "false");
+  } else {
+    accessBox.classList.remove("collapsed");
+    toggleBtn.setAttribute("aria-expanded", "true");
+  }
+
+  const toggle = (e) => {
+    // 如果点击的是链接或复制操作，不触发折叠
+    if (e && e.target && e.target.closest("a, code, .network-status")) {
+      return;
+    }
+    const willCollapse = !accessBox.classList.contains("collapsed");
+    accessBox.classList.toggle("collapsed", willCollapse);
+    toggleBtn.setAttribute("aria-expanded", String(!willCollapse));
+    try {
+      localStorage.setItem(ACCESS_BOX_COLLAPSED_KEY, String(willCollapse));
+    } catch {}
+  };
+
+  toggleBtn.addEventListener("click", toggle);
+  toggleBtn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle();
+    }
+  });
+
+  // 收起状态下，点击卡片任意非禁用区域即可展开
+  accessBox.addEventListener("click", (e) => {
+    if (accessBox.classList.contains("collapsed") && !e.target.closest("#accessBoxToggle")) {
+      toggle(e);
+    }
+  });
 }
 
 function isLanHost(hostname) {
@@ -8619,6 +8677,7 @@ for (const modal of [zipArchiveModal, shareModal, mySharesModal, aiDocSummaryMod
 }
 
 setupImageSwipeGestures();
+setupAccessBoxCollapsible();
 
 restoreSessionTokenFromUrl();
 localStorage.removeItem(AI_MODE_KEY);

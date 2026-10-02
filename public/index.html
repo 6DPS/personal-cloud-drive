@@ -202,14 +202,37 @@
             <strong id="storageRoot" title="D:\PersonalCloudDrive\files">D:\PersonalCloudDrive\files</strong>
           </div>
 
-          <div class="access-box">
-            <span>访问地址</span>
-            <div id="lanAccessLinks" class="access-links">
-              <small>正在检测局域网地址...</small>
+          <div class="access-box collapsible collapsed" id="accessBox">
+            <div class="access-box-header" id="accessBoxToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="accessBoxBody" title="点击展开/收起访问地址详情">
+              <div class="access-header-left">
+                <svg class="access-header-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span class="access-title-text">访问地址</span>
+              </div>
+              <div class="access-header-right">
+                <span id="accessStatusBadge" class="access-status-badge status-lan" title="当前连接状态">
+                  <span class="status-dot"></span>
+                  <span id="accessStatusBadgeText" class="status-badge-text">局域网</span>
+                </span>
+                <svg class="access-chevron-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
             </div>
-            <small id="activeClientCount">Active IPs: -</small>
-            <a id="publicAccessLink" href="#">公网备用</a>
-            <small id="networkStatus" class="network-status">当前访问：正在检测...</small>
+
+            <div class="access-box-body" id="accessBoxBody">
+              <div class="access-box-body-inner">
+                <div id="lanAccessLinks" class="access-links">
+                  <small>正在检测局域网地址...</small>
+                </div>
+                <small id="activeClientCount">Active IPs: -</small>
+                <a id="publicAccessLink" href="#">公网备用</a>
+                <small id="networkStatus" class="network-status">当前访问：正在检测...</small>
+              </div>
+            </div>
           </div>
 
           <div class="side-metrics storage-dashboard-card">

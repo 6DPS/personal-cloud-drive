@@ -422,6 +422,177 @@ select {
   padding-left: 14px;
 }
 
+/* ========================================================
+   可折叠访问地址卡片 (Collapsible Access Box)
+   ======================================================== */
+.access-box.collapsible {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  border-radius: 20px !important;
+  transition: padding 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s ease,
+              border-color 0.2s ease !important;
+}
+
+.access-box.collapsible.collapsed {
+  padding: 10px 14px !important;
+  cursor: pointer;
+}
+
+.access-box.collapsible.collapsed:hover {
+  border-color: rgba(23, 105, 224, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(23, 105, 224, 0.08) !important;
+}
+
+.access-box.collapsible:not(.collapsed) {
+  padding: 12px 14px 14px 14px !important;
+  gap: 9px !important;
+}
+
+.access-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+  padding: 2px 0;
+  border-radius: 10px;
+  user-select: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: opacity 0.18s ease;
+}
+
+.access-box-header:focus-visible {
+  box-shadow: 0 0 0 2px rgba(23, 105, 224, 0.35);
+}
+
+.access-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.access-header-icon {
+  width: 14px;
+  height: 14px;
+  color: #1769e0;
+  flex-shrink: 0;
+}
+
+.access-title-text {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  letter-spacing: -0.1px;
+}
+
+.access-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+/* 状态微胶囊 (微型在线指示器) */
+.access-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  padding: 2.5px 7px 2.5px 6px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(240, 253, 244, 0.95);
+  color: #059669;
+  transition: all 0.2s ease;
+}
+
+.access-status-badge .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  animation: accessDotPulse 2s infinite ease-in-out;
+}
+
+@keyframes accessDotPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.access-status-badge.status-public {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(239, 246, 255, 0.95);
+  color: #2563eb;
+}
+.access-status-badge.status-public .status-dot {
+  background-color: #3b82f6;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+}
+
+.access-status-badge.status-local {
+  border-color: rgba(13, 148, 136, 0.3);
+  background: rgba(240, 253, 250, 0.95);
+  color: #0d9488;
+}
+.access-status-badge.status-local .status-dot {
+  background-color: #0d9488;
+  box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.6);
+}
+
+/* 旋转小箭头 */
+.access-chevron-icon {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotate(0deg);
+}
+
+.access-box.collapsible:not(.collapsed) .access-chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* 折叠主体动画 */
+.access-box-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s ease,
+              margin-top 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  margin-top: 4px;
+}
+
+.access-box.collapsible.collapsed .access-box-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: 0;
+  pointer-events: none;
+}
+
+.access-box-body-inner {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .access-links {
   display: grid;
   gap: 7px;
