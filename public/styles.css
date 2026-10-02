@@ -7713,7 +7713,6 @@ select:focus {
 
 .conflict-modal-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 14px;
   margin-top: 18px;
@@ -7744,6 +7743,7 @@ select:focus {
 }
 
 .cancel-all-btn {
+  margin-left: auto !important;
   padding: 6px 14px !important;
   font-size: 13px !important;
   color: #64748b !important;
