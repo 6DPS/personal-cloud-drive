@@ -5785,8 +5785,28 @@ app.get("/s/:id", (req, res) => {
 });
 
 // ==========================================
-// 5. AI 文档一键总结 API
+// 5. AI 文档一键总结 API (极速提炼与智能缓存)
 // ==========================================
+const docSummaryCache = new Map();
+const DOC_SUMMARY_CACHE_MAX_ENTRIES = 120;
+
+function getCachedDocSummary(cacheKey) {
+  const item = docSummaryCache.get(cacheKey);
+  if (!item) return null;
+  // 维护 LRU 顺序
+  docSummaryCache.delete(cacheKey);
+  docSummaryCache.set(cacheKey, item);
+  return item;
+}
+
+function setCachedDocSummary(cacheKey, data) {
+  if (docSummaryCache.size >= DOC_SUMMARY_CACHE_MAX_ENTRIES) {
+    const oldestKey = docSummaryCache.keys().next().value;
+    if (oldestKey) docSummaryCache.delete(oldestKey);
+  }
+  docSummaryCache.set(cacheKey, { ...data, cachedAt: Date.now() });
+}
+
 app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
   const isStream = req.body.stream !== false;
   let sseStarted = false;
@@ -5820,6 +5840,48 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
 
     const docName = path.basename(target);
     const summaryModel = req.body.model || DEEPSEEK_SUMMARY_MODEL;
+    const forceFresh = Boolean(req.body.force || req.body.retry);
+    const cacheKey = `${target}:${stat.size}:${Math.round(stat.mtimeMs || 0)}:${summaryModel}`;
+
+    // 1. 命中已生成的本地总结缓存（瞬间秒开 0 毫秒出字，不消耗额度）
+    if (!forceFresh) {
+      const cached = getCachedDocSummary(cacheKey);
+      if (cached && cached.fullSummary) {
+        if (isStream) {
+          res.writeHead(200, {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+          });
+          res.flushHeaders?.();
+          sseStarted = true;
+          sendSse({ type: "start", docName, model: summaryModel, cached: true, message: "⚡ 已加载历史提炼缓存..." });
+          sendSse({ type: "chunk", content: cached.fullSummary });
+          if (cached.fullReasoning) {
+            sendSse({ type: "reasoning", content: cached.fullReasoning });
+          }
+          sendSse({
+            type: "done",
+            docName,
+            model: summaryModel,
+            fullSummary: cached.fullSummary,
+            fullReasoning: cached.fullReasoning || "",
+            cached: true,
+          });
+          return res.end();
+        } else {
+          return res.json({
+            ok: true,
+            docName,
+            summary: cached.fullSummary,
+            reasoning: cached.fullReasoning || "",
+            model: summaryModel,
+            cached: true,
+          });
+        }
+      }
+    }
 
     if (isStream) {
       res.writeHead(200, {
@@ -5830,7 +5892,7 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
       });
       res.flushHeaders?.();
       sseStarted = true;
-      sendSse({ type: "start", docName, model: summaryModel, message: "正在提取文档内容..." });
+      sendSse({ type: "start", docName, model: summaryModel, message: "正在极速提取文档内容..." });
     }
 
     const content = await extractSearchableContent(target, stat);
@@ -5855,14 +5917,19 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
     ].join("\n");
     const userPrompt = `文档名称：《${docName}》\n文件大小：${stat.size} 字节\n文档正文内容：\n\n${docSample}`;
 
+    // 默认关闭冗长深度思考（thinking: disabled），实现 1 秒内首字即时流式打印；若客户端有特殊要求再按需透传
+    const thinkingOption = req.body.thinking || { type: "disabled" };
+
     if (isStream) {
-      sendSse({ type: "status", message: `AI 正在极速生成总结 (${summaryModel})...` });
+      sendSse({ type: "status", message: `AI 正在极速提炼正文 (${summaryModel})...` });
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-      req.on("close", () => {
-        clearTimeout(timer);
-        controller.abort();
+      res.on("close", () => {
+        if (!res.writableEnded) {
+          clearTimeout(timer);
+          controller.abort();
+        }
       });
 
       try {
@@ -5880,6 +5947,7 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
             ],
             stream: true,
             max_tokens: 8192,
+            thinking: thinkingOption,
           }),
           signal: controller.signal,
         });
@@ -5929,6 +5997,15 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
           }
         }
 
+        if (fullSummary && fullSummary.trim()) {
+          setCachedDocSummary(cacheKey, {
+            fullSummary,
+            fullReasoning,
+            docName,
+            model: summaryModel,
+          });
+        }
+
         sendSse({
           type: "done",
           docName,
@@ -5936,6 +6013,14 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
           fullSummary,
           fullReasoning,
         });
+        return res.end();
+      } catch (fetchErr) {
+        if (controller.signal.aborted) {
+          console.warn("[AI:summarize-doc] Request aborted by client disconnect or timeout");
+          return;
+        }
+        console.error("[AI:summarize-doc] Fetch error:", fetchErr);
+        sendSse({ type: "error", error: `AI 调用异常：${fetchErr?.cause?.message || fetchErr.message}` });
         return res.end();
       } finally {
         clearTimeout(timer);
@@ -5959,6 +6044,7 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
             ],
             stream: false,
             max_tokens: 8192,
+            thinking: thinkingOption,
           }),
           signal: controller.signal,
         });
@@ -5973,6 +6059,15 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
         const message = data?.choices?.[0]?.message || {};
         const summary = aiFinalTextFromMessage(message);
         const reasoning = stripAiToolCallMarkup(message.reasoning_content || "");
+
+        if (summary && summary.trim()) {
+          setCachedDocSummary(cacheKey, {
+            fullSummary: summary,
+            fullReasoning: reasoning,
+            docName,
+            model: summaryModel,
+          });
+        }
 
         return res.json({
           ok: true,
@@ -5990,7 +6085,7 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
       sendSse({ type: "error", error: err.message || "文档总结失败" });
       return res.end();
     }
-    next(err);
+    return next(err);
   }
 });
 

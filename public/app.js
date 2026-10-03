@@ -8408,7 +8408,7 @@ function closeAiDocSummaryModal() {
   }
 }
 
-async function openAiDocSummaryModal(item) {
+async function openAiDocSummaryModal(item, options = {}) {
   if (!aiDocSummaryModal) return;
   if (currentAiDocSummaryAbortController) {
     currentAiDocSummaryAbortController.abort();
@@ -8416,6 +8416,7 @@ async function openAiDocSummaryModal(item) {
   }
   const abortController = new AbortController();
   currentAiDocSummaryAbortController = abortController;
+  const isForce = Boolean(options && options.force);
 
   aiDocSummaryModal.classList.remove("hidden");
   aiDocSummaryModal.setAttribute("aria-hidden", "false");
@@ -8428,22 +8429,30 @@ async function openAiDocSummaryModal(item) {
         <div class="ai-summary-statusbar" id="aiDocSummaryStatusBar">
           <span class="ai-summary-badge" id="aiDocSummaryBadge">
             <span class="ai-summary-pulse-dot"></span>
-            <span id="aiDocSummaryStatusText">正在提取文档并连接 DeepSeek-V4.1-Flash...</span>
+            <span id="aiDocSummaryStatusText">${isForce ? "正在重新提炼文档..." : "正在极速提炼文档并连接 DeepSeek..."}</span>
           </span>
-          <button class="copy-summary-btn hidden" id="copyAiDocSummaryBtn" type="button" title="复制总结全文">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <span id="copyAiDocSummaryBtnText">复制总结</span>
-          </button>
+          <div class="ai-summary-actions">
+            <button class="copy-summary-btn hidden" id="retryAiDocSummaryActionBtn" type="button" title="重新生成总结">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              <span>重新生成</span>
+            </button>
+            <button class="copy-summary-btn hidden" id="copyAiDocSummaryBtn" type="button" title="复制总结全文">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copyAiDocSummaryBtnText">复制总结</span>
+            </button>
+          </div>
         </div>
         <div id="aiDocSummaryStreamContent" class="ai-markdown ai-summary-content">
           <div class="ai-summary-loading">
             <div style="text-align:center;">
               <div style="font-size:24px;margin-bottom:8px;">⚡</div>
               <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4.1-Flash 极速分析提炼...</p>
-              <small style="opacity:0.75;margin-top:6px;display:block;">首字毫秒级响应，流式输出中，请稍候</small>
+              <small style="opacity:0.75;margin-top:6px;display:block;">首字秒级极速响应，实时流式输出</small>
             </div>
           </div>
         </div>
@@ -8454,8 +8463,13 @@ async function openAiDocSummaryModal(item) {
   const statusTextElem = document.getElementById("aiDocSummaryStatusText");
   const badgeElem = document.getElementById("aiDocSummaryBadge");
   const contentElem = document.getElementById("aiDocSummaryStreamContent");
+  const retryActionBtn = document.getElementById("retryAiDocSummaryActionBtn");
   const copyBtn = document.getElementById("copyAiDocSummaryBtn");
   const copyBtnText = document.getElementById("copyAiDocSummaryBtnText");
+
+  if (retryActionBtn) {
+    retryActionBtn.onclick = () => openAiDocSummaryModal(item, { force: true });
+  }
 
   let fullContent = "";
   let fullReasoning = "";
@@ -8475,7 +8489,6 @@ async function openAiDocSummaryModal(item) {
       const rendered = renderAiMarkdown(fullContent, fullReasoning);
       const thoughtBox = rendered.querySelector(".ai-thought-box");
       if (thoughtBox) {
-        // 与 AI 全库问答保持完全一致：默认折叠，保留用户手动点击开关状态
         thoughtBox.open = wasUserOpened;
       }
 
@@ -8506,7 +8519,7 @@ async function openAiDocSummaryModal(item) {
         "Accept": "text/event-stream",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ path: item.path, stream: true }),
+      body: JSON.stringify({ path: item.path, stream: true, force: isForce }),
       signal: abortController.signal,
     });
 
@@ -8539,7 +8552,11 @@ async function openAiDocSummaryModal(item) {
         try {
           const msg = JSON.parse(jsonStr);
           if (msg.type === "start") {
-            if (statusTextElem) statusTextElem.textContent = `DeepSeek-V4.1-Flash 正在提炼《${msg.docName || itemName(item)}》...`;
+            if (statusTextElem) {
+              statusTextElem.textContent = msg.cached
+                ? `⚡ 已加载历史提炼缓存`
+                : `DeepSeek-V4.1-Flash 正在极速提炼《${msg.docName || itemName(item)}》...`;
+            }
           } else if (msg.type === "status") {
             if (statusTextElem) statusTextElem.textContent = msg.message || "正在生成总结...";
           } else if (msg.type === "chunk") {
@@ -8566,7 +8583,10 @@ async function openAiDocSummaryModal(item) {
 
     if (badgeElem) {
       badgeElem.classList.add("done");
-      if (statusTextElem) statusTextElem.textContent = "✨ 总结生成完毕 (DeepSeek-V4.1-Flash)";
+      if (statusTextElem) statusTextElem.textContent = "✨ 极速提炼完毕 (DeepSeek-V4.1-Flash)";
+    }
+    if (retryActionBtn) {
+      retryActionBtn.classList.remove("hidden");
     }
     if (copyBtn) {
       copyBtn.classList.remove("hidden");
@@ -8590,7 +8610,7 @@ async function openAiDocSummaryModal(item) {
         </div>
       `;
       const retryBtn = document.getElementById("retryAiDocSummaryBtn");
-      if (retryBtn) retryBtn.onclick = () => openAiDocSummaryModal(item);
+      if (retryBtn) retryBtn.onclick = () => openAiDocSummaryModal(item, { force: true });
     }
   } finally {
     if (currentAiDocSummaryAbortController === abortController) {
