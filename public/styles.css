@@ -8892,3 +8892,51 @@ tbody tr.context-active-row {
   color: #1e40af;
 }
 
+/* 批量分享列表与项目卡片 */
+.share-batch-list {
+  max-height: 190px;
+  overflow-y: auto;
+  margin: 12px 0 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+  padding-right: 4px;
+}
+
+.share-batch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.share-batch-item:hover {
+  background: #f1f5f9;
+}
+
+.share-batch-item-name {
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.share-batch-item-btn {
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  min-height: 26px !important;
+  height: 26px !important;
+  flex-shrink: 0;
+  border-radius: 6px !important;
+}
+
+

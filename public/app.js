@@ -100,6 +100,7 @@ const shareLanLink = $("#shareLanLink");
 const copyPublicLinkBtn = $("#copyPublicLinkBtn");
 const copyLanLinkBtn = $("#copyLanLinkBtn");
 const copyShareLinkBtn = $("#copyShareLinkBtn");
+const shareBatchList = $("#shareBatchList");
 const createShareBtn = $("#createShareBtn");
 const shareDoneBtn = $("#shareDoneBtn");
 const shareActionButtons = $("#shareActionButtons");
@@ -263,6 +264,7 @@ const bulkPermanentDeleteBtn = $("#bulkPermanentDeleteBtn");
 const clearTrashSelectionBtn = $("#clearTrashSelectionBtn");
 const headerSelectAll = $("#headerSelectAll");
 const bulkDownloadBtn = $("#bulkDownloadBtn");
+const bulkShareBtn = $("#bulkShareBtn");
 const bulkCopyBtn = $("#bulkCopyBtn");
 const bulkMoveBtn = $("#bulkMoveBtn");
 const bulkDeleteBtn = $("#bulkDeleteBtn");
@@ -4717,6 +4719,7 @@ function updateSelectionUi() {
       }
     }
     if (bulkDownloadBtn) bulkDownloadBtn.disabled = count === 0;
+    if (bulkShareBtn) bulkShareBtn.disabled = count === 0;
     if (bulkCopyBtn) bulkCopyBtn.disabled = count === 0;
     if (bulkMoveBtn) bulkMoveBtn.disabled = count === 0;
     if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
@@ -5637,6 +5640,12 @@ function buildContextMenuItems(item, isMultiSelect) {
       },
       {
         type: "item",
+        label: `批量分享 (${count}项)`,
+        iconSvg: CONTEXT_MENU_ICONS.share,
+        handler: bulkShareSelected,
+      },
+      {
+        type: "item",
         label: "批量复制",
         iconSvg: CONTEXT_MENU_ICONS.copy,
         handler: bulkCopySelected,
@@ -6355,6 +6364,12 @@ async function bulkDownloadSelected() {
     await showErrorDialog(error.message);
     setStatus(error.message);
   }
+}
+
+function bulkShareSelected() {
+  const items = selectedItems();
+  if (!items || !items.length) return;
+  openShareModal(items);
 }
 
 async function resolveBulkDownloadLink(items, folderPasswords = {}) {
@@ -7726,6 +7741,7 @@ aiPromptSendBtn?.addEventListener("pointerdown", pulseAiSendButton);
 selectModeBtn.addEventListener("click", () => toggleSelectionMode());
 selectAllBtn.addEventListener("click", toggleAllSelection);
 bulkDownloadBtn.addEventListener("click", bulkDownloadSelected);
+bulkShareBtn?.addEventListener("click", bulkShareSelected);
 bulkCopyBtn.addEventListener("click", bulkCopySelected);
 bulkMoveBtn.addEventListener("click", openBulkMoveModal);
 bulkDeleteBtn.addEventListener("click", bulkDeleteSelected);
@@ -8743,6 +8759,7 @@ async function openZipArchiveModal(item) {
 
 // --- 3. 外链分享 ---
 let currentSharingItem = null;
+let currentSharingItems = [];
 
 async function copyTextWithFeedback(button, text) {
   let ok = false;
@@ -8789,12 +8806,34 @@ async function copyTextWithFeedback(button, text) {
   return ok;
 }
 
-function openShareModal(item) {
+function openShareModal(target) {
   if (!shareModal) return;
-  currentSharingItem = item;
+  const items = Array.isArray(target) ? target : (target ? [target] : []);
+  if (!items.length) return;
+  currentSharingItems = items;
+  currentSharingItem = items[0];
+
+  const isBatch = items.length > 1;
+
   shareModal.classList.remove("hidden");
   shareModal.setAttribute("aria-hidden", "false");
-  if (shareItemName) shareItemName.textContent = `正在分享：${itemName(item)}`;
+
+  if (shareModalTitle) {
+    shareModalTitle.textContent = isBatch ? `批量创建外链分享 (${items.length}项)` : "创建外链分享";
+  }
+
+  if (shareItemName) {
+    if (isBatch) {
+      const namesPreview = items.slice(0, 3).map((it) => itemName(it)).join("、");
+      const more = items.length > 3 ? ` 等共 ${items.length} 个项目` : "";
+      shareItemName.textContent = `已选择：${namesPreview}${more}`;
+      shareItemName.title = items.map((it) => itemName(it)).join("\n");
+    } else {
+      shareItemName.textContent = `正在分享：${itemName(items[0])}`;
+      shareItemName.title = itemName(items[0]);
+    }
+  }
+
   if (shareExpireDays) {
     shareExpireDays.value = "7";
     shareExpireDays.disabled = false;
@@ -8804,13 +8843,17 @@ function openShareModal(item) {
     sharePasswordInput.disabled = false;
   }
   if (shareResultPanel) shareResultPanel.classList.add("hidden");
+  if (shareBatchList) {
+    shareBatchList.innerHTML = "";
+    shareBatchList.classList.add("hidden");
+  }
   if (shareResultLink) shareResultLink.value = "";
   if (sharePublicLink) sharePublicLink.value = "";
   if (shareLanLink) shareLanLink.value = "";
   if (cancelShareBtn) cancelShareBtn.classList.remove("hidden");
   if (createShareBtn) {
     createShareBtn.disabled = false;
-    createShareBtn.textContent = "生成分享链接";
+    createShareBtn.textContent = isBatch ? `生成 ${items.length} 个分享链接` : "生成分享链接";
     createShareBtn.classList.remove("hidden");
   }
   if (shareDoneBtn) {
@@ -8819,36 +8862,53 @@ function openShareModal(item) {
 }
 
 async function handleCreateShare() {
-  if (!currentSharingItem) return;
+  const items = currentSharingItems && currentSharingItems.length ? currentSharingItems : (currentSharingItem ? [currentSharingItem] : []);
+  if (!items.length) return;
   if (!createShareBtn) return;
   createShareBtn.disabled = true;
-  createShareBtn.textContent = "正在生成...";
+  createShareBtn.textContent = items.length > 1 ? `正在生成 (0/${items.length})...` : "正在生成...";
+
   try {
     const expireDays = Number(shareExpireDays ? shareExpireDays.value : 7) || 0;
     const password = sharePasswordInput ? sharePasswordInput.value.trim() : "";
-    const res = await api("/api/shares", {
-      method: "POST",
-      body: JSON.stringify({
-        path: currentSharingItem.path,
-        expireDays,
-        password,
-      }),
-    });
-    const share = res.share;
-    const publicBase = (res.publicBaseUrl || window.location.origin).replace(/\/+$/, "");
-    let lanBase = (res.lanBaseUrl || "").replace(/\/+$/, "");
-    if (!lanBase && isLanHost(window.location.hostname)) {
-      lanBase = `${window.location.protocol}//${window.location.host}`.replace(/\/+$/, "");
-    }
-    const publicUrl = `${publicBase}/s/${share.id}`;
-    const lanUrl = lanBase ? `${lanBase}/s/${share.id}` : `${window.location.origin}/s/${share.id}`;
+    const pwdText = password ? `\n提取码：${password}` : "";
 
-    if (sharePublicLink) sharePublicLink.value = publicUrl;
-    if (shareLanLink) shareLanLink.value = lanUrl;
-    if (shareResultLink) shareResultLink.value = publicUrl;
-    if (shareResultPanel) shareResultPanel.classList.remove("hidden");
+    const results = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (items.length > 1) {
+        createShareBtn.textContent = `正在生成 (${i + 1}/${items.length})...`;
+      }
+      const res = await api("/api/shares", {
+        method: "POST",
+        body: JSON.stringify({
+          path: item.path,
+          expireDays,
+          password,
+        }),
+      });
+
+      const share = res.share;
+      const publicBase = (res.publicBaseUrl || window.location.origin).replace(/\/+$/, "");
+      let lanBase = (res.lanBaseUrl || "").replace(/\/+$/, "");
+      if (!lanBase && isLanHost(window.location.hostname)) {
+        lanBase = `${window.location.protocol}//${window.location.host}`.replace(/\/+$/, "");
+      }
+      const publicUrl = `${publicBase}/s/${share.id}`;
+      const lanUrl = lanBase ? `${lanBase}/s/${share.id}` : `${window.location.origin}/s/${share.id}`;
+
+      results.push({
+        item,
+        name: itemName(item),
+        share,
+        publicUrl,
+        lanUrl,
+      });
+    }
+
     if (shareExpireDays) shareExpireDays.disabled = true;
     if (sharePasswordInput) sharePasswordInput.disabled = true;
+    if (shareResultPanel) shareResultPanel.classList.remove("hidden");
 
     // 已经生成成功：隐藏“生成分享链接”和“取消”按钮，显示独立的“完成”按钮
     if (cancelShareBtn) cancelShareBtn.classList.add("hidden");
@@ -8861,33 +8921,105 @@ async function handleCreateShare() {
       shareDoneBtn.classList.remove("hidden");
     }
 
-    const pwdText = password ? `\n提取码：${password}` : "";
+    if (results.length === 1) {
+      const first = results[0];
+      if (sharePublicLink) sharePublicLink.value = first.publicUrl;
+      if (shareLanLink) shareLanLink.value = first.lanUrl;
+      if (shareResultLink) shareResultLink.value = first.publicUrl;
+      if (shareBatchList) {
+        shareBatchList.classList.add("hidden");
+        shareBatchList.innerHTML = "";
+      }
 
-    if (copyPublicLinkBtn) {
-      copyPublicLinkBtn.onclick = async () => {
-        const textToCopy = `【DPSir 智云盘分享 · 公网外链】\n文件：${itemName(currentSharingItem)}\n链接：${publicUrl}${pwdText}`;
-        await copyTextWithFeedback(copyPublicLinkBtn, textToCopy);
-      };
-    }
+      if (copyPublicLinkBtn) {
+        copyPublicLinkBtn.onclick = async () => {
+          const textToCopy = `【DPSir 智云盘分享 · 公网外链】\n文件：${first.name}\n链接：${first.publicUrl}${pwdText}`;
+          await copyTextWithFeedback(copyPublicLinkBtn, textToCopy);
+        };
+      }
 
-    if (copyLanLinkBtn) {
-      copyLanLinkBtn.onclick = async () => {
-        const textToCopy = `【DPSir 智云盘分享 · 局域网内网】\n文件：${itemName(currentSharingItem)}\n链接：${lanUrl}${pwdText}`;
-        await copyTextWithFeedback(copyLanLinkBtn, textToCopy);
-      };
-    }
+      if (copyLanLinkBtn) {
+        copyLanLinkBtn.onclick = async () => {
+          const textToCopy = `【DPSir 智云盘分享 · 局域网内网】\n文件：${first.name}\n链接：${first.lanUrl}${pwdText}`;
+          await copyTextWithFeedback(copyLanLinkBtn, textToCopy);
+        };
+      }
 
-    if (copyShareLinkBtn) {
-      copyShareLinkBtn.onclick = async () => {
-        const textToCopy = `【DPSir 智云盘分享】\n文件：${itemName(currentSharingItem)}\n🌐 公网链接：${publicUrl}\n🏠 局域网链接：${lanUrl}${pwdText}`;
-        await copyTextWithFeedback(copyShareLinkBtn, textToCopy);
-      };
+      if (copyShareLinkBtn) {
+        copyShareLinkBtn.onclick = async () => {
+          const textToCopy = `【DPSir 智云盘分享】\n文件：${first.name}\n🌐 公网链接：${first.publicUrl}\n🏠 局域网链接：${first.lanUrl}${pwdText}`;
+          await copyTextWithFeedback(copyShareLinkBtn, textToCopy);
+        };
+      }
+      setStatus("外链分享创建成功！");
+    } else {
+      if (sharePublicLink) sharePublicLink.value = `已生成 ${results.length} 个公网分享链接（点击右侧一键复制全部）`;
+      if (shareLanLink) shareLanLink.value = `已生成 ${results.length} 个局域网分享链接（点击右侧一键复制全部）`;
+
+      const allPublicText = `【DPSir 智云盘批量分享 · 公网外链】共 ${results.length} 项\n` +
+        results.map((r, idx) => `${idx + 1}. ${r.name}\n   链接：${r.publicUrl}`).join("\n") +
+        pwdText;
+
+      const allLanText = `【DPSir 智云盘批量分享 · 局域网内网】共 ${results.length} 项\n` +
+        results.map((r, idx) => `${idx + 1}. ${r.name}\n   链接：${r.lanUrl}`).join("\n") +
+        pwdText;
+
+      const allSummaryText = `【DPSir 智云盘批量分享】共 ${results.length} 项\n` +
+        results.map((r, idx) => `${idx + 1}. ${r.name}\n   🌐 公网：${r.publicUrl}\n   🏠 局域网：${r.lanUrl}`).join("\n") +
+        pwdText;
+
+      if (shareResultLink) shareResultLink.value = allSummaryText;
+
+      if (copyPublicLinkBtn) {
+        copyPublicLinkBtn.onclick = async () => {
+          await copyTextWithFeedback(copyPublicLinkBtn, allPublicText);
+        };
+      }
+
+      if (copyLanLinkBtn) {
+        copyLanLinkBtn.onclick = async () => {
+          await copyTextWithFeedback(copyLanLinkBtn, allLanText);
+        };
+      }
+
+      if (copyShareLinkBtn) {
+        copyShareLinkBtn.onclick = async () => {
+          await copyTextWithFeedback(copyShareLinkBtn, allSummaryText);
+        };
+      }
+
+      if (shareBatchList) {
+        shareBatchList.innerHTML = "";
+        shareBatchList.classList.remove("hidden");
+        for (const itemResult of results) {
+          const rowEl = document.createElement("div");
+          rowEl.className = "share-batch-item";
+
+          const nameEl = document.createElement("span");
+          nameEl.className = "share-batch-item-name";
+          nameEl.textContent = (itemResult.item.type === "folder" || itemResult.item.isDirectory ? "📁 " : "📄 ") + itemResult.name;
+          nameEl.title = itemResult.name;
+
+          const copyBtn = document.createElement("button");
+          copyBtn.type = "button";
+          copyBtn.className = "ghost compact share-batch-item-btn";
+          copyBtn.textContent = "📋 复制链接";
+          copyBtn.addEventListener("click", async () => {
+            const singleText = `【DPSir 智云盘分享】\n文件：${itemResult.name}\n🌐 公网链接：${itemResult.publicUrl}\n🏠 局域网链接：${itemResult.lanUrl}${pwdText}`;
+            await copyTextWithFeedback(copyBtn, singleText);
+          });
+
+          rowEl.appendChild(nameEl);
+          rowEl.appendChild(copyBtn);
+          shareBatchList.appendChild(rowEl);
+        }
+      }
+      setStatus(`已成功创建 ${results.length} 个外链分享！`);
     }
-    setStatus("外链分享创建成功！");
   } catch (err) {
     if (createShareBtn) {
       createShareBtn.disabled = false;
-      createShareBtn.textContent = "生成分享链接";
+      createShareBtn.textContent = items.length > 1 ? `生成 ${items.length} 个分享链接` : "生成分享链接";
       createShareBtn.classList.remove("hidden");
     }
     if (shareDoneBtn) shareDoneBtn.classList.add("hidden");
