@@ -5893,6 +5893,9 @@ app.get("/s/:id", (req, res) => {
 '  <script>' +
 '    const shareId = ' + JSON.stringify(shareId) + ';' +
 '    const container = document.getElementById("content");' +
+'    function esc(s) {' +
+'      return String(s || "").replace(/[&<>"\']/g, function(m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;", "\'": "&#39;" }[m]; });' +
+'    }' +
 '    function fmtSize(bytes) {' +
 '      if (!bytes || bytes === 0) return "0 B";' +
 '      const u = ["B", "KB", "MB", "GB", "TB"];' +
@@ -5904,14 +5907,14 @@ app.get("/s/:id", (req, res) => {
 '        const res = await fetch("/api/public-share/" + encodeURIComponent(shareId));' +
 '        const data = await res.json();' +
 '        if (!res.ok) {' +
-'          container.innerHTML = \'<div class="share-title" style="color:#f87171;">无法访问</div><div class="share-meta">\' + (data.error || "分享不可用") + \'</div>\';' +
+'          container.innerHTML = \'<div class="share-title" style="color:#f87171;">无法访问</div><div class="share-meta">\' + esc(data.error || "分享不可用") + \'</div>\';' +
 '          return;' +
 '        }' +
 '        const expStr = data.expiresAt ? " · 有效期至 " + data.expiresAt.slice(0, 10) : " · 永久有效";' +
 '        if (data.isBatch) {' +
 '          const totalSizeStr = fmtSize(data.size);' +
 '          const count = data.itemsCount || data.items?.length || 0;' +
-'          let html = \'<div class="share-title">\' + data.name + \'</div>\' +' +
+'          let html = \'<div class="share-title">\' + esc(data.name) + \'</div>\' +' +
 '            \'<div class="share-meta">共 \' + count + \' 个项目 · 总大小：\' + totalSizeStr + expStr + \'</div>\';' +
 '          if (data.hasPassword) {' +
 '            html += \'<input type="text" id="sharePwd" class="share-input" placeholder="请输入提取码" maxlength="20" />\';' +
@@ -5924,9 +5927,9 @@ app.get("/s/:id", (req, res) => {
 '            const itSize = it.isDirectory ? "文件夹" : fmtSize(it.size);' +
 '            const icon = it.isDirectory ? "📁" : "📄";' +
 '            html += \'<div class="share-item-row">\' +' +
-'              \'<div class="share-item-info" title="\' + it.name + \'">\' +' +
+'              \'<div class="share-item-info" title="\' + esc(it.name) + \'">\' +' +
 '                \'<span>\' + icon + \'</span>\' +' +
-'                \'<span class="share-item-name">\' + it.name + \'</span>\' +' +
+'                \'<span class="share-item-name">\' + esc(it.name) + \'</span>\' +' +
 '                \'<span class="share-item-size">(\' + itSize + \')</span>\' +' +
 '              \'</div>\' +' +
 '              \'<button class="share-btn compact share-single-dl" data-idx="\' + idx + \'" type="button">下载</button>\' +' +
@@ -5955,7 +5958,7 @@ app.get("/s/:id", (req, res) => {
 '          });' +
 '        } else {' +
 '          const sizeStr = data.isDirectory ? "文件夹" : fmtSize(data.size);' +
-'          let html = \'<div class="share-title">\' + data.name + \'</div>\' +' +
+'          let html = \'<div class="share-title">\' + esc(data.name) + \'</div>\' +' +
 '            \'<div class="share-meta">大小：\' + sizeStr + expStr + \'</div>\';' +
 '          if (data.hasPassword) {' +
 '            html += \'<input type="text" id="sharePwd" class="share-input" placeholder="请输入提取码" maxlength="20" />\';' +
