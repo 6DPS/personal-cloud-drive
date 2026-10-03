@@ -2040,8 +2040,8 @@ function sendFolderZip(res, folderPath) {
   archive.finalize();
 }
 
-function sendBulkZip(res, items) {
-  const filename = `selected-download-${new Date().toISOString().slice(0, 10)}.zip`;
+function sendBulkZip(res, items, customFilename) {
+  const filename = customFilename ? `${readableName(customFilename) || "batch-share"}.zip` : `selected-download-${new Date().toISOString().slice(0, 10)}.zip`;
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", contentDisposition("attachment", filename));
   res.setHeader("Cache-Control", "no-store, no-cache, no-transform");
@@ -5562,49 +5562,114 @@ app.get("/api/archive/entry", requireAuth, async (req, res, next) => {
 // ==========================================
 app.post("/api/shares", requireAuth, async (req, res, next) => {
   try {
-    const rel = normalizeRelative(req.body.path || "");
-    rejectHiddenDrivePath(rel);
-    ensureFolderAccess(req, rel);
-    const target = resolveDrivePathForUser(req.user.id, rel);
-    if (!fs.existsSync(target)) return res.status(404).json({ error: "文件不存在" });
-    const stat = await fsp.stat(target);
     const password = String(req.body.password || "").trim();
     const expireDays = Number(req.body.expireDays || 0);
+    const paths = Array.isArray(req.body.paths)
+      ? req.body.paths.map((p) => normalizeRelative(p || "")).filter(Boolean)
+      : (req.body.path ? [normalizeRelative(req.body.path)] : []);
 
+    if (!paths.length) {
+      return res.status(400).json({ error: "请选择要分享的文件或文件夹" });
+    }
+
+    const isBatch = paths.length > 1;
     const shares = await readShares();
-    const existingIndex = shares.findIndex(
-      (s) => s.userId === req.user.id && s.relPath === rel && (!s.expiresAt || new Date(s.expiresAt).getTime() > Date.now())
-    );
 
-    let record;
-    if (existingIndex !== -1) {
-      record = shares[existingIndex];
-      record.hasPassword = Boolean(password);
-      record.passwordHash = password ? crypto.createHash("sha256").update(password).digest("hex") : "";
-      record.expiresAt = expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null;
-      shares[existingIndex] = record;
-    } else {
-      const shareId = crypto.randomBytes(6).toString("hex");
-      record = {
-        id: shareId,
-        userId: req.user.id,
+    if (!isBatch) {
+      const rel = paths[0];
+      rejectHiddenDrivePath(rel);
+      ensureFolderAccess(req, rel);
+      const target = resolveDrivePathForUser(req.user.id, rel);
+      if (!fs.existsSync(target)) return res.status(404).json({ error: "文件不存在" });
+      const stat = await fsp.stat(target);
+
+      const existingIndex = shares.findIndex(
+        (s) => !s.isBatch && s.userId === req.user.id && s.relPath === rel && (!s.expiresAt || new Date(s.expiresAt).getTime() > Date.now())
+      );
+
+      let record;
+      if (existingIndex !== -1) {
+        record = shares[existingIndex];
+        record.hasPassword = Boolean(password);
+        record.passwordHash = password ? crypto.createHash("sha256").update(password).digest("hex") : "";
+        record.expiresAt = expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null;
+        shares[existingIndex] = record;
+      } else {
+        const shareId = crypto.randomBytes(6).toString("hex");
+        record = {
+          id: shareId,
+          userId: req.user.id,
+          isBatch: false,
+          relPath: rel,
+          name: path.basename(target),
+          isDirectory: stat.isDirectory(),
+          size: stat.isDirectory() ? 0 : stat.size,
+          hasPassword: Boolean(password),
+          passwordHash: password ? crypto.createHash("sha256").update(password).digest("hex") : "",
+          expiresAt: expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null,
+          createdAt: new Date().toISOString(),
+          downloads: 0,
+        };
+        shares.unshift(record);
+      }
+
+      await writeShares(shares);
+      const lan = lanAccessAddresses();
+      const primaryLanUrl = lan[0]?.url || "";
+      return res.json({
+        ok: true,
+        share: { ...record, passwordHash: undefined },
+        publicBaseUrl: PUBLIC_ACCESS_URL,
+        lanBaseUrl: primaryLanUrl,
+      });
+    }
+
+    // 多文件/文件夹批量单链接分享
+    const validItems = [];
+    let totalSize = 0;
+    for (const rel of paths) {
+      rejectHiddenDrivePath(rel);
+      ensureFolderAccess(req, rel);
+      const target = resolveDrivePathForUser(req.user.id, rel);
+      if (!fs.existsSync(target)) continue;
+      const stat = await fsp.stat(target);
+      const isDir = stat.isDirectory();
+      const size = isDir ? 0 : stat.size;
+      totalSize += size;
+      validItems.push({
         relPath: rel,
         name: path.basename(target),
-        isDirectory: stat.isDirectory(),
-        size: stat.isDirectory() ? 0 : stat.size,
-        hasPassword: Boolean(password),
-        passwordHash: password ? crypto.createHash("sha256").update(password).digest("hex") : "",
-        expiresAt: expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null,
-        createdAt: new Date().toISOString(),
-        downloads: 0,
-      };
-      shares.unshift(record);
+        isDirectory: isDir,
+        size,
+      });
     }
+
+    if (!validItems.length) {
+      return res.status(404).json({ error: "选中的文件不存在" });
+    }
+
+    const shareId = crypto.randomBytes(6).toString("hex");
+    const summaryName = `${validItems[0].name} 等 ${validItems.length} 个项目`;
+    const record = {
+      id: shareId,
+      userId: req.user.id,
+      isBatch: true,
+      name: summaryName,
+      items: validItems,
+      isDirectory: false,
+      size: totalSize,
+      hasPassword: Boolean(password),
+      passwordHash: password ? crypto.createHash("sha256").update(password).digest("hex") : "",
+      expiresAt: expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null,
+      createdAt: new Date().toISOString(),
+      downloads: 0,
+    };
+    shares.unshift(record);
 
     await writeShares(shares);
     const lan = lanAccessAddresses();
     const primaryLanUrl = lan[0]?.url || "";
-    res.json({
+    return res.json({
       ok: true,
       share: { ...record, passwordHash: undefined },
       publicBaseUrl: PUBLIC_ACCESS_URL,
@@ -5653,8 +5718,27 @@ app.get("/api/public-share/:id", async (req, res, next) => {
     if (share.expiresAt && new Date(share.expiresAt).getTime() < Date.now()) {
       return res.status(410).json({ error: "该分享链接已过期" });
     }
+    if (share.isBatch) {
+      return res.json({
+        id: share.id,
+        isBatch: true,
+        name: share.name,
+        itemsCount: (share.items || []).length,
+        items: (share.items || []).map((it, idx) => ({
+          index: idx,
+          name: it.name,
+          isDirectory: it.isDirectory,
+          size: it.size,
+        })),
+        size: share.size,
+        hasPassword: share.hasPassword,
+        expiresAt: share.expiresAt,
+        createdAt: share.createdAt,
+      });
+    }
     res.json({
       id: share.id,
+      isBatch: false,
       name: share.name,
       isDirectory: share.isDirectory,
       size: share.size,
@@ -5694,6 +5778,57 @@ app.all(["/api/public-share/:id/download", "/api/public-share/:id/preview"], pub
         return res.status(401).json({ error: "提取码错误" });
       }
     }
+
+    if (share.isBatch) {
+      // 1. 批量分享中的某一个单独文件/文件夹下载
+      const itemIndexStr = req.query.index;
+      if (itemIndexStr !== undefined && itemIndexStr !== "") {
+        const idx = parseInt(itemIndexStr, 10);
+        const item = share.items && share.items[idx];
+        if (!item) return res.status(404).json({ error: "指定的分享项目不存在" });
+        const target = resolveDrivePathForUser(share.userId, item.relPath);
+        if (!fs.existsSync(target)) return res.status(404).json({ error: "目标文件已不在网盘中" });
+        if (isDownload) {
+          share.downloads = (share.downloads || 0) + 1;
+          writeShares(shares).catch(() => {});
+        }
+        const stat = await fsp.stat(target);
+        if (stat.isDirectory()) {
+          return sendFolderZip(res, target);
+        } else {
+          return await sendFileStream(req, res, target, {
+            stat,
+            disposition: isDownload ? "attachment" : "inline",
+            filename: item.name,
+          });
+        }
+      }
+
+      // 2. 批量分享一键打包全部下载 (ZIP)
+      const itemsList = [];
+      for (const it of share.items || []) {
+        const fullPath = resolveDrivePathForUser(share.userId, it.relPath);
+        if (fs.existsSync(fullPath)) {
+          const stat = await fsp.stat(fullPath);
+          itemsList.push({
+            rel: it.relPath,
+            fullPath,
+            stat,
+          });
+        }
+      }
+      if (!itemsList.length) return res.status(404).json({ error: "分享的文件均已不存在" });
+
+      if (isDownload) {
+        share.downloads = (share.downloads || 0) + 1;
+        writeShares(shares).catch(() => {});
+      }
+
+      const zipFilename = `${share.name || "batch-share"}.zip`;
+      return sendBulkZip(res, itemsList, zipFilename);
+    }
+
+    // 单项目常规下载
     const target = resolveDrivePathForUser(share.userId, share.relPath);
     if (!fs.existsSync(target)) return res.status(404).json({ error: "目标文件已不在网盘中" });
 
@@ -5730,15 +5865,24 @@ app.get("/s/:id", (req, res) => {
 '  <title>DPSir 智云盘 - 文件分享</title>' +
 '  <link rel="stylesheet" href="/styles.css">' +
 '  <style>' +
-'    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: radial-gradient(circle at top, #1e293b, #0f172a); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; color: #f8fafc; }' +
-'    .share-box { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 32px; width: 90%; max-width: 460px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; }' +
-'    .share-logo { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 12px; }' +
+'    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: radial-gradient(circle at top, #1e293b, #0f172a); font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; color: #f8fafc; padding: 20px 12px; box-sizing: border-box; }' +
+'    .share-box { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 32px 24px; width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; box-sizing: border-box; }' +
+'    .share-logo { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 12px; display: block; }' +
 '    .share-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; word-break: break-all; }' +
-'    .share-meta { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }' +
-'    .share-input { width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; margin-bottom: 16px; text-align: center; }' +
-'    .share-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 12px; border-radius: 8px; background: #3b82f6; color: #fff; font-weight: 600; font-size: 16px; border: none; cursor: pointer; text-decoration: none; transition: background 0.2s; margin-top: 8px; }' +
+'    .share-meta { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }' +
+'    .share-input { width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; margin-bottom: 16px; text-align: center; outline: none; }' +
+'    .share-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.3); }' +
+'    .share-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 12px; border-radius: 8px; background: #3b82f6; color: #fff; font-weight: 600; font-size: 15px; border: none; cursor: pointer; text-decoration: none; transition: background 0.2s; box-sizing: border-box; }' +
 '    .share-btn:hover { background: #2563eb; }' +
-'    .share-error { color: #f87171; font-size: 13px; margin-top: 12px; min-height: 20px; }' +
+'    .share-btn.compact { padding: 5px 12px; font-size: 12px; border-radius: 6px; width: auto; font-weight: normal; }' +
+'    .share-error { color: #f87171; font-size: 13px; margin-top: 10px; min-height: 20px; }' +
+'    .share-batch-container { margin-top: 16px; text-align: left; }' +
+'    .share-items-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 10px 0; padding-right: 4px; }' +
+'    .share-item-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px; transition: background 0.15s; }' +
+'    .share-item-row:hover { background: rgba(255, 255, 255, 0.09); }' +
+'    .share-item-info { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; display: flex; align-items: center; gap: 6px; }' +
+'    .share-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }' +
+'    .share-item-size { font-size: 11px; color: #94a3b8; flex-shrink: 0; }' +
 '  </style>' +
 '</head>' +
 '<body>' +
@@ -5749,6 +5893,12 @@ app.get("/s/:id", (req, res) => {
 '  <script>' +
 '    const shareId = ' + JSON.stringify(shareId) + ';' +
 '    const container = document.getElementById("content");' +
+'    function fmtSize(bytes) {' +
+'      if (!bytes || bytes === 0) return "0 B";' +
+'      const u = ["B", "KB", "MB", "GB", "TB"];' +
+'      const i = Math.floor(Math.log(bytes) / Math.log(1024));' +
+'      return (bytes / Math.pow(1024, i)).toFixed(1) + " " + u[i];' +
+'    }' +
 '    async function loadShare() {' +
 '      try {' +
 '        const res = await fetch("/api/public-share/" + encodeURIComponent(shareId));' +
@@ -5757,22 +5907,70 @@ app.get("/s/:id", (req, res) => {
 '          container.innerHTML = \'<div class="share-title" style="color:#f87171;">无法访问</div><div class="share-meta">\' + (data.error || "分享不可用") + \'</div>\';' +
 '          return;' +
 '        }' +
-'        const sizeStr = data.isDirectory ? "文件夹" : (data.size > 1048576 ? (data.size / 1048576).toFixed(1) + " MB" : (data.size / 1024).toFixed(1) + " KB");' +
-'        let html = \'<div class="share-title">\' + data.name + \'</div>\' +' +
-'          \'<div class="share-meta">大小：\' + sizeStr + (data.expiresAt ? " · 有效期至 " + data.expiresAt.slice(0, 10) : " · 永久有效") + \'</div>\';' +
-'        if (data.hasPassword) {' +
-'          html += \'<input type="text" id="sharePwd" class="share-input" placeholder="请输入提取码" maxlength="20" />\';' +
-'        }' +
-'        html += \'<button id="dlBtn" class="share-btn">📥 立即下载</button><div id="errMsg" class="share-error"></div>\';' +
-'        container.innerHTML = html;' +
-'        document.getElementById("dlBtn").onclick = () => {' +
-'          const pwd = data.hasPassword ? document.getElementById("sharePwd").value.trim() : "";' +
-'          if (data.hasPassword && !pwd) {' +
-'            document.getElementById("errMsg").textContent = "请输入提取码";' +
-'            return;' +
+'        const expStr = data.expiresAt ? " · 有效期至 " + data.expiresAt.slice(0, 10) : " · 永久有效";' +
+'        if (data.isBatch) {' +
+'          const totalSizeStr = fmtSize(data.size);' +
+'          const count = data.itemsCount || data.items?.length || 0;' +
+'          let html = \'<div class="share-title">\' + data.name + \'</div>\' +' +
+'            \'<div class="share-meta">共 \' + count + \' 个项目 · 总大小：\' + totalSizeStr + expStr + \'</div>\';' +
+'          if (data.hasPassword) {' +
+'            html += \'<input type="text" id="sharePwd" class="share-input" placeholder="请输入提取码" maxlength="20" />\';' +
 '          }' +
-'          window.location.href = "/api/public-share/" + encodeURIComponent(shareId) + "/download?pwd=" + encodeURIComponent(pwd);' +
-'        };' +
+'          html += \'<button id="dlAllBtn" class="share-btn">📦 一键打包下载全部 (\' + count + \'项)</button>\';' +
+'          html += \'<div class="share-batch-container">\' +' +
+'            \'<div style="font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:6px;">包含文件列表：</div>\' +' +
+'            \'<div class="share-items-list">\';' +
+'          (data.items || []).forEach((it, idx) => {' +
+'            const itSize = it.isDirectory ? "文件夹" : fmtSize(it.size);' +
+'            const icon = it.isDirectory ? "📁" : "📄";' +
+'            html += \'<div class="share-item-row">\' +' +
+'              \'<div class="share-item-info" title="\' + it.name + \'">\' +' +
+'                \'<span>\' + icon + \'</span>\' +' +
+'                \'<span class="share-item-name">\' + it.name + \'</span>\' +' +
+'                \'<span class="share-item-size">(\' + itSize + \')</span>\' +' +
+'              \'</div>\' +' +
+'              \'<button class="share-btn compact share-single-dl" data-idx="\' + idx + \'" type="button">下载</button>\' +' +
+'            \'</div>\';' +
+'          });' +
+'          html += \'</div></div><div id="errMsg" class="share-error"></div>\';' +
+'          container.innerHTML = html;' +
+'          document.getElementById("dlAllBtn").onclick = () => {' +
+'            const pwd = data.hasPassword ? document.getElementById("sharePwd").value.trim() : "";' +
+'            if (data.hasPassword && !pwd) {' +
+'              document.getElementById("errMsg").textContent = "请输入提取码";' +
+'              return;' +
+'            }' +
+'            window.location.href = "/api/public-share/" + encodeURIComponent(shareId) + "/download?pwd=" + encodeURIComponent(pwd);' +
+'          };' +
+'          container.querySelectorAll(".share-single-dl").forEach((btn) => {' +
+'            btn.onclick = () => {' +
+'              const pwd = data.hasPassword ? document.getElementById("sharePwd").value.trim() : "";' +
+'              if (data.hasPassword && !pwd) {' +
+'                document.getElementById("errMsg").textContent = "请输入提取码";' +
+'                return;' +
+'              }' +
+'              const idx = btn.getAttribute("data-idx");' +
+'              window.location.href = "/api/public-share/" + encodeURIComponent(shareId) + "/download?pwd=" + encodeURIComponent(pwd) + "&index=" + encodeURIComponent(idx);' +
+'            };' +
+'          });' +
+'        } else {' +
+'          const sizeStr = data.isDirectory ? "文件夹" : fmtSize(data.size);' +
+'          let html = \'<div class="share-title">\' + data.name + \'</div>\' +' +
+'            \'<div class="share-meta">大小：\' + sizeStr + expStr + \'</div>\';' +
+'          if (data.hasPassword) {' +
+'            html += \'<input type="text" id="sharePwd" class="share-input" placeholder="请输入提取码" maxlength="20" />\';' +
+'          }' +
+'          html += \'<button id="dlBtn" class="share-btn">📥 立即下载</button><div id="errMsg" class="share-error"></div>\';' +
+'          container.innerHTML = html;' +
+'          document.getElementById("dlBtn").onclick = () => {' +
+'            const pwd = data.hasPassword ? document.getElementById("sharePwd").value.trim() : "";' +
+'            if (data.hasPassword && !pwd) {' +
+'              document.getElementById("errMsg").textContent = "请输入提取码";' +
+'              return;' +
+'            }' +
+'            window.location.href = "/api/public-share/" + encodeURIComponent(shareId) + "/download?pwd=" + encodeURIComponent(pwd);' +
+'          };' +
+'        }' +
 '      } catch (e) {' +
 '        container.innerHTML = \'<div class="share-title" style="color:#f87171;">加载失败</div><div class="share-meta">\' + e.message + \'</div>\';' +
 '      }' +
