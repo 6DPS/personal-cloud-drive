@@ -3002,12 +3002,41 @@ async function extractPdfText(filePath) {
   return result.text || "";
 }
 
+const imageOcrCache = new Map();
+const IMAGE_OCR_CACHE_MAX_ENTRIES = 120;
+
+function getCachedOcrText(cacheKey) {
+  const item = imageOcrCache.get(cacheKey);
+  if (!item) return null;
+  imageOcrCache.delete(cacheKey);
+  imageOcrCache.set(cacheKey, item);
+  return item;
+}
+
+function setCachedOcrText(cacheKey, text) {
+  if (imageOcrCache.size >= IMAGE_OCR_CACHE_MAX_ENTRIES) {
+    const oldestKey = imageOcrCache.keys().next().value;
+    if (oldestKey) imageOcrCache.delete(oldestKey);
+  }
+  imageOcrCache.set(cacheKey, text);
+}
+
 async function extractImageOcrText(filePath, stat) {
   if (stat.size > SEARCH_IMAGE_OCR_MAX_BYTES) return "";
-  const result = await recognizeImageText(filePath, AI_OCR_LANGS, {
-    logger: () => {},
-  });
-  return result?.data?.text || "";
+  const cacheKey = `${filePath}:${stat.size}:${Math.round(stat.mtimeMs || 0)}`;
+  const cached = getCachedOcrText(cacheKey);
+  if (cached !== null && cached !== undefined) return cached;
+  try {
+    const result = await recognizeImageText(filePath, AI_OCR_LANGS, {
+      logger: () => {},
+    });
+    const text = result?.data?.text || "";
+    setCachedOcrText(cacheKey, text);
+    return text;
+  } catch (error) {
+    console.warn("图片 OCR 提取失败：", filePath, error.message);
+    return "";
+  }
 }
 
 async function extractOfficeTextViaPdf(filePath, stat) {
@@ -6008,6 +6037,165 @@ function setCachedDocSummary(cacheKey, data) {
   docSummaryCache.set(cacheKey, { ...data, cachedAt: Date.now() });
 }
 
+function formatSpreadsheetForAi(filePath) {
+  try {
+    const workbook = XLSX.readFile(filePath, {
+      cellDates: true,
+      sheetRows: 101,
+      WTF: false,
+    });
+    const sheetSections = [];
+    for (const sheetName of workbook.SheetNames.slice(0, 10)) {
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        blankrows: false,
+        defval: "",
+        raw: false,
+      });
+      if (!rows.length) continue;
+      const displayRows = rows.slice(0, 100).map((r) => r.slice(0, 30));
+      let md = `### 工作表：【${sheetName}】（前 ${displayRows.length} 行数据预览）\n\n`;
+      if (displayRows.length >= 1) {
+        const header = displayRows[0];
+        md += "| " + header.map((h) => String(h || "").replace(/\|/g, "/")).join(" | ") + " |\n";
+        md += "| " + header.map(() => "---").join(" | ") + " |\n";
+        for (let i = 1; i < displayRows.length; i++) {
+          const r = displayRows[i];
+          md += "| " + r.map((c) => String(c || "").replace(/\|/g, "/")).join(" | ") + " |\n";
+        }
+      }
+      sheetSections.push(md);
+    }
+    return sheetSections.join("\n\n");
+  } catch (err) {
+    console.warn("表格内容解析失败：", filePath, err.message);
+    return "";
+  }
+}
+
+async function prepareDocForAiSummary(target, stat, sendSse) {
+  const ext = path.extname(target).toLowerCase();
+  const docName = path.basename(target);
+  const sizeReadable = `${stat.size} 字节 (${(stat.size / 1024).toFixed(1)} KB)`;
+  const mtimeReadable = new Date(stat.mtime).toLocaleString();
+
+  // 1. 电子表格类文件 (xlsx, xls, csv, tsv)
+  if ([".xlsx", ".xls", ".csv", ".tsv"].includes(ext)) {
+    sendSse?.({ type: "status", message: "正在解析多维表格数据与结构..." });
+    let tableContent = "";
+    if ([".xlsx", ".xls"].includes(ext)) {
+      tableContent = formatSpreadsheetForAi(target);
+    } else {
+      tableContent = await readTextFileHead(target, SEARCH_TEXT_MAX_BYTES);
+    }
+    if (!tableContent || !tableContent.trim()) {
+      tableContent = await extractSearchableContent(target, stat);
+    }
+    if (!tableContent || !tableContent.trim()) {
+      throw new Error("未能从该电子表格中解析到有效数据行");
+    }
+
+    const docSample = tableContent.trim().slice(0, 64000);
+    const systemPrompt = [
+      "你是一位专业资深的数据分析专家与报告提炼师，正在使用旗舰大模型对用户提供的电子表格数据进行深度、系统、高保真的洞察提炼与总结。",
+      "请输出结构严谨、排版清晰优美的 Markdown 格式，包含以下模块：",
+      "1. 【表格核心主题与概要】：用精炼语言阐明该表格的核心业务场景、记录主题、包含的工作表（Sheets）及数据量概况；",
+      "2. 【数据维度与结构说明】：梳理核心字段列名、指标口径、统计周期或分类维度；",
+      "3. 【核心指标与关键数据】：提炼关键数值、榜首/极值（最高/最低）、统计汇总、核心排名或异常值对比；",
+      "4. 【数据洞察与管理建议】：提炼从数据中发现的核心趋势、业务洞察、潜在风险点及后续行动建议。",
+      "注意：对于关键数字、排名与统计结果，请务必准确保留并严格基于数据事实，避免虚构。",
+    ].join("\n");
+    const userPrompt = `电子表格名称：《${docName}》\n文件大小：${sizeReadable}\n表格数据详情预览：\n\n${docSample}`;
+
+    return { systemPrompt, userPrompt, typeDesc: "多维表格数据与指标趋势" };
+  }
+
+  // 2. 图像素材类文件 (jpg, jpeg, png, webp, bmp, tif, tiff)
+  if (isImageOcrFile(target)) {
+    sendSse?.({ type: "status", message: "正在对图片进行 OCR 智能图文识别提取..." });
+    let ocrText = "";
+    try {
+      const ocrPromise = extractImageOcrText(target, stat);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("OCR超时")), 25000));
+      ocrText = (await Promise.race([ocrPromise, timeoutPromise])) || "";
+    } catch (ocrErr) {
+      console.warn("图片 OCR 提取超时或异常:", ocrErr.message);
+    }
+
+    const hasText = Boolean(ocrText && ocrText.trim());
+    if (hasText) {
+      const docSample = [
+        `【图片基础属性】`,
+        `- 文件名称：《${docName}》`,
+        `- 图像格式：${ext.slice(1).toUpperCase()}`,
+        `- 文件大小：${sizeReadable}`,
+        `- 最近修改：${mtimeReadable}`,
+        ``,
+        `【图片 OCR 识别提取的文字与排版内容】：`,
+        ocrText.trim().slice(0, 32000),
+      ].join("\n");
+
+      const systemPrompt = [
+        "你是一位专业资深的图像与图文内容分析专家，正在使用旗舰大模型对用户上传的图像素材及 OCR 识别出的文本内容进行深度、系统、高保真的提炼与总结。",
+        "请输出结构严谨、排版优美清晰的 Markdown 格式，包含以下模块：",
+        "1. 【图片主题与类型定位】：说明图片所属类型（如票据发票、文档截图、UI界面、统计图表、宣传海报、论文插图、科研数据图、证件资料等）与核心主题；",
+        "2. 【核心图文与信息整理】：结构化梳理图片中包含的关键文字、标题、字段及布局逻辑；",
+        "3. 【重点要点与数据分析】：分点详述核心信息、关键数据指标、重要结论或技术细节；",
+        "4. 【应用建议与总结】：提炼实用启示、注意事项或后续使用/归档建议。",
+        "如果识别内容包含公式、代码或表格数据，请使用规范 Markdown 排版准确保留。",
+      ].join("\n");
+      const userPrompt = `图像文件：《${docName}》\n文件大小：${sizeReadable}\n图像分析内容：\n\n${docSample}`;
+
+      return { systemPrompt, userPrompt, typeDesc: "OCR 图文内容与核心信息" };
+    } else {
+      // 纯图形/照片/无字素材
+      const docSample = [
+        `【图片基础属性】`,
+        `- 文件名称：《${docName}》`,
+        `- 图像格式：${ext.slice(1).toUpperCase()}`,
+        `- 文件大小：${sizeReadable}`,
+        `- 最近修改：${mtimeReadable}`,
+        ``,
+        `【图文识别扫描状态】：`,
+        `系统已对该图片进行了高精度 OCR 图文识别扫描。未检测到明显的印刷体/排版文字内容。该文件为纯视觉图像素材（如风光摄影、艺术插画、未含文字的设计图标、三维渲染图或低对比度素材）。`,
+      ].join("\n");
+
+      const systemPrompt = [
+        "你是一位专业资深的图像分析与多媒体资产管理专家，正在对用户上传的图像素材进行专业解读与归档建议。",
+        "由于该图片未检测到印刷文字内容，属于纯视觉图像素材。请根据文件名、文件属性与常见图像分类场景，输出排版清晰规范的 Markdown 格式总结：",
+        "1. 【素材定位与特征分析】：基于文件名和格式属性，分析该图像的可能用途（如桌面壁纸、摄影相片、设计底图、界面素材等）；",
+        "2. 【素材规格与存储属性】：总结文件的格式类型、数据体量及存储管理属性；",
+        "3. 【图像应用与归档建议】：提供该图像在个人云网盘中的分类标签、相册归档、备份优化及使用场景建议。",
+      ].join("\n");
+      const userPrompt = `图像文件：《${docName}》\n文件大小：${sizeReadable}\n图像分析内容：\n\n${docSample}`;
+
+      return { systemPrompt, userPrompt, typeDesc: "图像素材属性与应用建议" };
+    }
+  }
+
+  // 3. 常规文档与代码类文件 (pdf, docx, doc, pptx, ppt, txt, md, json, js, html, css, etc.)
+  sendSse?.({ type: "status", message: "正在极速提取文档正文内容..." });
+  const content = await extractSearchableContent(target, stat);
+  if (!content || !content.trim()) {
+    throw new Error("未能从该文档中提取到可读文本内容");
+  }
+
+  const docSample = content.trim().slice(0, 64000);
+  const systemPrompt = [
+    "你是一位高效专业的云网盘智能分析专家，正在使用旗舰大模型对用户文档进行深度、系统、高保真的提炼与总结。",
+    "请输出结构严谨、排版优美清晰的 Markdown 格式，包含以下模块：",
+    "1. 【核心主题与概要】：用精炼语言高度概括文档核心主旨与背景；",
+    "2. 【章节架构与脉络】：梳理文档主要结构和逻辑主线；",
+    "3. 【重点要点与数据】：分点详述核心观点、关键数据、重要结论或技术细节；",
+    "4. 【核心启示与建议】：提炼关键收获、实用启示或后续行动建议。",
+    "如果文档中包含专业术语、公式或数字，请准确保留并使用标准 Markdown 输出（数学公式使用标准 LaTeX 格式：行内公式用 $...$ 或 \\(...\\)，独立公式用 $$...$$ 或 \\[...\\]）。",
+  ].join("\n");
+  const userPrompt = `文档名称：《${docName}》\n文件大小：${sizeReadable}\n文档正文内容：\n\n${docSample}`;
+
+  return { systemPrompt, userPrompt, typeDesc: "正文核心内容" };
+}
+
 app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
   const isStream = req.body.stream !== false;
   let sseStarted = false;
@@ -6093,36 +6281,27 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
       });
       res.flushHeaders?.();
       sseStarted = true;
-      sendSse({ type: "start", docName, model: summaryModel, message: "正在极速提取文档内容..." });
+      sendSse({ type: "start", docName, model: summaryModel, message: "正在极速准备分析内容..." });
     }
 
-    const content = await extractSearchableContent(target, stat);
-    if (!content || !content.trim()) {
+    let docContext = null;
+    try {
+      docContext = await prepareDocForAiSummary(target, stat, isStream ? sendSse : null);
+    } catch (prepErr) {
       if (sseStarted) {
-        sendSse({ type: "error", error: "未能从该文档中提取到可读文本内容" });
+        sendSse({ type: "error", error: prepErr.message || "未能提取到有效内容进行分析" });
         return res.end();
       }
-      return res.status(400).json({ error: "未能从该文档中提取到可读文本内容" });
+      return res.status(400).json({ error: prepErr.message || "未能提取到有效内容进行分析" });
     }
 
-    const docSample = content.trim().slice(0, 64000);
-
-    const systemPrompt = [
-      "你是一位高效专业的云网盘智能分析专家，正在使用旗舰大模型对用户文档进行深度、系统、高保真的提炼与总结。",
-      "请输出结构严谨、排版优美清晰的 Markdown 格式，包含以下模块：",
-      "1. 【核心主题与概要】：用精炼语言高度概括文档核心主旨与背景；",
-      "2. 【章节架构与脉络】：梳理文档主要结构和逻辑主线；",
-      "3. 【重点要点与数据】：分点详述核心观点、关键数据、重要结论或技术细节；",
-      "4. 【核心启示与建议】：提炼关键收获、实用启示或后续行动建议。",
-      "如果文档中包含专业术语、公式或数字，请准确保留并使用标准 Markdown 输出（数学公式使用标准 LaTeX 格式：行内公式用 $...$ 或 \\(...\\)，独立公式用 $$...$$ 或 \\[...\\]）。",
-    ].join("\n");
-    const userPrompt = `文档名称：《${docName}》\n文件大小：${stat.size} 字节\n文档正文内容：\n\n${docSample}`;
+    const { systemPrompt, userPrompt, typeDesc } = docContext;
 
     // 默认关闭冗长深度思考（thinking: disabled），实现 1 秒内首字即时流式打印；若客户端有特殊要求再按需透传
     const thinkingOption = req.body.thinking || { type: "disabled" };
 
     if (isStream) {
-      sendSse({ type: "status", message: `AI 正在极速提炼正文 (${summaryModel})...` });
+      sendSse({ type: "status", message: `AI 正在极速提炼${typeDesc || "内容"} (${summaryModel})...` });
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);

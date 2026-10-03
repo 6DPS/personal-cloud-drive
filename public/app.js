@@ -3732,6 +3732,17 @@ function fileExt(name) {
   return dot === -1 ? "" : name.slice(dot + 1).toLowerCase();
 }
 
+const AI_SUMMARIZE_EXTENSIONS = new Set([
+  "txt", "md", "json", "js", "ts", "html", "css", "py", "csv", "tsv", "log", "xml", "sql", "sh", "bat",
+  "pdf", "doc", "docx", "ppt", "pptx", "xlsx", "xls",
+  "jpg", "jpeg", "png", "webp", "bmp", "tif", "tiff"
+]);
+
+function canSummarizeFile(name) {
+  if (!name) return false;
+  return AI_SUMMARIZE_EXTENSIONS.has(fileExt(name));
+}
+
 function itemName(item) {
   return item.displayName || item.name;
 }
@@ -5676,7 +5687,7 @@ function buildContextMenuItems(item, isMultiSelect) {
   // Single Item Normal Mode
   const isFolder = item.type === "folder" || item.isDirectory;
   const isZip = !isFolder && fileExt(item.name) === "zip";
-  const canSummarize = !isFolder && ["txt", "md", "json", "js", "ts", "html", "css", "py", "csv", "log", "pdf", "doc", "docx", "ppt", "pptx"].includes(fileExt(item.name));
+  const canSummarize = !isFolder && canSummarizeFile(item.name);
 
   const items = [];
 
@@ -6927,7 +6938,7 @@ async function openPreview(item) {
   previewModal.setAttribute("aria-hidden", "false");
 
   // AI Document Summarize button toggle
-  const canSummarize = ["txt", "md", "json", "js", "ts", "html", "css", "py", "csv", "log", "pdf", "doc", "docx", "ppt", "pptx"].includes(fileExt(item.name));
+  const canSummarize = canSummarizeFile(item.name);
   if (previewAiSummarizeBtn) {
     if (canSummarize) {
       previewAiSummarizeBtn.classList.remove("hidden");
@@ -9112,11 +9123,31 @@ async function openAiDocSummaryModal(item, options = {}) {
   const abortController = new AbortController();
   currentAiDocSummaryAbortController = abortController;
   const isForce = Boolean(options && options.force);
+  const ext = fileExt(item.name);
+  const isImage = ["jpg", "jpeg", "png", "webp", "bmp", "tif", "tiff"].includes(ext);
+  const isTable = ["xlsx", "xls", "csv", "tsv"].includes(ext);
+
+  let summaryTitle = `DeepSeek 智能总结：${itemName(item)}`;
+  let initialStatus = isForce ? "正在重新提炼..." : "正在极速提炼文档并连接 DeepSeek...";
+  let loadingTitle = "正在由 DeepSeek-V4.1-Flash 极速分析提炼...";
+  let loadingSub = "首字秒级极速响应，实时流式输出";
+
+  if (isImage) {
+    summaryTitle = `DeepSeek 智能图文总结：${itemName(item)}`;
+    initialStatus = isForce ? "正在重新进行 OCR 图文识别与提炼..." : "正在进行 OCR 图文识别与分析...";
+    loadingTitle = "正在进行 OCR 图文识别与 DeepSeek 深度分析...";
+    loadingSub = "智能提取图片文字与核心信息，实时流式呈现";
+  } else if (isTable) {
+    summaryTitle = `DeepSeek 表格智能分析：${itemName(item)}`;
+    initialStatus = isForce ? "正在重新解析表格数据并分析..." : "正在解析多维表格数据与指标...";
+    loadingTitle = "正在深度解析表格结构与数据趋势...";
+    loadingSub = "多工作表维度拆解与核心数据洞察提炼";
+  }
 
   aiDocSummaryModal.classList.remove("hidden");
   aiDocSummaryModal.setAttribute("aria-hidden", "false");
   if (aiDocSummaryTitle) {
-    aiDocSummaryTitle.textContent = `DeepSeek 智能总结：${itemName(item)}`;
+    aiDocSummaryTitle.textContent = summaryTitle;
   }
   if (aiDocSummaryBody) {
     aiDocSummaryBody.innerHTML = `
@@ -9124,7 +9155,7 @@ async function openAiDocSummaryModal(item, options = {}) {
         <div class="ai-summary-statusbar" id="aiDocSummaryStatusBar">
           <span class="ai-summary-badge" id="aiDocSummaryBadge">
             <span class="ai-summary-pulse-dot"></span>
-            <span id="aiDocSummaryStatusText">${isForce ? "正在重新提炼文档..." : "正在极速提炼文档并连接 DeepSeek..."}</span>
+            <span id="aiDocSummaryStatusText">${initialStatus}</span>
           </span>
           <div class="ai-summary-actions">
             <button class="copy-summary-btn hidden" id="retryAiDocSummaryActionBtn" type="button" title="重新生成总结">
@@ -9146,8 +9177,8 @@ async function openAiDocSummaryModal(item, options = {}) {
           <div class="ai-summary-loading">
             <div style="text-align:center;">
               <div style="font-size:24px;margin-bottom:8px;">⚡</div>
-              <p style="margin:0;font-weight:600;">正在由 DeepSeek-V4.1-Flash 极速分析提炼...</p>
-              <small style="opacity:0.75;margin-top:6px;display:block;">首字秒级极速响应，实时流式输出</small>
+              <p style="margin:0;font-weight:600;">${loadingTitle}</p>
+              <small style="opacity:0.75;margin-top:6px;display:block;">${loadingSub}</small>
             </div>
           </div>
         </div>
@@ -9250,7 +9281,7 @@ async function openAiDocSummaryModal(item, options = {}) {
             if (statusTextElem) {
               statusTextElem.textContent = msg.cached
                 ? `⚡ 已加载历史提炼缓存`
-                : `DeepSeek-V4.1-Flash 正在极速提炼《${msg.docName || itemName(item)}》...`;
+                : (msg.message || `DeepSeek-V4.1-Flash 正在极速提炼《${msg.docName || itemName(item)}》...`);
             }
           } else if (msg.type === "status") {
             if (statusTextElem) statusTextElem.textContent = msg.message || "正在生成总结...";
