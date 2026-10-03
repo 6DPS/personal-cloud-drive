@@ -7,6 +7,7 @@ const state = {
   draggedItemPath: "",
   selectionMode: false,
   selectedPaths: new Set(),
+  lastAnchorKey: "",
   folderCache: new Map(),
   folderListCache: null,
   folderListCacheAt: 0,
@@ -4618,6 +4619,64 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("resize", () => closeRowActionMenus());
 document.querySelector(".file-panel")?.addEventListener("scroll", () => closeRowActionMenus(), { passive: true });
 
+function itemKeyOf(item) {
+  return item ? (item.path || item.id || item.trashId || "") : "";
+}
+
+function handleRangeSelection(targetItem, { append = false } = {}) {
+  const targetKey = itemKeyOf(targetItem);
+  if (!targetKey || !state.items || state.items.length === 0) return;
+
+  const targetIdx = state.items.findIndex((it) => itemKeyOf(it) === targetKey);
+  if (targetIdx === -1) return;
+
+  let anchorIdx = -1;
+  if (state.lastAnchorKey) {
+    anchorIdx = state.items.findIndex((it) => itemKeyOf(it) === state.lastAnchorKey);
+  }
+
+  if (anchorIdx === -1) {
+    anchorIdx = 0;
+    state.lastAnchorKey = itemKeyOf(state.items[0]);
+  }
+
+  const start = Math.min(anchorIdx, targetIdx);
+  const end = Math.max(anchorIdx, targetIdx);
+
+  if (!append) {
+    state.selectedPaths.clear();
+  }
+
+  for (let i = start; i <= end; i++) {
+    const it = state.items[i];
+    if (it) {
+      state.selectedPaths.add(itemKeyOf(it));
+    }
+  }
+
+  state.selectionMode = state.selectedPaths.size > 0;
+  updateSelectionUi();
+  syncSelectionRows();
+
+  window.getSelection()?.removeAllRanges();
+}
+
+function handleToggleSelection(targetItem) {
+  const targetKey = itemKeyOf(targetItem);
+  if (!targetKey) return;
+
+  if (state.selectedPaths.has(targetKey)) {
+    state.selectedPaths.delete(targetKey);
+  } else {
+    state.selectedPaths.add(targetKey);
+  }
+
+  state.lastAnchorKey = targetKey;
+  state.selectionMode = state.selectedPaths.size > 0;
+  updateSelectionUi();
+  syncSelectionRows();
+}
+
 function selectedItems() {
   return state.items.filter((item) => state.selectedPaths.has(item.path || item.id || item.trashId));
 }
@@ -4625,6 +4684,7 @@ function selectedItems() {
 function clearSelection() {
   state.selectedPaths.clear();
   state.selectionMode = false;
+  state.lastAnchorKey = "";
   updateSelectionUi();
   syncSelectionRows();
   if (!state.trashMode && !state.starredMode) void flushPendingRealtimeRefresh();
@@ -5158,17 +5218,36 @@ function renderRows(options = {}) {
       checkbox.className = "row-select";
       checkbox.checked = isSelected;
       checkbox.setAttribute("aria-label", `选择 ${item.name}`);
-      checkbox.addEventListener("click", (event) => event.stopPropagation());
+      checkbox.addEventListener("click", (event) => {
+        if (event.shiftKey) {
+          event.preventDefault();
+          handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+          return;
+        }
+        event.stopPropagation();
+      });
       checkbox.addEventListener("change", () => {
         state.selectionMode = true;
         toggleItemSelection(item, checkbox.checked);
+        state.lastAnchorKey = itemKey;
       });
       selectTd.append(checkbox);
 
       tr.addEventListener("click", (event) => {
         if (event.target.closest("button") || event.target.closest("a") || event.target.closest("input")) return;
+        if (event.shiftKey) {
+          event.preventDefault();
+          handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+          return;
+        }
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          handleToggleSelection(item);
+          return;
+        }
         state.selectionMode = true;
         toggleItemSelection(item, !state.selectedPaths.has(itemKey));
+        state.lastAnchorKey = itemKey;
       });
 
       const nameTd = document.createElement("td");
@@ -5249,10 +5328,18 @@ function renderRows(options = {}) {
     checkbox.className = "row-select";
     checkbox.checked = state.selectedPaths.has(item.path);
     checkbox.setAttribute("aria-label", `选择 ${itemName(item)}`);
-    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("click", (event) => {
+      if (event.shiftKey) {
+        event.preventDefault();
+        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+        return;
+      }
+      event.stopPropagation();
+    });
     checkbox.addEventListener("change", () => {
       state.selectionMode = true;
       toggleItemSelection(item, checkbox.checked);
+      state.lastAnchorKey = itemKeyOf(item);
     });
     selectTd.append(checkbox);
 
@@ -5285,7 +5372,20 @@ function renderRows(options = {}) {
       nameBtn.textContent = itemName(item);
     }
     nameBtn.title = item.type === "folder" ? "进入文件夹" : (fileExt(item.name) === "zip" ? "浏览压缩包内容" : "预览文件");
-    nameBtn.addEventListener("click", async () => {
+    nameBtn.addEventListener("click", async (event) => {
+      if (event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleToggleSelection(item);
+        return;
+      }
+      state.lastAnchorKey = itemKeyOf(item);
       if (item.type === "folder") {
         const ok = await ensureFolderReady(item.path, itemName(item));
         if (ok) {
@@ -5384,6 +5484,23 @@ function renderRows(options = {}) {
     actionsTd.append(actions);
 
     tr.append(selectTd, nameTd, sizeTd, timeTd, actionsTd);
+    tr.addEventListener("click", (event) => {
+      if (event.target.closest("button") || event.target.closest("a") || event.target.closest("input")) return;
+      if (event.shiftKey) {
+        event.preventDefault();
+        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        handleToggleSelection(item);
+        return;
+      }
+      if (state.selectionMode) {
+        toggleItemSelection(item, !state.selectedPaths.has(itemKeyOf(item)));
+      }
+      state.lastAnchorKey = itemKeyOf(item);
+    });
     tr.addEventListener("dragstart", (event) => {
       state.draggedItemPath = item.path;
       event.dataTransfer.effectAllowed = "move";
@@ -5837,6 +5954,9 @@ function applyFolderData(data, options = {}) {
   state.searchTokens = [];
 
   const pathChanged = state.path !== data.path;
+  if (pathChanged) {
+    state.lastAnchorKey = "";
+  }
   if (pathChanged && aiDrawer && !aiDrawer.classList.contains("hidden") && state.aiDrawer.mode === "global") {
     archiveCurrentAiSession();
     saveAiConversation();
@@ -7781,12 +7901,38 @@ document.addEventListener("keydown", (event) => {
       return;
     }
   }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+    const activeEl = document.activeElement;
+    const tagName = activeEl?.tagName?.toLowerCase();
+    if (tagName === "input" || tagName === "textarea" || activeEl?.isContentEditable) {
+      return;
+    }
+    if (document.querySelector(".modal:not(.hidden)")) {
+      return;
+    }
+    if (driveView && driveView.classList.contains("hidden")) {
+      return;
+    }
+    if (state.items && state.items.length > 0) {
+      event.preventDefault();
+      state.selectedPaths.clear();
+      for (const item of state.items) {
+        state.selectedPaths.add(itemKeyOf(item));
+      }
+      state.selectionMode = true;
+      updateSelectionUi();
+      syncSelectionRows();
+      return;
+    }
+  }
+
   if (event.key !== "Escape") return;
   if (closeAllFolderDropdowns()) {
     event.preventDefault();
     event.stopPropagation();
     return;
   }
+  const hadOpenModal = Boolean(document.querySelector(".modal:not(.hidden)"));
   closeUploadModal();
   closeBulkMoveModal();
   closePreview();
@@ -7798,6 +7944,9 @@ document.addEventListener("keydown", (event) => {
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");
   if (aiDocSummaryModal) closeAiDocSummaryModal();
+  if (!hadOpenModal && state.selectionMode) {
+    clearSelection();
+  }
 });
 
 document.addEventListener("click", (event) => {
@@ -8032,6 +8181,7 @@ async function loadStarred(options = {}) {
   if (!options?.preserveSelection) {
     state.selectedPaths.clear();
     state.selectionMode = false;
+    state.lastAnchorKey = "";
   }
   updateSelectionUi();
   syncAiGlobalBtnUi();
@@ -8165,6 +8315,7 @@ async function loadTrash(options = {}) {
   if (!options?.preserveSelection) {
     state.selectedPaths.clear();
     state.selectionMode = false;
+    state.lastAnchorKey = "";
   }
   updateSelectionUi();
   syncAiGlobalBtnUi();

@@ -2154,6 +2154,8 @@ td.select-col {
 }
 
 tbody tr {
+  user-select: none;
+  -webkit-user-select: none;
   transition:
     background 150ms ease,
     transform 150ms ease;
