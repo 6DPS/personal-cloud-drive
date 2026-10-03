@@ -4967,7 +4967,153 @@ function updateSearchVisibleItems(options = {}) {
   if (options.render) renderRows({ noAnimation: true });
 }
 
+async function renameItem(item) {
+  const result = await openDialog({
+    eyebrow: "重命名",
+    title: "重命名项目",
+    description: `请输入“${itemName(item)}”的新名称。`,
+    input: { label: "新名称", value: itemName(item) },
+    validate(value) {
+      if (!value.trim()) return "请输入新的名称";
+      return "";
+    },
+  });
+  const name = result?.value?.trim();
+  if (!name || name === item.name || name === itemName(item)) return;
+  await runAction(() => api("/api/rename", {
+    method: "POST",
+    body: JSON.stringify({ path: item.path, name }),
+  }));
+}
+
+async function copyItem(item) {
+  const data = await getFolderList();
+  const options = folderSelectOptions(data.folders, {
+    excludeInside: item.type === "folder" ? item.path : "",
+  });
+  const result = await openDialog({
+    eyebrow: "复制",
+    title: "复制项目",
+    description: `请选择要把“${itemName(item)}”复制进去的目标文件夹。`,
+    select: {
+      label: "目标文件夹",
+      value: state.path,
+      options,
+    },
+    validate(first, second, selected) {
+      if (!options.some((option) => option.value === selected)) return "请选择有效的目标文件夹";
+      return "";
+    },
+  });
+  if (result === null) return;
+  const targetDir = result.selectedValue;
+  await runAction(() => api("/api/copy", {
+    method: "POST",
+    body: JSON.stringify({ source: item.path, targetDir }),
+  }));
+}
+
+async function moveItem(item) {
+  const data = await getFolderList();
+  const options = folderSelectOptions(data.folders, {
+    excludeInside: item.type === "folder" ? item.path : "",
+  });
+  const result = await openDialog({
+    eyebrow: "移动",
+    title: "移动项目",
+    description: `请选择要把“${itemName(item)}”移动进去的目标文件夹。`,
+    select: {
+      label: "目标文件夹",
+      value: parentPath(item.path),
+      options,
+    },
+    validate(first, second, selected) {
+      if (!options.some((option) => option.value === selected)) return "请选择有效的目标文件夹";
+      return "";
+    },
+  });
+  if (result === null) return;
+  const targetDir = result.selectedValue;
+  await runAction(() => api("/api/move", {
+    method: "POST",
+    body: JSON.stringify({ source: item.path, targetDir }),
+  }));
+}
+
+async function deleteItem(item) {
+  const isLockedFolder = item.type === "folder" && item.locked;
+  let verified = null;
+  if (isLockedFolder) {
+    verified = await verifyFolderDeletion(item);
+    if (!verified) return;
+  }
+  const ok = await showConfirmDialog("删除项目", `确认删除“${itemName(item)}”吗？`);
+  if (!ok) return;
+  await runAction(() => api("/api/item", {
+    method: "DELETE",
+    body: JSON.stringify(
+      isLockedFolder
+        ? {
+            path: item.path,
+            adminPassword: verified.adminPassword,
+            currentPassword: verified.currentPassword,
+          }
+        : { path: item.path }
+    ),
+  }));
+}
+
+async function restoreTrashItem(item) {
+  const id = item.id || item.trashId;
+  try {
+    suppressNextRealtimeRefresh();
+    const res = await api("/api/trash/restore", {
+      method: "POST",
+      body: JSON.stringify({ id, trashId: id }),
+    });
+    setStatus(res.message || `已还原“${item.name}”`);
+    clearFolderCaches();
+    scheduleStorageUsageRefresh({ force: true });
+    await loadTrash();
+  } catch (err) {
+    showErrorDialog(err.message || "还原失败");
+  }
+}
+
+async function permanentDeleteTrashItem(item) {
+  const ok = await showConfirmDialog("彻底删除", `确认永久删除“${item.name}”吗？此操作无法撤销。`);
+  if (!ok) return;
+  const id = item.id || item.trashId;
+  try {
+    suppressNextRealtimeRefresh();
+    const res = await api("/api/trash/permanent", {
+      method: "DELETE",
+      body: JSON.stringify({ id, trashId: id }),
+    });
+    setStatus(res.message || `已彻底删除“${item.name}”`);
+    scheduleStorageUsageRefresh({ force: true });
+    await loadTrash();
+  } catch (err) {
+    showErrorDialog(err.message || "删除失败");
+  }
+}
+
+async function executeOpenItem(item) {
+  if (item.type === "folder" || item.isDirectory) {
+    const ok = await ensureFolderReady(item.path, itemName(item));
+    if (ok) {
+      if (state.starredMode) exitStarredMode();
+      loadFolder(item.path);
+    }
+  } else if (fileExt(item.name) === "zip") {
+    openZipArchiveModal(item);
+  } else {
+    openPreview(item);
+  }
+}
+
 function renderRows(options = {}) {
+  closeContextMenu();
   closeRowActionMenus();
   document.querySelectorAll(".row-action-menu").forEach((menu) => menu.remove());
   document.querySelectorAll(".row-action-menu-bridge").forEach((bridge) => bridge.remove());
@@ -5063,20 +5209,7 @@ function renderRows(options = {}) {
         className: "restore-action-btn",
         handler: async (event) => {
           if (event) event.stopPropagation();
-          const id = item.id || item.trashId;
-          try {
-            suppressNextRealtimeRefresh();
-            const res = await api("/api/trash/restore", {
-              method: "POST",
-              body: JSON.stringify({ id, trashId: id }),
-            });
-            setStatus(res.message || `已还原“${item.name}”`);
-            clearFolderCaches();
-            scheduleStorageUsageRefresh({ force: true });
-            await loadTrash();
-          } catch (err) {
-            showErrorDialog(err.message || "还原失败");
-          }
+          await restoreTrashItem(item);
         },
       });
 
@@ -5086,21 +5219,7 @@ function renderRows(options = {}) {
         className: "danger-action-btn",
         handler: async (event) => {
           if (event) event.stopPropagation();
-          const ok = await showConfirmDialog("彻底删除", `确认永久删除“${item.name}”吗？此操作无法撤销。`);
-          if (!ok) return;
-          const id = item.id || item.trashId;
-          try {
-            suppressNextRealtimeRefresh();
-            const res = await api("/api/trash/permanent", {
-              method: "DELETE",
-              body: JSON.stringify({ id, trashId: id }),
-            });
-            setStatus(res.message || `已彻底删除“${item.name}”`);
-            scheduleStorageUsageRefresh({ force: true });
-            await loadTrash();
-          } catch (err) {
-            showErrorDialog(err.message || "删除失败");
-          }
+          await permanentDeleteTrashItem(item);
         },
       });
 
@@ -5211,98 +5330,10 @@ function renderRows(options = {}) {
     const actions = document.createElement("div");
     actions.className = "row-actions";
 
-    const renameAction = async () => {
-        const result = await openDialog({
-          eyebrow: "重命名",
-          title: "重命名项目",
-          description: `请输入“${itemName(item)}”的新名称。`,
-          input: { label: "新名称", value: itemName(item) },
-          validate(value) {
-            if (!value.trim()) return "请输入新的名称";
-            return "";
-          },
-        });
-        const name = result?.value?.trim();
-        if (!name || name === item.name || name === itemName(item)) return;
-        await runAction(() => api("/api/rename", {
-          method: "POST",
-          body: JSON.stringify({ path: item.path, name }),
-        }));
-      };
-    const copyAction = async () => {
-        const data = await getFolderList();
-        const options = folderSelectOptions(data.folders, {
-          excludeInside: item.type === "folder" ? item.path : "",
-        });
-        const result = await openDialog({
-          eyebrow: "复制",
-          title: "复制项目",
-          description: `请选择要把“${itemName(item)}”复制进去的目标文件夹。`,
-          select: {
-            label: "目标文件夹",
-            value: state.path,
-            options,
-          },
-          validate(first, second, selected) {
-            if (!options.some((option) => option.value === selected)) return "请选择有效的目标文件夹";
-            return "";
-          },
-        });
-        if (result === null) return;
-        const targetDir = result.selectedValue;
-        await runAction(() => api("/api/copy", {
-          method: "POST",
-          body: JSON.stringify({ source: item.path, targetDir }),
-        }));
-      };
-    const moveAction = async () => {
-        const data = await getFolderList();
-        const options = folderSelectOptions(data.folders, {
-          excludeInside: item.type === "folder" ? item.path : "",
-        });
-        const result = await openDialog({
-          eyebrow: "移动",
-          title: "移动项目",
-          description: `请选择要把“${itemName(item)}”移动进去的目标文件夹。`,
-          select: {
-            label: "目标文件夹",
-            value: parentPath(item.path),
-            options,
-          },
-          validate(first, second, selected) {
-            if (!options.some((option) => option.value === selected)) return "请选择有效的目标文件夹";
-            return "";
-          },
-        });
-        if (result === null) return;
-        const targetDir = result.selectedValue;
-        await runAction(() => api("/api/move", {
-          method: "POST",
-          body: JSON.stringify({ source: item.path, targetDir }),
-        }));
-      };
-    const deleteAction = async () => {
-        const isLockedFolder = item.type === "folder" && item.locked;
-        let verified = null;
-        if (isLockedFolder) {
-          verified = await verifyFolderDeletion(item);
-          if (!verified) return;
-        }
-        const ok = await showConfirmDialog("删除项目", `确认删除“${itemName(item)}”吗？`);
-        if (!ok) return;
-        await runAction(() => api("/api/item", {
-          method: "DELETE",
-          body: JSON.stringify(
-            isLockedFolder
-              ? {
-                  path: item.path,
-                  adminPassword: verified.adminPassword,
-                  currentPassword: verified.currentPassword,
-                }
-              : { path: item.path }
-          ),
-        }));
-      };
+    const renameAction = () => renameItem(item);
+    const copyAction = () => copyItem(item);
+    const moveAction = () => moveItem(item);
+    const deleteAction = () => deleteItem(item);
 
     const aiBtn = aiActionSlot(item, options, index);
     if (aiBtn) actions.append(aiBtn);
@@ -5389,6 +5420,412 @@ function renderRows(options = {}) {
     fragment.append(tr);
   });
   fileRows.append(fragment);
+}
+
+/* =========================================================================
+   桌面级鼠标右键上下文菜单核心系统 (Desktop Context Menu Subsystem)
+   ========================================================================= */
+
+const CONTEXT_MENU_ICONS = {
+  open: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  folderOpen: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  archive: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
+  sparkle: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>`,
+  aiChat: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><path d="M12 7.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor" stroke="none"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.6 2.1A2 2 0 0 0 4.5 21h15a2 2 0 0 0 1.9-1.9L22 17"/></svg>`,
+  share: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+  starFilled: `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  starEmpty: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  lockClosed: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15" r="1.2" fill="currentColor"/><path d="M12 16.2v1.8"/></svg>`,
+  lockOpen: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 7.8-1.2"/></svg>`,
+  pencil: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  move: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><polyline points="9 14 12 11 15 14"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>`,
+  restore: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><path d="M7 6L3 10l4 4"/></svg>`,
+};
+
+let activeContextMenuRow = null;
+let contextMenuDismissBound = false;
+
+function getOrCreateContextMenuElement() {
+  let menu = document.getElementById("customContextMenu");
+  if (!menu) {
+    menu = document.createElement("div");
+    menu.id = "customContextMenu";
+    menu.className = "desktop-context-menu hidden";
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-hidden", "true");
+    document.body.appendChild(menu);
+  }
+  return menu;
+}
+
+function buildContextMenuItems(item, isMultiSelect) {
+  if (state.trashMode) {
+    if (isMultiSelect) {
+      const count = state.selectedPaths.size;
+      return [
+        { type: "header", label: `已选择 ${count} 项` },
+        {
+          type: "item",
+          label: `批量还原 (${count}项)`,
+          iconSvg: CONTEXT_MENU_ICONS.restore,
+          handler: bulkRestoreSelectedTrash,
+        },
+        { type: "divider" },
+        {
+          type: "item",
+          label: `彻底删除 (${count}项)`,
+          className: "danger-item",
+          iconSvg: CONTEXT_MENU_ICONS.trash,
+          handler: bulkPermanentDeleteSelectedTrash,
+        },
+      ];
+    }
+
+    return [
+      {
+        type: "item",
+        label: "还原项目",
+        iconSvg: CONTEXT_MENU_ICONS.restore,
+        handler: () => restoreTrashItem(item),
+      },
+      { type: "divider" },
+      {
+        type: "item",
+        label: "彻底删除 (不可恢复)",
+        className: "danger-item",
+        iconSvg: CONTEXT_MENU_ICONS.trash,
+        handler: () => permanentDeleteTrashItem(item),
+      },
+    ];
+  }
+
+  // Normal mode
+  if (isMultiSelect) {
+    const count = state.selectedPaths.size;
+    const allStarred = Array.from(state.selectedPaths).every((p) => {
+      const found = state.items.find((it) => it.path === p);
+      return Boolean(found && found.starred);
+    });
+
+    return [
+      { type: "header", label: `已选择 ${count} 项` },
+      {
+        type: "item",
+        label: `批量下载 (${count}项)`,
+        iconSvg: CONTEXT_MENU_ICONS.download,
+        handler: bulkDownloadSelected,
+      },
+      {
+        type: "item",
+        label: "批量复制",
+        iconSvg: CONTEXT_MENU_ICONS.copy,
+        handler: bulkCopySelected,
+      },
+      {
+        type: "item",
+        label: "批量移动",
+        iconSvg: CONTEXT_MENU_ICONS.move,
+        handler: openBulkMoveModal,
+      },
+      {
+        type: "item",
+        label: allStarred ? "批量取消星标" : "批量设为星标",
+        iconSvg: allStarred ? CONTEXT_MENU_ICONS.starEmpty : CONTEXT_MENU_ICONS.starFilled,
+        handler: bulkStarSelected,
+      },
+      { type: "divider" },
+      {
+        type: "item",
+        label: `批量删除 (${count}项)`,
+        className: "danger-item",
+        iconSvg: CONTEXT_MENU_ICONS.trash,
+        handler: bulkDeleteSelected,
+      },
+    ];
+  }
+
+  // Single Item Normal Mode
+  const isFolder = item.type === "folder" || item.isDirectory;
+  const isZip = !isFolder && fileExt(item.name) === "zip";
+  const canSummarize = !isFolder && ["txt", "md", "json", "js", "ts", "html", "css", "py", "csv", "log", "pdf", "doc", "docx", "ppt", "pptx"].includes(fileExt(item.name));
+
+  const items = [];
+
+  // 1. 打开/浏览/预览
+  items.push({
+    type: "item",
+    label: isFolder ? "打开文件夹" : (isZip ? "浏览压缩包" : "预览文件"),
+    iconSvg: isFolder ? CONTEXT_MENU_ICONS.folderOpen : (isZip ? CONTEXT_MENU_ICONS.archive : CONTEXT_MENU_ICONS.open),
+    handler: () => executeOpenItem(item),
+  });
+
+  // 2. AI 智能功能
+  if (canSummarize) {
+    items.push({
+      type: "item",
+      label: "AI 一键智能总结",
+      className: "ai-summary-item",
+      iconSvg: CONTEXT_MENU_ICONS.sparkle,
+      handler: () => openAiDocSummaryModal(item),
+    });
+  }
+
+  if (state.aiModeEnabled) {
+    items.push({
+      type: "item",
+      label: "AI 智能对话",
+      iconSvg: CONTEXT_MENU_ICONS.aiChat,
+      handler: () => openAiChatPlaceholder(item),
+    });
+  }
+
+  items.push({ type: "divider" });
+
+  // 3. 文件/文件夹基础操作
+  items.push({
+    type: "item",
+    label: isFolder ? "下载文件夹 (ZIP)" : "下载文件",
+    iconSvg: CONTEXT_MENU_ICONS.download,
+    handler: () => downloadFile(item),
+  });
+
+  items.push({
+    type: "item",
+    label: "公开分享",
+    iconSvg: CONTEXT_MENU_ICONS.share,
+    handler: () => openShareModal(item),
+  });
+
+  items.push({
+    type: "item",
+    label: item.starred ? "取消星标" : "设为星标",
+    iconSvg: item.starred ? CONTEXT_MENU_ICONS.starEmpty : CONTEXT_MENU_ICONS.starFilled,
+    handler: () => toggleStarItem(item),
+  });
+
+  if (isFolder) {
+    const isLocked = Boolean(item.locked);
+    items.push({
+      type: "item",
+      label: isLocked ? "修改文件夹密码 / 密码管理" : "加密文件夹",
+      iconSvg: isLocked ? CONTEXT_MENU_ICONS.lockClosed : CONTEXT_MENU_ICONS.lockOpen,
+      handler: async () => {
+        await runAction(() => openFolderPasswordSettings(item));
+      },
+    });
+  }
+
+  items.push({ type: "divider" });
+
+  // 4. 重命名、复制、移动
+  items.push({
+    type: "item",
+    label: "重命名",
+    iconSvg: CONTEXT_MENU_ICONS.pencil,
+    handler: () => renameItem(item),
+  });
+
+  items.push({
+    type: "item",
+    label: "复制到...",
+    iconSvg: CONTEXT_MENU_ICONS.copy,
+    handler: () => copyItem(item),
+  });
+
+  items.push({
+    type: "item",
+    label: "移动到...",
+    iconSvg: CONTEXT_MENU_ICONS.move,
+    handler: () => moveItem(item),
+  });
+
+  items.push({ type: "divider" });
+
+  // 5. 删除
+  items.push({
+    type: "item",
+    label: "删除",
+    className: "danger-item",
+    iconSvg: CONTEXT_MENU_ICONS.trash,
+    handler: () => deleteItem(item),
+  });
+
+  return items;
+}
+
+function renderContextMenuDom(menu, items) {
+  menu.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const entry of items) {
+    if (entry.type === "header") {
+      const header = document.createElement("div");
+      header.className = "context-menu-header";
+      header.textContent = entry.label;
+      frag.appendChild(header);
+    } else if (entry.type === "divider") {
+      const divider = document.createElement("div");
+      divider.className = "context-menu-divider";
+      frag.appendChild(divider);
+    } else {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `context-menu-item ${entry.className || ""}`.trim();
+      btn.setAttribute("role", "menuitem");
+
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "context-menu-icon";
+      iconSpan.innerHTML = entry.iconSvg || "";
+
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "context-menu-label";
+      labelSpan.textContent = entry.label;
+
+      btn.append(iconSpan, labelSpan);
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        closeContextMenu();
+        if (typeof entry.handler === "function") {
+          try {
+            await entry.handler();
+          } catch (err) {
+            console.error("Context menu action failed:", err);
+          }
+        }
+      });
+      frag.appendChild(btn);
+    }
+  }
+  menu.appendChild(frag);
+}
+
+function positionContextMenu(menu, x, y) {
+  menu.classList.remove("hidden");
+  menu.setAttribute("aria-hidden", "false");
+  menu.style.visibility = "hidden";
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+
+  const rect = menu.getBoundingClientRect();
+  const menuWidth = rect.width || 200;
+  const menuHeight = rect.height || 320;
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+  const margin = 10;
+
+  let finalX = x;
+  let finalY = y;
+
+  // 水平防溢出：靠近右边界时向左翻转
+  if (x + menuWidth > winWidth - margin) {
+    finalX = x - menuWidth;
+    if (finalX < margin) {
+      finalX = Math.max(margin, winWidth - menuWidth - margin);
+    }
+  } else {
+    finalX = Math.max(margin, x);
+  }
+
+  // 垂直防溢出：靠近底边界时向上翻转
+  if (y + menuHeight > winHeight - margin) {
+    finalY = y - menuHeight;
+    if (finalY < margin) {
+      finalY = Math.max(margin, winHeight - menuHeight - margin);
+    }
+  } else {
+    finalY = Math.max(margin, y);
+  }
+
+  menu.style.left = `${Math.round(finalX)}px`;
+  menu.style.top = `${Math.round(finalY)}px`;
+  menu.style.visibility = "visible";
+}
+
+function handleOutsidePointerDown(event) {
+  const menu = document.getElementById("customContextMenu");
+  if (menu && !menu.contains(event.target)) {
+    closeContextMenu();
+  }
+}
+
+function handleContextScrollDismiss() {
+  closeContextMenu();
+}
+
+function handleContextKeyDown(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeContextMenu();
+  }
+}
+
+function bindContextMenuDismissListeners() {
+  if (contextMenuDismissBound) return;
+  contextMenuDismissBound = true;
+  document.addEventListener("pointerdown", handleOutsidePointerDown, true);
+  window.addEventListener("wheel", handleContextScrollDismiss, { passive: true });
+  window.addEventListener("scroll", handleContextScrollDismiss, { capture: true, passive: true });
+  window.addEventListener("resize", handleContextScrollDismiss, { passive: true });
+  window.addEventListener("keydown", handleContextKeyDown, true);
+}
+
+function unbindContextMenuDismissListeners() {
+  if (!contextMenuDismissBound) return;
+  contextMenuDismissBound = false;
+  document.removeEventListener("pointerdown", handleOutsidePointerDown, true);
+  window.removeEventListener("wheel", handleContextScrollDismiss, { passive: true });
+  window.removeEventListener("scroll", handleContextScrollDismiss, { capture: true, passive: true });
+  window.removeEventListener("resize", handleContextScrollDismiss, { passive: true });
+  window.removeEventListener("keydown", handleContextKeyDown, true);
+}
+
+function closeContextMenu() {
+  const menu = document.getElementById("customContextMenu");
+  if (menu && !menu.classList.contains("hidden")) {
+    menu.classList.add("hidden");
+    menu.setAttribute("aria-hidden", "true");
+    menu.innerHTML = "";
+  }
+  if (activeContextMenuRow) {
+    activeContextMenuRow.classList.remove("context-active-row");
+    activeContextMenuRow = null;
+  }
+  unbindContextMenuDismissListeners();
+}
+
+function handleRowContextMenu(event, tr) {
+  if (document.querySelector(".modal:not(.hidden)")) return;
+
+  const itemKey = tr.dataset.path;
+  if (!itemKey) return;
+
+  const item = state.items.find((entry) => (entry.path || entry.id || entry.trashId) === itemKey);
+  if (!item) return;
+
+  const isMultiSelect = state.selectedPaths.size > 1 && state.selectedPaths.has(itemKey);
+
+  if (!isMultiSelect) {
+    if (state.selectedPaths.size > 0 && !state.selectedPaths.has(itemKey)) {
+      clearSelection();
+    }
+  }
+
+  if (activeContextMenuRow && activeContextMenuRow !== tr) {
+    activeContextMenuRow.classList.remove("context-active-row");
+  }
+  activeContextMenuRow = tr;
+  tr.classList.add("context-active-row");
+
+  const menuItems = buildContextMenuItems(item, isMultiSelect);
+  if (!menuItems || menuItems.length === 0) return;
+
+  const menu = getOrCreateContextMenuElement();
+  renderContextMenuDom(menu, menuItems);
+  positionContextMenu(menu, event.clientX, event.clientY);
+  bindContextMenuDismissListeners();
 }
 
 function applyFolderData(data, options = {}) {
@@ -8666,6 +9103,15 @@ headerSelectAll?.addEventListener("click", toggleAllSelection);
 bulkRestoreTrashBtn?.addEventListener("click", bulkRestoreSelectedTrash);
 bulkPermanentDeleteBtn?.addEventListener("click", bulkPermanentDeleteSelectedTrash);
 clearTrashSelectionBtn?.addEventListener("click", clearSelection);
+
+// 绑定表格行右键上下文菜单事件
+fileRows?.addEventListener("contextmenu", (event) => {
+  const tr = event.target.closest("tr[data-path]");
+  if (!tr) return;
+  event.preventDefault();
+  event.stopPropagation();
+  handleRowContextMenu(event, tr);
+});
 
 mySharesBtn?.addEventListener("click", () => {
   mySharesModal?.classList.remove("hidden");

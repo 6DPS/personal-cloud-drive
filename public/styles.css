@@ -8720,3 +8720,173 @@ select:focus {
 .cancel-all-btn:active {
   transform: translateY(0) scale(0.97) !important;
 }
+
+/* =========================================================================
+   桌面级鼠标右键上下文菜单 (Desktop Right-Click Context Menu)
+   ========================================================================= */
+
+/* 行聚焦高亮样式 (右键点击时自动激活) */
+tbody tr.context-active-row {
+  background: #dbeafe !important;
+  box-shadow: inset 3.5px 0 0 #2563eb !important;
+}
+
+/* 浮动右键上下文菜单容器 */
+.desktop-context-menu {
+  position: fixed;
+  z-index: 10050;
+  min-width: 200px;
+  max-width: 260px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.08),
+    0 12px 28px -4px rgba(15, 23, 42, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  user-select: none;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.desktop-context-menu.hidden {
+  display: none !important;
+}
+
+@keyframes desktopContextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.desktop-context-menu:not(.hidden) {
+  animation: desktopContextMenuFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 菜单项基础按钮样式 (强制重置全局 button 样式) */
+.desktop-context-menu button,
+.desktop-context-menu .context-menu-item {
+  width: 100% !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: none !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  color: #1e293b !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background-color 0.12s ease, color 0.12s ease !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+.desktop-context-menu button:hover,
+.desktop-context-menu .context-menu-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  transform: none !important;
+}
+
+.desktop-context-menu button:active,
+.desktop-context-menu .context-menu-item:active {
+  background-color: #e2e8f0 !important;
+  transform: none !important;
+}
+
+/* 图标容器 */
+.desktop-context-menu .context-menu-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #64748b;
+  transition: color 0.12s ease;
+}
+
+.desktop-context-menu .context-menu-item:hover .context-menu-icon {
+  color: #1e293b;
+}
+
+.desktop-context-menu .context-menu-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 分割线 */
+.desktop-context-menu .context-menu-divider {
+  height: 1px;
+  margin: 4px 5px;
+  background-color: rgba(226, 232, 240, 0.85);
+}
+
+/* 顶部小标题 (多选状态感知) */
+.desktop-context-menu .context-menu-header {
+  padding: 5px 10px 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  user-select: none;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* 危险操作项 (删除 / 彻底删除) */
+.desktop-context-menu .context-menu-item.danger-item {
+  color: #dc2626 !important;
+}
+
+.desktop-context-menu .context-menu-item.danger-item .context-menu-icon {
+  color: #ef4444;
+}
+
+.desktop-context-menu .context-menu-item.danger-item:hover {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+.desktop-context-menu .context-menu-item.danger-item:hover .context-menu-icon {
+  color: #b91c1c;
+}
+
+/* AI 智能总结特色项高亮 */
+.desktop-context-menu .context-menu-item.ai-summary-item {
+  color: #1d4ed8 !important;
+  font-weight: 600 !important;
+}
+
+.desktop-context-menu .context-menu-item.ai-summary-item .context-menu-icon {
+  color: #2563eb;
+}
+
+.desktop-context-menu .context-menu-item.ai-summary-item:hover {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+}
+
+.desktop-context-menu .context-menu-item.ai-summary-item:hover .context-menu-icon {
+  color: #1e40af;
+}
+
