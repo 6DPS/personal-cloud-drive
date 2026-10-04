@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # DPSir 个人网盘 - GitHub 云端拉取与热更新向导
 # ==============================================================================
 
@@ -29,13 +29,20 @@ Write-Host "[2/3] 正在检查依赖完整性 (npm install --omit=dev)..." -Fore
 npm install --omit=dev
 
 Write-Host ""
-Write-Host "[3/3] 正在平滑重启网盘守护服务..." -ForegroundColor Yellow
-Stop-Process -Name node -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
-Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
-
-Write-Host ""
-Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "       🎉 恭喜！网盘已成功同步至 GitHub 最新版本并已完成重启！    " -ForegroundColor Green
-Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host "[3/3] 正在平滑重启网盘服务与公网隧道..." -ForegroundColor Yellow
+$restartScript = Join-Path $PSScriptRoot "restart-all-services.ps1"
+if (Test-Path -LiteralPath $restartScript) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $restartScript
+} else {
+    Stop-Process -Name node -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    $lanTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+    if ($lanTask) {
+        Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
+    } else {
+        $lanVbs = Join-Path $PSScriptRoot "run-lan-drive-silent.vbs"
+        if (Test-Path -LiteralPath $lanVbs) {
+            Start-Process "wscript.exe" -ArgumentList "`"$lanVbs`"" -WorkingDirectory $root
+        }
+    }
+}
