@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "start:watchdog": "node scripts/server-watchdog.js",
-    "test:smoke": "node tests/smoke.js"
+    "test:smoke": "node tests/smoke.js",
+    "test:isolation": "node tests/test_avatar_isolation.js"
   },
   "dependencies": {
     "archiver": "^7.0.1",

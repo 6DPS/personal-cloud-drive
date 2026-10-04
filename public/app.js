@@ -7122,15 +7122,16 @@ function syncAdminUi() {
   const adminPanelCard = document.getElementById("adminPanelCard");
   if (adminPanelCard) adminPanelCard.classList.toggle("hidden", !isAdmin);
 
-  const username = state.currentUser?.username || "admin";
-  const userInitial = username.charAt(0).toUpperCase();
+  const username = state.currentUser?.username || "";
+  const userInitial = username ? username.charAt(0).toUpperCase() : "";
+  const userId = state.currentUser?.id || "";
   const sidebarUsername = document.getElementById("sidebarUsername");
   const sidebarUserInitial = document.getElementById("sidebarUserInitial");
   const sidebarUserRole = document.getElementById("sidebarUserRole");
 
   if (sidebarUsername) {
     sidebarUsername.textContent = username;
-    sidebarUsername.title = `当前登录账号: ${username}`;
+    sidebarUsername.title = username ? `当前登录账号: ${username}` : "";
   }
   if (sidebarUserInitial) {
     sidebarUserInitial.textContent = userInitial;
@@ -7140,10 +7141,10 @@ function syncAdminUi() {
     sidebarUserRole.classList.toggle("role-user", !isAdmin);
   }
 
-  // Update avatar display
+  // Update avatar display strictly per-user
   if (sidebarUserAvatarImg) {
-    if (state.currentUser?.hasCustomAvatar) {
-      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&auth=${encodeURIComponent(state.token || "")}`;
+    if (state.currentUser?.hasCustomAvatar && state.token && userId) {
+      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}&auth=${encodeURIComponent(state.token || "")}`;
       sidebarUserAvatarImg.onload = () => {
         sidebarUserAvatarImg.classList.remove("hidden");
         sidebarUserInitial?.classList.add("hidden");
@@ -7525,12 +7526,13 @@ function openUserAvatarModal() {
     saveUserAvatarBtn.textContent = "保存头像";
   }
 
-  const username = state.currentUser?.username || "admin";
-  const userInitial = username.charAt(0).toUpperCase();
+  const username = state.currentUser?.username || "";
+  const userInitial = username ? username.charAt(0).toUpperCase() : "";
+  const userId = state.currentUser?.id || "";
   if (avatarModalPreviewInitial) avatarModalPreviewInitial.textContent = userInitial;
 
-  if (state.currentUser?.hasCustomAvatar && avatarModalPreviewImg) {
-    const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&auth=${encodeURIComponent(state.token || "")}`;
+  if (state.currentUser?.hasCustomAvatar && avatarModalPreviewImg && userId) {
+    const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}&auth=${encodeURIComponent(state.token || "")}`;
     avatarModalPreviewImg.onload = () => {
       avatarModalPreviewImg.classList.remove("hidden");
       avatarModalPreviewInitial?.classList.add("hidden");
@@ -7739,6 +7741,7 @@ async function submitPasswordReset() {
 
 async function enterDrive(user = state.currentUser) {
   state.currentUser = user || null;
+  state.avatarVersion = Date.now();
   exitTrashMode();
   exitStarredMode();
   syncAdminUi();
@@ -7891,8 +7894,36 @@ $("#logoutBtn").addEventListener("click", async () => {
   await api("/api/logout", { method: "POST", body: "{}" });
   setSessionToken("");
   state.currentUser = null;
+  state.avatarVersion = null;
+  pendingAvatarDataUrl = null;
   state.path = "";
   state.items = [];
+  if (sidebarUserAvatarImg) {
+    sidebarUserAvatarImg.src = "";
+    sidebarUserAvatarImg.classList.add("hidden");
+  }
+  if (sidebarUserInitial) {
+    sidebarUserInitial.textContent = "";
+    sidebarUserInitial.classList.remove("hidden");
+  }
+  if (avatarModalPreviewImg) {
+    avatarModalPreviewImg.src = "";
+    avatarModalPreviewImg.classList.add("hidden");
+  }
+  if (avatarModalPreviewInitial) {
+    avatarModalPreviewInitial.textContent = "";
+    avatarModalPreviewInitial.classList.remove("hidden");
+  }
+  const sidebarUsernameEl = document.getElementById("sidebarUsername");
+  const sidebarUserRoleEl = document.getElementById("sidebarUserRole");
+  if (sidebarUsernameEl) {
+    sidebarUsernameEl.textContent = "";
+    sidebarUsernameEl.removeAttribute("title");
+  }
+  if (sidebarUserRoleEl) {
+    sidebarUserRoleEl.textContent = "";
+    sidebarUserRoleEl.classList.remove("role-user");
+  }
   exitTrashMode();
   exitStarredMode();
   clearSelection();

@@ -632,12 +632,17 @@ function userFolderPasswordFile(userId) {
 }
 
 function userAvatarFile(userId) {
-  return path.join(userRoot(userId), ".avatar.png");
+  const safeId = String(userId || "").trim().toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!safeId) {
+    throw Object.assign(new Error("无效的用户标识"), { status: 400 });
+  }
+  return path.join(userRoot(safeId), ".avatar.png");
 }
 
 function hasUserAvatar(userId) {
   try {
-    return fs.existsSync(userAvatarFile(userId));
+    const file = userAvatarFile(userId);
+    return fs.existsSync(file);
   } catch {
     return false;
   }
@@ -4202,7 +4207,7 @@ app.get("/api/me", (req, res) => {
 app.get("/api/user/avatar", (req, res) => {
   const token = requestSessionToken(req);
   const user = sessionUser(token);
-  if (!user) {
+  if (!user || !user.id) {
     return res.status(401).json({ error: "请先登录" });
   }
   const avatarPath = userAvatarFile(user.id);
@@ -4211,6 +4216,8 @@ app.get("/api/user/avatar", (req, res) => {
   }
   res.setHeader("Content-Type", "image/png");
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   const stream = fs.createReadStream(avatarPath);
   stream.on("error", () => {
     if (!res.headersSent) res.status(500).json({ error: "读取头像失败" });
@@ -4220,7 +4227,10 @@ app.get("/api/user/avatar", (req, res) => {
 
 app.post("/api/user/avatar", requireAuth, express.json({ limit: "10mb" }), async (req, res) => {
   try {
-    const userId = req.user?.id || currentUserId();
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "请先登录" });
+    }
     const { dataUrl } = req.body || {};
     if (!dataUrl || typeof dataUrl !== "string") {
       return res.status(400).json({ error: "请提供头像图片数据" });
@@ -4244,7 +4254,10 @@ app.post("/api/user/avatar", requireAuth, express.json({ limit: "10mb" }), async
 
 app.delete("/api/user/avatar", requireAuth, async (req, res) => {
   try {
-    const userId = req.user?.id || currentUserId();
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "请先登录" });
+    }
     const avatarPath = userAvatarFile(userId);
     if (fs.existsSync(avatarPath)) {
       await fsp.unlink(avatarPath);
