@@ -4741,9 +4741,6 @@ function updateSelectionUi() {
   } else {
     selectModeBtn.innerHTML = `<svg class="btn-icon" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M5.2 8L7.1 10L10.8 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-text">${state.selectionMode ? "完成" : "多选"}</span>`;
   }
-  if (selectModeBtn) {
-    selectModeBtn.classList.toggle("active", Boolean(state.selectionMode));
-  }
 }
 
 function syncSelectionRows() {
@@ -7852,14 +7849,7 @@ searchSort?.addEventListener("change", () => {
   updateSearchVisibleItems({ render: true });
 });
 
-$("#refreshBtn")?.addEventListener("click", () => {
-  const btn = $("#refreshBtn");
-  if (btn) {
-    btn.classList.remove("is-refreshing");
-    void btn.offsetWidth;
-    btn.classList.add("is-refreshing");
-    setTimeout(() => btn.classList.remove("is-refreshing"), 560);
-  }
+$("#refreshBtn").addEventListener("click", () => {
   if (state.trashMode) {
     loadTrash();
     return;
