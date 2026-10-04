@@ -1275,48 +1275,152 @@ tr:hover .name-cell .star-toggle-btn {
   color: #2563eb;
 }
 
-.sidebar-logout-btn {
+/* 跑道型用户状态底栏 (身份标识 + 退出登录一体化) */
+.sidebar-user-dock {
   width: 100%;
-  height: 40px;
-  background: #fef2f2 !important;
-  border: 1px solid rgba(254, 202, 202, 0.85) !important;
+  height: 48px;
+  background: #ffffff;
+  border: 1px solid rgba(168, 187, 214, 0.52);
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(42, 67, 104, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 10px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-user-dock:hover {
+  border-color: rgba(147, 197, 253, 0.85);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.09);
+}
+
+.user-dock-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.user-dock-avatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.32);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.user-online-dot {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+}
+
+.user-dock-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-dock-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 95px;
+}
+
+.user-dock-role {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid rgba(191, 219, 254, 0.75);
+  padding: 1px 7px;
+  border-radius: 999px;
+  display: inline-block;
+  width: fit-content;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.user-dock-role.role-user {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+/* 跑道型退出小胶囊按钮 (全跑道圆角) */
+.sidebar-logout-pill,
+.sidebar-logout-btn {
+  height: 32px;
+  padding: 0 13px;
   border-radius: 999px !important;
+  border: 1px solid rgba(254, 202, 202, 0.9) !important;
+  background: #fef2f2 !important;
   color: #dc2626 !important;
-  font-size: 13.5px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 4px !important;
   cursor: pointer !important;
   box-shadow: none !important;
-  transition: all 0.2s ease !important;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+.sidebar-logout-pill .btn-icon,
 .sidebar-logout-btn .btn-icon {
-  width: 15px !important;
-  height: 15px !important;
+  width: 13px !important;
+  height: 13px !important;
   flex-shrink: 0 !important;
   color: #dc2626 !important;
   transition: all 0.2s ease !important;
 }
 
+.sidebar-logout-pill:hover,
+.sidebar-logout-pill:focus-visible,
 .sidebar-logout-btn:hover,
 .sidebar-logout-btn:focus-visible {
   background: #dc2626 !important;
   color: #ffffff !important;
   border-color: #dc2626 !important;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25) !important;
-  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.28) !important;
+  transform: translateY(-0.5px) !important;
 }
 
+.sidebar-logout-pill:hover .btn-icon,
+.sidebar-logout-pill:focus-visible .btn-icon,
 .sidebar-logout-btn:hover .btn-icon,
 .sidebar-logout-btn:focus-visible .btn-icon {
   color: #ffffff !important;
 }
 
+.sidebar-logout-pill:active,
 .sidebar-logout-btn:active {
-  transform: translateY(0) scale(0.98) !important;
+  transform: translateY(0) scale(0.96) !important;
 }
 
 .content {

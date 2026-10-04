@@ -205,7 +205,7 @@
                   <line x1="2" y1="12" x2="22" y2="12"></line>
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                 </svg>
-                <span class="access-title-text">访问与存储</span>
+                <span class="access-title-text">访问来源</span>
               </div>
               <div class="access-header-right">
                 <span id="accessStatusBadge" class="access-status-badge status-lan" title="当前连接状态">
@@ -325,12 +325,24 @@
               </button>
             </div>
 
-            <button id="logoutBtn" class="sidebar-logout-btn" type="button" title="退出当前账号">
-              <svg class="btn-icon" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M6.5 15.5H3.5A1.5 1.5 0 0 1 2 14V4a1.5 1.5 0 0 1 1.5-1.5h3M12 12.5l3.5-3.5L12 5.5M15.5 9H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>退出登录</span>
-            </button>
+            <div id="sidebarUserDock" class="sidebar-user-dock">
+              <div class="user-dock-left">
+                <div class="user-dock-avatar">
+                  <span id="sidebarUserInitial" class="user-avatar-initial">A</span>
+                  <span class="user-online-dot"></span>
+                </div>
+                <div class="user-dock-info">
+                  <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>
+                  <span id="sidebarUserRole" class="user-dock-role">超级管理员</span>
+                </div>
+              </div>
+              <button id="logoutBtn" class="sidebar-logout-pill" type="button" title="退出当前账号">
+                <svg class="btn-icon" width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6.5 15.5H3.5A1.5 1.5 0 0 1 2 14V4a1.5 1.5 0 0 1 1.5-1.5h3M12 12.5l3.5-3.5L12 5.5M15.5 9H6"/>
+                </svg>
+                <span>退出</span>
+              </button>
+            </div>
           </div>
         </aside>
 

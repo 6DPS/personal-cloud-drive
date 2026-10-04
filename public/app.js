@@ -7108,6 +7108,24 @@ function syncAdminUi() {
   userQuotasBtn?.classList.toggle("hidden", !isAdmin);
   const adminPanelCard = document.getElementById("adminPanelCard");
   if (adminPanelCard) adminPanelCard.classList.toggle("hidden", !isAdmin);
+
+  const username = state.currentUser?.username || "admin";
+  const userInitial = username.charAt(0).toUpperCase();
+  const sidebarUsername = document.getElementById("sidebarUsername");
+  const sidebarUserInitial = document.getElementById("sidebarUserInitial");
+  const sidebarUserRole = document.getElementById("sidebarUserRole");
+
+  if (sidebarUsername) {
+    sidebarUsername.textContent = username;
+    sidebarUsername.title = `当前登录账号: ${username}`;
+  }
+  if (sidebarUserInitial) {
+    sidebarUserInitial.textContent = userInitial;
+  }
+  if (sidebarUserRole) {
+    sidebarUserRole.textContent = isAdmin ? "超级管理员" : "普通用户";
+    sidebarUserRole.classList.toggle("role-user", !isAdmin);
+  }
 }
 
 function registrationKeyStatusText(status) {
