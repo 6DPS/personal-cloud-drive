@@ -1303,10 +1303,17 @@ tr:hover .name-cell .star-toggle-btn {
   min-width: 0;
 }
 
-.user-dock-avatar {
+.user-avatar-wrapper {
   position: relative;
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
+}
+
+.user-dock-avatar {
+  position: relative;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
@@ -1316,7 +1323,6 @@ tr:hover .name-cell .star-toggle-btn {
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.32);
-  flex-shrink: 0;
   user-select: none;
   cursor: pointer;
   overflow: hidden;
@@ -1324,8 +1330,13 @@ tr:hover .name-cell .star-toggle-btn {
 }
 
 .user-dock-avatar:hover {
-  transform: scale(1.06);
+  transform: scale(1.05);
   box-shadow: 0 3px 10px rgba(37, 99, 235, 0.45);
+}
+
+.user-dock-avatar:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .user-avatar-image {
@@ -1361,12 +1372,15 @@ tr:hover .name-cell .star-toggle-btn {
   position: absolute;
   bottom: 0px;
   right: 0px;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   background: #10b981;
-  border: 1.5px solid #ffffff;
+  border: 2px solid #ffffff;
   border-radius: 50%;
-  z-index: 3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+  z-index: 4;
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 /* 自定义头像设置弹窗 */

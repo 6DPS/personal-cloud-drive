@@ -7872,6 +7872,12 @@ refreshUserQuotasBtn?.addEventListener("click", () => {
 });
 
 userAvatarContainer?.addEventListener("click", openUserAvatarModal);
+userAvatarContainer?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    openUserAvatarModal();
+  }
+});
 closeUserAvatarModalBtn?.addEventListener("click", closeUserAvatarModal);
 cancelUserAvatarBtn?.addEventListener("click", closeUserAvatarModal);
 selectAvatarImageBtn?.addEventListener("click", () => userAvatarFileInput?.click());
