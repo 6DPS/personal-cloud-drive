@@ -187,6 +187,52 @@
         </div>
       </section>
 
+      <section id="userAvatarModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card user-avatar-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">个人设置</p>
+              <h2>更换自定义头像</h2>
+            </div>
+            <button id="closeUserAvatarModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </header>
+          <div class="user-avatar-modal-body">
+            <div class="avatar-modal-preview-wrapper">
+              <div class="avatar-modal-preview-circle">
+                <img id="avatarModalPreviewImg" class="avatar-modal-preview-img hidden" alt="头像预览" />
+                <span id="avatarModalPreviewInitial" class="avatar-modal-preview-initial">A</span>
+              </div>
+              <p class="avatar-modal-hint">支持 JPG、PNG、WebP 等格式，图片将自动适应为圆形</p>
+            </div>
+            <input id="userAvatarFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
+            <div class="avatar-modal-buttons-row">
+              <button id="selectAvatarImageBtn" class="avatar-action-btn select-img" type="button">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14.5 4.5h-2l-1-1.5h-3l-1 1.5h-2A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 14V6a1.5 1.5 0 0 0-1.5-1.5z"/>
+                  <circle cx="10" cy="10" r="3"/>
+                </svg>
+                <span>选择新图片...</span>
+              </button>
+              <button id="resetAvatarDefaultBtn" class="avatar-action-btn reset-default" type="button" title="清除自定义头像，恢复为字母头像">
+                <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2.5 9A6.5 6.5 0 1 0 5 4.2L2.5 6.5M2.5 2.5v4h4"/>
+                </svg>
+                <span>恢复默认头像</span>
+              </button>
+            </div>
+            <p id="userAvatarModalError" class="error modal-error"></p>
+          </div>
+          <div class="modal-actions">
+            <button id="saveUserAvatarBtn" class="primary" type="button" disabled>保存头像</button>
+            <button id="cancelUserAvatarBtn" class="ghost" type="button">取消</button>
+          </div>
+        </div>
+      </section>
+
       <section id="driveView" class="drive-shell hidden">
         <aside class="sidebar">
           <div class="brand-row">
@@ -327,9 +373,16 @@
 
             <div id="sidebarUserDock" class="sidebar-user-dock">
               <div class="user-dock-left">
-                <div class="user-dock-avatar">
+                <div id="userAvatarContainer" class="user-dock-avatar" role="button" tabindex="0" title="点击更换自定义头像">
+                  <img id="sidebarUserAvatarImg" class="user-avatar-image hidden" alt="头像" />
                   <span id="sidebarUserInitial" class="user-avatar-initial">A</span>
                   <span class="user-online-dot"></span>
+                  <div class="user-avatar-hover-overlay" aria-hidden="true">
+                    <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14.5 4.5h-2l-1-1.5h-3l-1 1.5h-2A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 14V6a1.5 1.5 0 0 0-1.5-1.5z"/>
+                      <circle cx="10" cy="10" r="3"/>
+                    </svg>
+                  </div>
                 </div>
                 <div class="user-dock-info">
                   <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>

@@ -158,6 +158,19 @@ const userQuotaList = $("#userQuotaList");
 const userQuotasError = $("#userQuotasError");
 const storageMetricLabel = $("#storageMetricLabel");
 
+const userAvatarModal = $("#userAvatarModal");
+const closeUserAvatarModalBtn = $("#closeUserAvatarModalBtn");
+const avatarModalPreviewImg = $("#avatarModalPreviewImg");
+const avatarModalPreviewInitial = $("#avatarModalPreviewInitial");
+const userAvatarFileInput = $("#userAvatarFileInput");
+const selectAvatarImageBtn = $("#selectAvatarImageBtn");
+const resetAvatarDefaultBtn = $("#resetAvatarDefaultBtn");
+const saveUserAvatarBtn = $("#saveUserAvatarBtn");
+const cancelUserAvatarBtn = $("#cancelUserAvatarBtn");
+const userAvatarModalError = $("#userAvatarModalError");
+const userAvatarContainer = $("#userAvatarContainer");
+const sidebarUserAvatarImg = $("#sidebarUserAvatarImg");
+
 const breadcrumb = $("#breadcrumb");
 const statusLine = $("#statusLine");
 const storageRoot = $("#storageRoot");
@@ -7126,6 +7139,26 @@ function syncAdminUi() {
     sidebarUserRole.textContent = isAdmin ? "超级管理员" : "普通用户";
     sidebarUserRole.classList.toggle("role-user", !isAdmin);
   }
+
+  // Update avatar display
+  if (sidebarUserAvatarImg) {
+    if (state.currentUser?.hasCustomAvatar) {
+      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&auth=${encodeURIComponent(state.token || "")}`;
+      sidebarUserAvatarImg.onload = () => {
+        sidebarUserAvatarImg.classList.remove("hidden");
+        sidebarUserInitial?.classList.add("hidden");
+      };
+      sidebarUserAvatarImg.onerror = () => {
+        sidebarUserAvatarImg.classList.add("hidden");
+        sidebarUserInitial?.classList.remove("hidden");
+      };
+      sidebarUserAvatarImg.src = avatarSrc;
+    } else {
+      sidebarUserAvatarImg.src = "";
+      sidebarUserAvatarImg.classList.add("hidden");
+      sidebarUserInitial?.classList.remove("hidden");
+    }
+  }
 }
 
 function registrationKeyStatusText(status) {
@@ -7482,6 +7515,150 @@ function closeUserQuotasModal() {
   userQuotasModal?.setAttribute("aria-hidden", "true");
 }
 
+let pendingAvatarDataUrl = null;
+
+function openUserAvatarModal() {
+  pendingAvatarDataUrl = null;
+  if (userAvatarModalError) userAvatarModalError.textContent = "";
+  if (saveUserAvatarBtn) {
+    saveUserAvatarBtn.disabled = true;
+    saveUserAvatarBtn.textContent = "保存头像";
+  }
+
+  const username = state.currentUser?.username || "admin";
+  const userInitial = username.charAt(0).toUpperCase();
+  if (avatarModalPreviewInitial) avatarModalPreviewInitial.textContent = userInitial;
+
+  if (state.currentUser?.hasCustomAvatar && avatarModalPreviewImg) {
+    const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&auth=${encodeURIComponent(state.token || "")}`;
+    avatarModalPreviewImg.onload = () => {
+      avatarModalPreviewImg.classList.remove("hidden");
+      avatarModalPreviewInitial?.classList.add("hidden");
+    };
+    avatarModalPreviewImg.onerror = () => {
+      avatarModalPreviewImg.classList.add("hidden");
+      avatarModalPreviewInitial?.classList.remove("hidden");
+    };
+    avatarModalPreviewImg.src = avatarSrc;
+    resetAvatarDefaultBtn?.classList.remove("hidden");
+  } else {
+    if (avatarModalPreviewImg) {
+      avatarModalPreviewImg.src = "";
+      avatarModalPreviewImg.classList.add("hidden");
+    }
+    avatarModalPreviewInitial?.classList.remove("hidden");
+    resetAvatarDefaultBtn?.classList.add("hidden");
+  }
+
+  userAvatarModal?.classList.remove("hidden");
+  userAvatarModal?.setAttribute("aria-hidden", "false");
+}
+
+function closeUserAvatarModal() {
+  pendingAvatarDataUrl = null;
+  if (userAvatarFileInput) userAvatarFileInput.value = "";
+  userAvatarModal?.classList.add("hidden");
+  userAvatarModal?.setAttribute("aria-hidden", "true");
+}
+
+function processAvatarImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("未选择文件"));
+    if (!file.type.startsWith("image/")) {
+      return reject(new Error("请选择有效的图片文件（JPG、PNG、WebP 等）"));
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("读取图片失败"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("加载图片失败，可能文件已损坏"));
+      img.onload = () => {
+        try {
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          const canvas = document.createElement("canvas");
+          const targetSize = 256;
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize);
+          const dataUrl = canvas.toDataURL("image/png");
+          resolve(dataUrl);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleAvatarFileSelect(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (userAvatarModalError) userAvatarModalError.textContent = "";
+  try {
+    const dataUrl = await processAvatarImageFile(file);
+    pendingAvatarDataUrl = dataUrl;
+    if (avatarModalPreviewImg) {
+      avatarModalPreviewImg.src = dataUrl;
+      avatarModalPreviewImg.classList.remove("hidden");
+    }
+    avatarModalPreviewInitial?.classList.add("hidden");
+    if (saveUserAvatarBtn) saveUserAvatarBtn.disabled = false;
+  } catch (err) {
+    if (userAvatarModalError) userAvatarModalError.textContent = err.message;
+  }
+}
+
+async function saveUserAvatar() {
+  if (!pendingAvatarDataUrl) return;
+  if (userAvatarModalError) userAvatarModalError.textContent = "";
+  if (saveUserAvatarBtn) {
+    saveUserAvatarBtn.disabled = true;
+    saveUserAvatarBtn.textContent = "保存中...";
+  }
+  try {
+    await api("/api/user/avatar", {
+      method: "POST",
+      body: JSON.stringify({ dataUrl: pendingAvatarDataUrl }),
+    });
+    state.avatarVersion = Date.now();
+    if (state.currentUser) {
+      state.currentUser.hasCustomAvatar = true;
+    }
+    syncAdminUi();
+    closeUserAvatarModal();
+    setStatus("头像已成功更换！");
+  } catch (err) {
+    if (userAvatarModalError) userAvatarModalError.textContent = err.message;
+    if (saveUserAvatarBtn) {
+      saveUserAvatarBtn.disabled = false;
+      saveUserAvatarBtn.textContent = "保存头像";
+    }
+  }
+}
+
+async function resetUserAvatar() {
+  if (userAvatarModalError) userAvatarModalError.textContent = "";
+  try {
+    await api("/api/user/avatar", { method: "DELETE" });
+    state.avatarVersion = Date.now();
+    if (state.currentUser) {
+      state.currentUser.hasCustomAvatar = false;
+    }
+    syncAdminUi();
+    closeUserAvatarModal();
+    setStatus("已恢复默认字母头像");
+  } catch (err) {
+    if (userAvatarModalError) userAvatarModalError.textContent = err.message;
+  }
+}
+
 async function copyRegistrationKey() {
   const value = newRegistrationKeyValue?.textContent || "";
   if (!value) return;
@@ -7694,6 +7871,14 @@ refreshUserQuotasBtn?.addEventListener("click", () => {
   });
 });
 
+userAvatarContainer?.addEventListener("click", openUserAvatarModal);
+closeUserAvatarModalBtn?.addEventListener("click", closeUserAvatarModal);
+cancelUserAvatarBtn?.addEventListener("click", closeUserAvatarModal);
+selectAvatarImageBtn?.addEventListener("click", () => userAvatarFileInput?.click());
+userAvatarFileInput?.addEventListener("change", handleAvatarFileSelect);
+saveUserAvatarBtn?.addEventListener("click", saveUserAvatar);
+resetAvatarDefaultBtn?.addEventListener("click", resetUserAvatar);
+
 $("#logoutBtn").addEventListener("click", async () => {
   const ok = await showConfirmDialog("退出登录", "确认退出当前网盘账号吗？");
   if (!ok) return;
@@ -7884,7 +8069,7 @@ $("#refreshBtn").addEventListener("click", () => {
 });
 closePreviewBtn.addEventListener("click", closePreview);
 
-for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal]) {
+for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal]) {
   if (!modal) continue;
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
@@ -7896,6 +8081,7 @@ for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordMod
     if (modal === passwordResetModal) return;
     if (modal === registrationKeysModal) return;
     if (modal === userQuotasModal) return;
+    if (modal === userAvatarModal) return closeUserAvatarModal();
   });
 }
 
@@ -7985,6 +8171,7 @@ document.addEventListener("keydown", (event) => {
   closePasswordResetModal();
   closeRegistrationKeysModal();
   closeUserQuotasModal();
+  closeUserAvatarModal();
   if (zipArchiveModal) zipArchiveModal.classList.add("hidden");
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");

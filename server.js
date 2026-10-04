@@ -631,6 +631,18 @@ function userFolderPasswordFile(userId) {
   return path.join(userRoot(userId), ".folder-passwords.json");
 }
 
+function userAvatarFile(userId) {
+  return path.join(userRoot(userId), ".avatar.png");
+}
+
+function hasUserAvatar(userId) {
+  try {
+    return fs.existsSync(userAvatarFile(userId));
+  } catch {
+    return false;
+  }
+}
+
 function userTempRoot(userId) {
   return path.join(SYSTEM_TMP_ROOT, userId);
 }
@@ -897,6 +909,7 @@ function publicUser(user) {
     username: user.username,
     role: isAdm ? "admin" : (user.role || "user"),
     quotaBytes: isAdm ? null : (user.quotaBytes !== undefined ? user.quotaBytes : DEFAULT_USER_QUOTA_BYTES),
+    hasCustomAvatar: hasUserAvatar(user.id),
   };
 }
 
@@ -4184,6 +4197,62 @@ app.get("/api/me", (req, res) => {
   const token = requestSessionToken(req);
   const user = sessionUser(token);
   res.json({ authenticated: Boolean(user), user: publicUser(user), token: user ? token : "" });
+});
+
+app.get("/api/user/avatar", (req, res) => {
+  const token = requestSessionToken(req);
+  const user = sessionUser(token);
+  if (!user) {
+    return res.status(401).json({ error: "请先登录" });
+  }
+  const avatarPath = userAvatarFile(user.id);
+  if (!fs.existsSync(avatarPath)) {
+    return res.status(404).json({ error: "未设置自定义头像" });
+  }
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  const stream = fs.createReadStream(avatarPath);
+  stream.on("error", () => {
+    if (!res.headersSent) res.status(500).json({ error: "读取头像失败" });
+  });
+  stream.pipe(res);
+});
+
+app.post("/api/user/avatar", requireAuth, express.json({ limit: "10mb" }), async (req, res) => {
+  try {
+    const userId = req.user?.id || currentUserId();
+    const { dataUrl } = req.body || {};
+    if (!dataUrl || typeof dataUrl !== "string") {
+      return res.status(400).json({ error: "请提供头像图片数据" });
+    }
+    const matches = dataUrl.match(/^data:image\/[a-zA-Z0-9.+_-]+;base64,(.+)$/);
+    if (!matches || matches.length !== 2) {
+      return res.status(400).json({ error: "头像图片数据格式不正确" });
+    }
+    const buffer = Buffer.from(matches[1], "base64");
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: "头像文件过大（不可超过 5MB）" });
+    }
+    const avatarPath = userAvatarFile(userId);
+    await fsp.mkdir(path.dirname(avatarPath), { recursive: true });
+    await fsp.writeFile(avatarPath, buffer);
+    return res.json({ ok: true, avatarUrl: `/api/user/avatar?v=${Date.now()}` });
+  } catch (err) {
+    return res.status(500).json({ error: "保存头像失败：" + err.message });
+  }
+});
+
+app.delete("/api/user/avatar", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id || currentUserId();
+    const avatarPath = userAvatarFile(userId);
+    if (fs.existsSync(avatarPath)) {
+      await fsp.unlink(avatarPath);
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "恢复默认头像失败：" + err.message });
+  }
 });
 
 app.get("/api/access-info", requireAuth, (req, res) => {
