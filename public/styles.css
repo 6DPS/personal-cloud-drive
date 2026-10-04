@@ -1534,11 +1534,190 @@ tr:hover .name-cell .star-toggle-btn {
   min-height: 36px;
   padding-inline: 14px;
   font-weight: 700;
+  border-radius: 999px;
+  transition:
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    filter 140ms ease;
+  will-change: transform, box-shadow;
 }
 
 .actions button .btn-icon {
   width: 15px;
   height: 15px;
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+/* 1. 上传文件：品牌科技蓝 + 物理下沉 + 向上微跳 */
+#uploadBtn {
+  background: linear-gradient(180deg, #1f77f5 0%, #1562d6 100%);
+  color: #fff;
+  border: 1px solid rgba(17, 85, 188, 0.35);
+  box-shadow:
+    0 4px 12px rgba(23, 105, 224, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+#uploadBtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #2b81fa 0%, #1769e0 100%);
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 20px rgba(23, 105, 224, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+#uploadBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #1356bf 0%, #0d48a3 100%);
+  box-shadow:
+    0 2px 4px rgba(13, 72, 163, 0.35),
+    inset 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+}
+
+#uploadBtn:active:not(:disabled) .btn-icon {
+  transform: translateY(-2.5px) scale(1.1);
+  transition: transform 70ms ease;
+}
+
+/* 2. 新建文件夹：翡翠青绿 + 物理下沉 + 灵动微倾 */
+#newFolderBtn {
+  background: linear-gradient(180deg, #009e8e 0%, #008275 100%);
+  color: #fff;
+  border: 1px solid rgba(0, 114, 102, 0.35);
+  box-shadow:
+    0 4px 12px rgba(0, 141, 127, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+#newFolderBtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #02ab9b 0%, #008d7f 100%);
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 20px rgba(0, 141, 127, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+#newFolderBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #007367 0%, #005c52 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 92, 82, 0.35),
+    inset 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+}
+
+#newFolderBtn:active:not(:disabled) .btn-icon {
+  transform: rotate(20deg) scale(1.12);
+  transition: transform 70ms ease;
+}
+
+/* 3. 多选：冰川晶体质感 + 凹槽贴地 + 勾选框盖章微震 */
+#selectModeBtn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 243, 252, 0.92));
+  color: #24354c;
+  border: 1px solid rgba(175, 195, 222, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 3px 8px rgba(35, 58, 92, 0.06);
+}
+
+#selectModeBtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff, #eaf2fc);
+  border-color: rgba(147, 197, 253, 0.85);
+  color: #1769e0;
+  transform: translateY(-1.5px);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 6px 16px rgba(23, 105, 224, 0.12);
+}
+
+#selectModeBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #e1eeff 0%, #cce3fd 100%);
+  border-color: rgba(59, 130, 246, 0.65);
+  color: #1255bc;
+  box-shadow:
+    0 1px 2px rgba(23, 105, 224, 0.12),
+    inset 0 2px 4px rgba(18, 85, 188, 0.14);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+}
+
+#selectModeBtn:active:not(:disabled) .btn-icon {
+  transform: scale(0.88);
+  transition: transform 70ms ease;
+}
+
+#selectModeBtn.active {
+  background: linear-gradient(180deg, #2573e8 0%, #1560d2 100%);
+  color: #ffffff;
+  border-color: #1560d2;
+  box-shadow:
+    0 4px 12px rgba(23, 105, 224, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+#selectModeBtn.active:hover:not(:disabled) {
+  background: linear-gradient(180deg, #327ef2 0%, #1868e4 100%);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 20px rgba(23, 105, 224, 0.35);
+}
+
+#selectModeBtn.active:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #1255be 0%, #0e49a6 100%);
+  box-shadow:
+    0 2px 4px rgba(14, 73, 166, 0.3),
+    inset 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+/* 4. 刷新：冰川晶体质感 + 凹槽贴地 + 极速回转/完整顺滑旋转 */
+#refreshBtn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 243, 252, 0.92));
+  color: #24354c;
+  border: 1px solid rgba(175, 195, 222, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 3px 8px rgba(35, 58, 92, 0.06);
+}
+
+#refreshBtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff, #eaf2fc);
+  border-color: rgba(147, 197, 253, 0.85);
+  color: #1769e0;
+  transform: translateY(-1.5px);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 6px 16px rgba(23, 105, 224, 0.12);
+}
+
+#refreshBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #e1eeff 0%, #cce3fd 100%);
+  border-color: rgba(59, 130, 246, 0.65);
+  color: #1255bc;
+  box-shadow:
+    0 1px 2px rgba(23, 105, 224, 0.12),
+    inset 0 2px 4px rgba(18, 85, 188, 0.14);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+}
+
+#refreshBtn:active:not(:disabled) .btn-icon {
+  transform: rotate(180deg) scale(0.94);
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#refreshBtn.is-refreshing .btn-icon {
+  animation: refreshSpinAction 550ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes refreshSpinAction {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .search-panel {
@@ -1669,6 +1848,47 @@ tr:hover .name-cell .star-toggle-btn {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  background: linear-gradient(180deg, #009e8e 0%, #008275 100%);
+  color: #fff;
+  border: 1px solid rgba(0, 114, 102, 0.35);
+  box-shadow:
+    0 4px 12px rgba(0, 141, 127, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  transition:
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 140ms ease,
+    border-color 140ms ease;
+  will-change: transform, box-shadow;
+}
+
+#searchBtn .btn-icon {
+  width: 15px;
+  height: 15px;
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+#searchBtn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #02ab9b 0%, #008d7f 100%);
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 20px rgba(0, 141, 127, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+#searchBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  background: linear-gradient(180deg, #007367 0%, #005c52 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 92, 82, 0.35),
+    inset 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+}
+
+#searchBtn:active:not(:disabled) .btn-icon {
+  transform: scale(1.16) rotate(-12deg);
+  transition: transform 70ms ease;
 }
 
 #clearSearchBtn {
@@ -1680,6 +1900,22 @@ tr:hover .name-cell .star-toggle-btn {
   border-radius: 999px;
   padding: 0 14px;
   font-weight: 600;
+  transition:
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 140ms ease;
+}
+
+#clearSearchBtn:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+}
+
+#clearSearchBtn:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.982);
+  box-shadow:
+    0 1px 2px rgba(35, 58, 92, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease;
 }
 
 .ai-mode-toggle {
