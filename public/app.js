@@ -3047,10 +3047,11 @@ function startAccessInfoRefresh() {
 }
 
 function sessionToken() {
-  return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+  return sessionStorage.getItem(SESSION_TOKEN_KEY) || state.token || "";
 }
 
 function setSessionToken(token) {
+  state.token = token || "";
   if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
   else sessionStorage.removeItem(SESSION_TOKEN_KEY);
 }
@@ -6228,7 +6229,22 @@ function scheduleRealtimeRefresh() {
 function startRealtimeRefresh() {
   if (state.eventSource) state.eventSource.close();
   state.eventSource = new EventSource(authUrl("/api/events"));
-  state.eventSource.onmessage = () => scheduleRealtimeRefresh();
+  state.eventSource.onmessage = (event) => {
+    try {
+      const data = event.data ? JSON.parse(event.data) : null;
+      if (data?.type === "avatar-change") {
+        state.avatarVersion = data.at || Date.now();
+        api("/api/me").then((me) => {
+          if (me?.user) {
+            state.currentUser = me.user;
+            syncAdminUi();
+          }
+        }).catch(() => {});
+        return;
+      }
+    } catch {}
+    scheduleRealtimeRefresh();
+  };
   state.eventSource.onerror = () => {
     state.eventSource?.close();
     window.setTimeout(() => {
@@ -7141,10 +7157,12 @@ function syncAdminUi() {
     sidebarUserRole.classList.toggle("role-user", !isAdmin);
   }
 
-  // Update avatar display strictly per-user
+  // Update avatar display strictly per-user across all platforms (desktop & mobile)
   if (sidebarUserAvatarImg) {
-    if (state.currentUser?.hasCustomAvatar && state.token && userId) {
-      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}&auth=${encodeURIComponent(state.token || "")}`;
+    if (state.currentUser?.hasCustomAvatar && userId) {
+      const token = sessionToken() || state.token || "";
+      const authParam = token ? `&auth=${encodeURIComponent(token)}` : "";
+      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}${authParam}`;
       sidebarUserAvatarImg.onload = () => {
         sidebarUserAvatarImg.classList.remove("hidden");
         sidebarUserInitial?.classList.add("hidden");
@@ -7532,7 +7550,9 @@ function openUserAvatarModal() {
   if (avatarModalPreviewInitial) avatarModalPreviewInitial.textContent = userInitial;
 
   if (state.currentUser?.hasCustomAvatar && avatarModalPreviewImg && userId) {
-    const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}&auth=${encodeURIComponent(state.token || "")}`;
+    const token = sessionToken() || state.token || "";
+    const authParam = token ? `&auth=${encodeURIComponent(token)}` : "";
+    const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}${authParam}`;
     avatarModalPreviewImg.onload = () => {
       avatarModalPreviewImg.classList.remove("hidden");
       avatarModalPreviewInitial?.classList.add("hidden");
@@ -8415,10 +8435,31 @@ window.addEventListener("popstate", (event) => {
 window.addEventListener("focus", refreshAccessInfoSoon);
 window.addEventListener("online", refreshAccessInfoSoon);
 window.addEventListener("offline", () => refreshAccessInfoSoon({ allowSwitch: false }));
-window.addEventListener("pageshow", () => refreshAccessInfoSoon());
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) refreshAccessInfoSoon();
+window.addEventListener("pageshow", () => {
+  refreshAccessInfoSoon();
+  refreshUserSessionState();
 });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    refreshAccessInfoSoon();
+    refreshUserSessionState();
+  }
+});
+
+function refreshUserSessionState() {
+  if (driveView && !driveView.classList.contains("hidden") && state.currentUser) {
+    api("/api/me").then((me) => {
+      if (me?.user) {
+        const avatarChanged = me.user.hasCustomAvatar !== state.currentUser?.hasCustomAvatar;
+        state.currentUser = me.user;
+        if (avatarChanged) {
+          state.avatarVersion = Date.now();
+        }
+        syncAdminUi();
+      }
+    }).catch(() => {});
+  }
+}
 
 /* =========================================================
    新增功能逻辑：回收站、ZIP浏览、外链分享、AI总结、手势

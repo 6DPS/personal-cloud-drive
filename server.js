@@ -2244,6 +2244,17 @@ function notifyFileChange(userId = currentUserId()) {
   changeNotifyTimers.set(userId, timer);
 }
 
+function notifyUserAvatarChange(userId) {
+  if (!userId) return;
+  const payload = `data: ${JSON.stringify({ type: "avatar-change", userId, at: Date.now() })}\n\n`;
+  const recipients = eventClients.get(userId) || new Set();
+  for (const res of recipients) {
+    try {
+      res.write(payload);
+    } catch {}
+  }
+}
+
 function watchedPathUserId(filename) {
   const parts = String(filename || "").split(/[\\/]/).filter(Boolean);
   if (!parts.length) return "";
@@ -4246,6 +4257,7 @@ app.post("/api/user/avatar", requireAuth, express.json({ limit: "10mb" }), async
     const avatarPath = userAvatarFile(userId);
     await fsp.mkdir(path.dirname(avatarPath), { recursive: true });
     await fsp.writeFile(avatarPath, buffer);
+    notifyUserAvatarChange(userId);
     return res.json({ ok: true, avatarUrl: `/api/user/avatar?v=${Date.now()}` });
   } catch (err) {
     return res.status(500).json({ error: "保存头像失败：" + err.message });
@@ -4262,6 +4274,7 @@ app.delete("/api/user/avatar", requireAuth, async (req, res) => {
     if (fs.existsSync(avatarPath)) {
       await fsp.unlink(avatarPath);
     }
+    notifyUserAvatarChange(userId);
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: "恢复默认头像失败：" + err.message });
