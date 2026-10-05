@@ -26,6 +26,14 @@ contest-build/
 contest-analysis/
 soft-copyright-screenshots*/
 silky-verification-screenshots/
+scratch/
+
+# 根目录本地临时调试、界面验证与展示截图（仅保留本地工作区，不上传 GitHub 核心代码包）
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/popover_preview_viewer.html
 
 # 操作系统与中间缓存文件
 Thumbs.db
