@@ -1823,13 +1823,20 @@ tr:hover .name-cell .star-toggle-btn {
   color: #b91c1c !important;
 }
 
-/* 密码与安全模态框 (优雅 3-Tab 设计) */
+/* 密码与安全模态框 (统一尺寸 + 防抖动设计) */
 .user-security-card {
-  max-width: 480px !important;
-  width: 92% !important;
+  width: 480px !important;
+  max-width: 94vw !important;
+  height: 590px !important;
+  min-height: 590px !important;
+  max-height: min(590px, 94vh) !important;
   border-radius: 22px !important;
   padding: 24px 28px !important;
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .security-segmented-control {
@@ -1839,7 +1846,8 @@ tr:hover .name-cell .star-toggle-btn {
   background: #f1f5f9;
   padding: 4px;
   border-radius: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
 }
 
 .sec-segment-btn {
@@ -1871,16 +1879,89 @@ tr:hover .name-cell .star-toggle-btn {
 }
 
 .sec-tab-tip {
-  margin: -4px 0 12px 0;
+  margin: -4px 0 10px 0;
   font-size: 12.5px;
   color: #64748b;
   line-height: 1.45;
+  flex-shrink: 0;
 }
 
 .sec-tab-view {
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 11px;
+}
+
+.sec-tab-view.hidden {
+  display: none !important;
+}
+
+.user-security-card .field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin: 0 !important;
+}
+
+.user-security-card .field label {
+  margin: 0 !important;
+  color: #334155 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  cursor: default !important;
+  user-select: none !important;
+}
+
+.field-label-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.text-link-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 2px !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: #2563eb !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  min-height: unset !important;
+  height: auto !important;
+  line-height: 1.3 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: color 0.15s ease !important;
+  user-select: none !important;
+  outline: none !important;
+}
+
+.text-link-btn:hover:not(:disabled) {
+  transform: none !important;
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+
+.text-link-btn:active:not(:disabled) {
+  transform: none !important;
+  color: #1e40af !important;
+}
+
+.text-link-btn:focus,
+.text-link-btn:focus-visible {
+  outline: none !important;
+  transform: none !important;
 }
 
 .sec-tab-view .modal-actions {
@@ -1888,33 +1969,11 @@ tr:hover .name-cell .star-toggle-btn {
   justify-content: flex-end !important;
   align-items: center !important;
   gap: 10px !important;
-  margin-top: 16px !important;
+  margin-top: auto !important;
   padding-top: 14px !important;
   border-top: 1px solid #f1f5f9 !important;
   width: 100% !important;
-}
-
-.field-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.text-link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 11.5px;
-  color: #2563eb;
-  cursor: pointer;
-  font-weight: 600;
-  transition: color 0.15s ease;
-}
-
-.text-link-btn:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+  flex-shrink: 0 !important;
 }
 
 .sec-account-badge-row {
