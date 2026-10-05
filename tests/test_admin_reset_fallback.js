@@ -119,16 +119,13 @@ function del(path, headers = {}) {
     console.log(`  ✓ 测试账号注册成功: ${testUsername}, 初始密钥: ${initialRecoveryKey}`);
 
     // 3. 非管理员鉴权拦截测试
-    console.log('\n[Test 3] 验证权限拦截：非管理员无法调用重置与重发密钥接口...');
+    console.log('\n[Test 3] 验证权限拦截：非管理员无法调用重置密码管理接口...');
     const userToken = regRes.body.token;
     const userHeaders = { Authorization: `Bearer ${userToken}` };
 
     const fakeReset = await post(`/api/admin/users/${testUsername}/reset-password`, { newPassword: 'HackerPassword123' }, userHeaders);
     assert.strictEqual(fakeReset.status, 403, '越权拦截失败：非管理员居然调用成功');
-
-    const fakeKey = await post(`/api/admin/users/${testUsername}/recovery-key`, {}, userHeaders);
-    assert.strictEqual(fakeKey.status, 403, '越权拦截失败：非管理员居然调用成功');
-    console.log('  ✓ 403 权限拦截生效，普通用户绝无法越权重置他人密码或密钥');
+    console.log('  ✓ 403 权限拦截生效，普通用户绝无法越权重置他人密码');
 
     // 4. 管理员直接重置该用户密码
     console.log('\n[Test 4] 场景一测试：管理员在后台为该用户重置临时密码...');
@@ -145,9 +142,10 @@ function del(path, headers = {}) {
     assert.strictEqual(newLogin.status, 200, '临时新密码登录失败');
     console.log('  ✓ 用户使用管理员发放的临时新密码成功登录！');
 
-    // 5. 管理员为该用户重新生成专属恢复密钥
-    console.log('\n[Test 5] 场景二测试：管理员在后台为该用户重新生成恢复密钥...');
-    const regenRes = await post(`/api/admin/users/${testUsername}/recovery-key`, {}, adminHeaders);
+    // 5. 用户登录后在设置中重新生成专属恢复密钥
+    console.log('\n[Test 5] 用户登录后在个人安全设置中重新生成恢复密钥...');
+    const userSessionHeaders = { Authorization: `Bearer ${newLogin.body.token}` };
+    const regenRes = await post('/api/user/recovery-key/regenerate', {}, userSessionHeaders);
     assert.strictEqual(regenRes.status, 200, '重新生成恢复密钥失败: ' + JSON.stringify(regenRes.body));
     const newRecoveryKey = regenRes.body.recoveryKey;
     assert.notStrictEqual(newRecoveryKey, initialRecoveryKey, '新恢复密钥应该与旧密钥不同');
@@ -171,7 +169,7 @@ function del(path, headers = {}) {
       newPassword: finalPassword,
     });
     assert.strictEqual(successReset.status, 200, '新恢复密钥自主重置失败: ' + JSON.stringify(successReset.body));
-    console.log('  ✓ 用户凭管理员重发的新密钥在登录页自助找回并更新密码成功！');
+    console.log('  ✓ 用户凭新密钥在登录页自助找回并更新密码成功！');
 
     // 验证最终密码登录
     const finalLogin = await post('/api/login', { username: testUsername, password: finalPassword });

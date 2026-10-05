@@ -973,6 +973,7 @@ function normalizeAccountsUsers(users) {
       role: isAdm ? "admin" : (user.role || "user"),
       quotaBytes,
       recoveryKey,
+      tokenVersion: Number(user.tokenVersion) || 0,
       storageRoot: `users/${id}/files`,
       createdAt: user.createdAt || new Date().toISOString(),
     };
@@ -1065,10 +1066,10 @@ function sessionUser(token) {
       null
     );
     if (!user) return null;
-    if (user.tokenVersion !== undefined && payload.tokenVersion !== undefined) {
-      if (Number(payload.tokenVersion) !== Number(user.tokenVersion)) {
-        return null; // 会话已因密码重置而失效，要求使用最新密码重新鉴权
-      }
+    const userTokenVer = Number(user.tokenVersion) || 0;
+    const payloadTokenVer = Number(payload.tokenVersion) || 0;
+    if (payloadTokenVer !== userTokenVer) {
+      return null; // 会话已因密码重置而失效，要求使用最新密码重新鉴权
     }
     return user;
   } catch {
@@ -4153,28 +4154,6 @@ app.delete("/api/admin/users/:id", requireAuth, ensureAdminUser, async (req, res
   }
 });
 
-app.post("/api/admin/users/:id/recovery-key", requireAuth, ensureAdminUser, async (req, res, next) => {
-  try {
-    const targetId = String(req.params.id || "").trim();
-    const targetUser = accountsStore.users.find(
-      (u) => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase()
-    );
-    if (!targetUser) {
-      return res.status(404).json({ error: "指定用户不存在" });
-    }
-    if (targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID) {
-      return res.status(400).json({ error: "不可通过此入口重置管理员恢复密钥" });
-    }
-    const newKey = generateRecoveryKeyValue();
-    targetUser.recoveryKey = newKey;
-    targetUser.updatedAt = new Date().toISOString();
-    await saveAccountsStore();
-    res.json({ ok: true, recoveryKey: newKey, message: `已为用户 ${targetUser.username} 重新生成专属恢复密钥` });
-  } catch (error) {
-    next(error);
-  }
-});
-
 app.post("/api/register", createRateLimitMiddleware({
   id: "register",
   windowMs: 10 * 60 * 1000,
@@ -4374,7 +4353,13 @@ app.get("/api/user/recovery-key", requireAuth, (req, res) => {
   res.json({ ok: true, recoveryKey: user.recoveryKey });
 });
 
-app.post("/api/user/recovery-key/regenerate", requireAuth, async (req, res, next) => {
+app.post("/api/user/recovery-key/regenerate", requireAuth, createRateLimitMiddleware({
+  id: "recovery-key-regenerate",
+  windowMs: 15 * 60 * 1000,
+  maxHits: 20,
+  message: "重新生成安全恢复密钥过于频繁，请稍后再试",
+  key: (req) => `${clientIp(req)}:${req.user?.id || "-"}`,
+}), async (req, res, next) => {
   try {
     const user = req.user;
     user.recoveryKey = generateRecoveryKeyValue();

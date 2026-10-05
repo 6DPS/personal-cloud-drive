@@ -1149,16 +1149,12 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
   renderAiDrawer();
+  driveView?.classList.add("ai-drawer-docked");
+  document.body.classList.add("ai-drawer-open");
   aiDrawer?.classList.remove("closing");
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
-
-  // Decouple full-page grid docked reflow and trigger slide-in on pristine compositor frame
-  requestAnimationFrame(() => {
-    driveView?.classList.add("ai-drawer-docked");
-    document.body.classList.add("ai-drawer-open");
-  });
 
   // Schedule auto-resize and focus AFTER the 380ms GPU animation completes smoothly!
   window.setTimeout(() => {
@@ -3185,6 +3181,20 @@ async function api(url, options = {}) {
     data = rawText ? JSON.parse(rawText) : null;
   } catch {}
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      !url.includes("/api/login") &&
+      !url.includes("/api/password-reset") &&
+      !url.includes("/api/register") &&
+      !url.includes("/api/me")
+    ) {
+      if (state.currentUser) {
+        clearUserSessionAndNavigateToLogin(
+          state.currentUser.username,
+          "登录状态已失效或密码已被重置，请使用新密码重新登录"
+        );
+      }
+    }
     let fallback = (data && data.error) || "操作失败";
     if (String(url).includes("/api/ai/chat")) {
       if (response.status === 404) {

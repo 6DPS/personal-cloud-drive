@@ -3899,8 +3899,7 @@ tbody tr.selected-row .row-actions,
   -webkit-backface-visibility: hidden;
 }
 
-body.ai-drawer-open .ai-drawer,
-.ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer {
+body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer {
   animation: aiDrawerIn 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -8511,6 +8510,7 @@ select:focus {
   }
 
   /* 抽屉自身吸附在右侧，高度贴合，纯 GPU translate3d 流畅推入 */
+  .ai-drawer,
   body.ai-drawer-open .ai-drawer,
   .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer {
     top: 8px;
