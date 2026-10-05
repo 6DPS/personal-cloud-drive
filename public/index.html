@@ -255,18 +255,26 @@
                 <circle cx="7.5" cy="15.5" r="4.5"/>
                 <path d="M10.8 12.2L21 2M16 7l2 2M19 4l2 2"/>
               </svg>
-              <span>记得原密码 · 修改密码</span>
+              <span>修改密码</span>
             </button>
             <button id="secTabRecoverBtn" class="sec-segment-btn" type="button">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
-              <span>忘记原密码 · 凭密钥重置</span>
+              <span>找回重置</span>
+            </button>
+            <button id="secTabKeyBtn" class="sec-segment-btn" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span>安全恢复密钥</span>
             </button>
           </div>
 
           <!-- Tab 1 内容：修改密码 -->
           <div id="secChangeView" class="sec-tab-view">
+            <p class="sec-tab-tip">记得当前登录原密码时，直接自主修改新密码。</p>
             <label class="field">
               <span class="field-label-row">
                 <span>当前原密码</span>
@@ -284,20 +292,24 @@
             </label>
             <p id="secChangeError" class="error modal-error"></p>
             <div class="modal-actions">
-              <button id="confirmSecChangeBtn" class="primary" type="button">确认修改密码</button>
               <button id="cancelSecChangeBtn" class="ghost" type="button">取消</button>
+              <button id="confirmSecChangeBtn" class="primary" type="button">确认修改密码</button>
             </div>
           </div>
 
           <!-- Tab 2 内容：忘记原密码，凭专属恢复密钥重置 -->
           <div id="secRecoverView" class="sec-tab-view hidden">
+            <p class="sec-tab-tip">遗忘原密码时，凭账号专属恢复密钥在系统内直接重置。</p>
             <div class="sec-account-badge-row">
               <span class="sec-account-badge-label">当前账号：</span>
               <strong id="secCurrentUsernameText" class="sec-account-badge-val">admin</strong>
-              <span class="sec-account-badge-tip">（免登出系统内直接找回）</span>
+              <span class="sec-account-badge-tip">（免登出直接重置）</span>
             </div>
             <label class="field">
-              <span>账号专属安全恢复密钥</span>
+              <span class="field-label-row">
+                <span>账号专属安全恢复密钥</span>
+                <button id="secViewMyKeyLink" class="text-link-btn" type="button">查看我的密钥 ➔</button>
+              </span>
               <input id="secRecoveryKeyInput" type="text" autocomplete="off" placeholder="请输入专属密钥，例如 DPSIR-RCV-XXXX-XXXX" />
             </label>
             <label class="field">
@@ -310,45 +322,79 @@
             </label>
             <p id="secRecoverError" class="error modal-error"></p>
             <div class="modal-actions">
-              <button id="confirmSecRecoverBtn" class="primary sec-amber-btn" type="button">重置并更新密码</button>
               <button id="cancelSecRecoverBtn" class="ghost" type="button">取消</button>
+              <button id="confirmSecRecoverBtn" class="primary sec-amber-btn" type="button">凭密钥重置密码</button>
             </div>
           </div>
 
-          <!-- 底部独立卡片：我的专属安全恢复密钥 -->
-          <div class="recovery-key-card">
-            <div class="recovery-key-header">
-              <div class="recovery-key-title-group">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                <span class="recovery-key-title">我的专属安全恢复密钥</span>
+          <!-- Tab 3 内容：专属安全恢复密钥管理专区 -->
+          <div id="secKeyView" class="sec-tab-view hidden">
+            <div class="recovery-hero-card">
+              <div class="recovery-hero-top">
+                <div class="recovery-hero-icon-wrap">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <div class="recovery-hero-text">
+                  <div class="recovery-hero-title-row">
+                    <strong>我的专属安全恢复密钥</strong>
+                    <span class="sec-active-tag">● 专属绑定当前账号</span>
+                  </div>
+                  <p class="recovery-hero-sub">系统内外通用，遗忘密码时凭此密钥可随时自主找回</p>
+                </div>
               </div>
-              <button id="secRegenerateKeyBtn" class="ghost compact recovery-regen-btn" type="button" title="重新生成后旧密钥将立即作废失效">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                </svg>
-                <span>重新生成</span>
-              </button>
+
+              <!-- 密钥展示条 -->
+              <div class="recovery-key-display-box">
+                <span id="secRecoveryKeyVal" class="recovery-key-code">DPSIR-RCV-••••-••••</span>
+                <div class="recovery-key-actions">
+                  <button id="secToggleKeyVisibilityBtn" class="icon-button tiny-icon" type="button" title="显示/隐藏密钥">
+                    <svg id="secKeyEyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                  <button id="secCopyKeyBtn" class="copy-key-pill-btn" type="button" title="复制恢复密钥到剪贴板">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    <span id="secCopyKeyBtnText">复制密钥</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 提示引导 -->
+              <div class="recovery-guide-box">
+                <div class="recovery-guide-item">
+                  <span class="guide-icon">💡</span>
+                  <span><strong>自主找回：</strong>若遗忘密码，无论在登录页还是系统内均可凭借此密钥重设，无需管理员介入。</span>
+                </div>
+                <div class="recovery-guide-item">
+                  <span class="guide-icon">🛡️</span>
+                  <span><strong>一人一密：</strong>不同账号完全隔离。若密钥不慎泄露给他人，请立即在下方重新生成新密钥。</span>
+                </div>
+              </div>
+
+              <!-- 重新生成操作区 -->
+              <div class="recovery-regen-bar">
+                <div class="recovery-regen-info">
+                  <span class="recovery-regen-title">重新生成专属密钥</span>
+                  <span class="recovery-regen-tip">重新生成后旧密钥立即作废，系统仅认最新一把</span>
+                </div>
+                <button id="secRegenerateKeyBtn" class="ghost compact recovery-regen-btn" type="button" title="重新生成后旧密钥将立即作废失效">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                  </svg>
+                  <span>重新生成</span>
+                </button>
+              </div>
             </div>
-            <p class="recovery-key-desc">用于在遗忘登录密码时自主找回，专属绑定当前账号，请妥善保存在备忘录中。</p>
-            <div class="recovery-key-display-box">
-              <span id="secRecoveryKeyVal" class="recovery-key-code">DPSIR-RCV-••••-••••</span>
-              <div class="recovery-key-actions">
-                <button id="secToggleKeyVisibilityBtn" class="icon-button tiny-icon" type="button" title="显示/隐藏密钥">
-                  <svg id="secKeyEyeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </button>
-                <button id="secCopyKeyBtn" class="copy-key-pill-btn" type="button" title="复制恢复密钥到剪贴板">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                  <span id="secCopyKeyBtnText">复制</span>
-                </button>
-              </div>
+
+            <div class="modal-actions" style="margin-top: 18px;">
+              <button id="secKeyGoResetLink" class="ghost text-link-btn" type="button" style="margin-right: auto; padding: 0 4px;">忘记密码？前往重置 ➔</button>
+              <button id="closeSecKeyViewBtn" class="primary" type="button">完成</button>
             </div>
           </div>
         </div>
@@ -573,8 +619,8 @@
                     <span id="sidebarUserRole" class="user-dock-role">超级管理员</span>
                   </div>
                 </div>
-                <button id="sidebarUserMenuBtn" class="dock-more-trigger" type="button" title="账号与安全菜单" aria-label="账号与安全菜单">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <button id="sidebarUserMenuBtn" class="dock-more-trigger" type="button" title="展开/收起账号菜单" aria-label="展开/收起账号菜单">
+                  <svg class="dock-arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="18 15 12 9 6 15"/>
                   </svg>
                 </button>

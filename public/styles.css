@@ -1586,27 +1586,56 @@ tr:hover .name-cell .star-toggle-btn {
 }
 
 .dock-more-trigger {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(203, 213, 225, 0.7);
-  background: rgba(241, 245, 249, 0.85);
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  flex-shrink: 0;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(203, 213, 225, 0.85) !important;
+  background: #f8fafc !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
 }
 
-.dock-more-trigger:hover,
+.dock-more-trigger:hover {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+  color: #2563eb !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2) !important;
+  transform: scale(1.08) !important;
+}
+
+.dock-more-trigger .dock-arrow-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  display: block !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
 .sidebar-user-dock.popover-open .dock-more-trigger {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
-  transform: translateY(-1px);
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+.sidebar-user-dock.popover-open .dock-more-trigger .dock-arrow-icon {
+  transform: rotate(180deg) !important;
 }
 
 .sidebar-user-dock.popover-open {
@@ -1797,28 +1826,31 @@ tr:hover .name-cell .star-toggle-btn {
   color: #b91c1c !important;
 }
 
-/* 密码与安全模态框 */
+/* 密码与安全模态框 (优雅 3-Tab 设计) */
 .user-security-card {
-  max-width: 460px !important;
+  max-width: 480px !important;
   width: 92% !important;
+  border-radius: 22px !important;
+  padding: 24px 28px !important;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.06) !important;
 }
 
 .security-segmented-control {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
   background: #f1f5f9;
   padding: 4px;
   border-radius: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .sec-segment-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 10px;
+  gap: 5px;
+  padding: 8px 6px;
   font-size: 12.5px;
   font-weight: 600;
   color: #64748b;
@@ -1827,6 +1859,7 @@ tr:hover .name-cell .star-toggle-btn {
   border-radius: 9px;
   cursor: pointer;
   transition: all 0.16s ease;
+  white-space: nowrap;
 }
 
 .sec-segment-btn.active {
@@ -1840,10 +1873,28 @@ tr:hover .name-cell .star-toggle-btn {
   color: #d97706;
 }
 
+.sec-tab-tip {
+  margin: -4px 0 12px 0;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
 .sec-tab-view {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 13px;
+}
+
+.sec-tab-view .modal-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  width: 100% !important;
 }
 
 .field-label-row {
@@ -1860,7 +1911,7 @@ tr:hover .name-cell .star-toggle-btn {
   font-size: 11.5px;
   color: #2563eb;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: color 0.15s ease;
 }
 
@@ -1903,49 +1954,70 @@ tr:hover .name-cell .star-toggle-btn {
   background: #b45309 !important;
 }
 
-/* 恢复密钥独立卡片 */
-.recovery-key-card {
-  margin-top: 20px;
-  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  border-radius: 14px;
-  padding: 14px;
+/* Tab 3：安全恢复密钥专区卡片 */
+.recovery-hero-card {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
 }
 
-.recovery-key-header {
+.recovery-hero-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.recovery-hero-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid rgba(191, 219, 254, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recovery-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.recovery-hero-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
-.recovery-key-title-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.recovery-key-title {
-  font-size: 13px;
-  font-weight: 700;
+.recovery-hero-title-row strong {
+  font-size: 13.5px;
   color: #0f172a;
+  font-weight: 700;
 }
 
-.recovery-regen-btn {
-  font-size: 11px !important;
-  padding: 3px 8px !important;
-  color: #64748b !important;
+.sec-active-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid rgba(167, 243, 208, 0.8);
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
 }
 
-.recovery-regen-btn:hover {
-  color: #2563eb !important;
-}
-
-.recovery-key-desc {
+.recovery-hero-sub {
   font-size: 11.5px;
   color: #64748b;
-  margin: 0 0 10px 0;
+  margin: 0;
   line-height: 1.4;
 }
 
@@ -1954,10 +2026,11 @@ tr:hover .name-cell .star-toggle-btn {
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
-  border: 1px solid rgba(203, 213, 225, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.95);
   border-radius: 10px;
   padding: 8px 12px;
   gap: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .recovery-key-code {
@@ -1965,7 +2038,7 @@ tr:hover .name-cell .star-toggle-btn {
   font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .recovery-key-actions {
@@ -2003,11 +2076,81 @@ tr:hover .name-cell .star-toggle-btn {
   background: transparent !important;
   border: none !important;
   cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
 }
 
 .tiny-icon:hover {
   background: #f1f5f9 !important;
   color: #0f172a !important;
+}
+
+.recovery-guide-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.recovery-guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.recovery-guide-item strong {
+  color: #1e293b;
+}
+
+.guide-icon {
+  font-size: 12px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.recovery-regen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(203, 213, 225, 0.85);
+}
+
+.recovery-regen-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recovery-regen-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.recovery-regen-tip {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.recovery-regen-btn {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  color: #64748b !important;
+  border-radius: 8px !important;
+}
+
+.recovery-regen-btn:hover {
+  color: #2563eb !important;
 }
 
 .content {

@@ -188,8 +188,13 @@ const userSecurityModal = $("#userSecurityModal");
 const closeUserSecurityModalBtn = $("#closeUserSecurityModalBtn");
 const secTabChangeBtn = $("#secTabChangeBtn");
 const secTabRecoverBtn = $("#secTabRecoverBtn");
+const secTabKeyBtn = $("#secTabKeyBtn");
 const secChangeView = $("#secChangeView");
 const secRecoverView = $("#secRecoverView");
+const secKeyView = $("#secKeyView");
+const secViewMyKeyLink = $("#secViewMyKeyLink");
+const secKeyGoResetLink = $("#secKeyGoResetLink");
+const closeSecKeyViewBtn = $("#closeSecKeyViewBtn");
 
 const secOldPasswordInput = $("#secOldPasswordInput");
 const secNewPasswordInput = $("#secNewPasswordInput");
@@ -8015,21 +8020,27 @@ function toggleUserAccountPopover() {
 }
 
 function switchSecurityModalTab(mode = "change") {
+  secTabChangeBtn?.classList.remove("active", "amber-active");
+  secTabRecoverBtn?.classList.remove("active", "amber-active");
+  secTabKeyBtn?.classList.remove("active", "amber-active");
+  secChangeView?.classList.add("hidden");
+  secRecoverView?.classList.add("hidden");
+  secKeyView?.classList.add("hidden");
+
   if (mode === "change") {
     secTabChangeBtn?.classList.add("active");
-    secTabChangeBtn?.classList.remove("amber-active");
-    secTabRecoverBtn?.classList.remove("active", "amber-active");
     secChangeView?.classList.remove("hidden");
-    secRecoverView?.classList.add("hidden");
     if (secChangeError) secChangeError.textContent = "";
     window.setTimeout(() => secOldPasswordInput?.focus(), 50);
-  } else {
+  } else if (mode === "recover") {
     secTabRecoverBtn?.classList.add("active", "amber-active");
-    secTabChangeBtn?.classList.remove("active");
     secRecoverView?.classList.remove("hidden");
-    secChangeView?.classList.add("hidden");
     if (secRecoverError) secRecoverError.textContent = "";
     window.setTimeout(() => secRecoveryKeyInput?.focus(), 50);
+  } else if (mode === "key") {
+    secTabKeyBtn?.classList.add("active");
+    secKeyView?.classList.remove("hidden");
+    renderRecoveryKeyDisplay();
   }
 }
 
@@ -8298,12 +8309,16 @@ popoverLogoutBtn?.addEventListener("click", () => {
 
 secTabChangeBtn?.addEventListener("click", () => switchSecurityModalTab("change"));
 secTabRecoverBtn?.addEventListener("click", () => switchSecurityModalTab("recover"));
+secTabKeyBtn?.addEventListener("click", () => switchSecurityModalTab("key"));
 secForgotOldPwdLink?.addEventListener("click", () => switchSecurityModalTab("recover"));
+secViewMyKeyLink?.addEventListener("click", () => switchSecurityModalTab("key"));
+secKeyGoResetLink?.addEventListener("click", () => switchSecurityModalTab("recover"));
 confirmSecChangeBtn?.addEventListener("click", submitChangePassword);
 cancelSecChangeBtn?.addEventListener("click", closeUserSecurityModal);
 closeUserSecurityModalBtn?.addEventListener("click", closeUserSecurityModal);
 confirmSecRecoverBtn?.addEventListener("click", submitRecoverPasswordInApp);
 cancelSecRecoverBtn?.addEventListener("click", closeUserSecurityModal);
+closeSecKeyViewBtn?.addEventListener("click", closeUserSecurityModal);
 
 secRegenerateKeyBtn?.addEventListener("click", handleRegenerateRecoveryKey);
 secToggleKeyVisibilityBtn?.addEventListener("click", () => {
