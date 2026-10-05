@@ -58,13 +58,11 @@ const state = {
   aiConversations: new Map(),
   trashMode: false,
   starredMode: false,
-  viewMode: localStorage.getItem("pcd.viewMode") || "list",
 };
 
 const $ = (selector) => document.querySelector(selector);
 const SESSION_TOKEN_KEY = "pcd.sessionToken";
 const AI_MODE_KEY = "pcd.aiModeEnabled";
-const VIEW_MODE_KEY = "pcd.viewMode";
 let aiDrawerCloseTimer = null;
 let aiPromptPressTimer = null;
 let aiModeRenderFrame = 0;
@@ -182,12 +180,6 @@ const activeClientCount = $("#activeClientCount");
 const networkStatus = $("#networkStatus");
 const healthStatus = $("#healthStatus");
 const fileRows = $("#fileRows");
-const fileTable = $("#fileTable");
-const fileGrid = $("#fileGrid");
-const viewModeToggleBtn = $("#viewModeToggleBtn");
-const iconViewGrid = $("#iconViewGrid");
-const iconViewList = $("#iconViewList");
-const viewModeLabel = $("#viewModeLabel");
 const emptyState = $("#emptyState");
 const fileInput = $("#fileInput");
 const folderInput = $("#folderInput");
@@ -4772,14 +4764,6 @@ function syncSelectionRows() {
     const checkbox = row.querySelector(".row-select");
     if (checkbox) checkbox.checked = selected;
   }
-  if (fileGrid) {
-    for (const card of fileGrid.querySelectorAll(".grid-card[data-path]")) {
-      const selected = state.selectedPaths.has(card.dataset.path);
-      card.classList.toggle("selected-card", selected);
-      const checkbox = card.querySelector(".card-select");
-      if (checkbox) checkbox.checked = selected;
-    }
-  }
   if (headerSelectAll) {
     const total = state.items.length;
     const count = state.selectedPaths.size;
@@ -5216,247 +5200,12 @@ async function executeOpenItem(item) {
   }
 }
 
-function updateViewModeUi() {
-  const isTrash = Boolean(state.trashMode);
-  const isGrid = !isTrash && state.viewMode === "grid";
-  if (fileTable) fileTable.classList.toggle("hidden", isGrid);
-  if (fileGrid) fileGrid.classList.toggle("hidden", !isGrid);
-  if (iconViewGrid) iconViewGrid.classList.toggle("hidden", isGrid);
-  if (iconViewList) iconViewList.classList.toggle("hidden", !isGrid);
-  if (viewModeLabel) viewModeLabel.textContent = isGrid ? "列表" : "宫格";
-  if (viewModeToggleBtn) {
-    viewModeToggleBtn.title = isGrid ? "切换为列表视图" : "切换为宫格缩略图视图";
-    viewModeToggleBtn.classList.toggle("hidden", isTrash);
-  }
-}
-
-function renderGridCards(options = {}) {
-  if (!fileGrid) return;
-  const fragment = document.createDocumentFragment();
-
-  state.items.forEach((item, index) => {
-    const itemKey = item.path || item.id || item.trashId;
-    const isSelected = state.selectedPaths.has(itemKey);
-    const isFolder = item.type === "folder" || item.isDirectory;
-    const ext = fileExt(item.name || "");
-    const isImg = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext);
-
-    const card = document.createElement("div");
-    card.className = `grid-card${isSelected ? " selected-card" : ""}`;
-    card.draggable = true;
-    card.dataset.path = item.path;
-    card.dataset.type = item.type;
-
-    // Top Bar: Checkbox + Star
-    const topbar = document.createElement("div");
-    topbar.className = "grid-card-topbar";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "row-select card-select";
-    checkbox.checked = isSelected;
-    checkbox.setAttribute("aria-label", `选择 ${itemName(item)}`);
-    checkbox.addEventListener("click", (event) => {
-      if (event.shiftKey) {
-        event.preventDefault();
-        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
-        return;
-      }
-      event.stopPropagation();
-    });
-    checkbox.addEventListener("change", () => {
-      state.selectionMode = true;
-      toggleItemSelection(item, checkbox.checked);
-      state.lastAnchorKey = itemKeyOf(item);
-    });
-
-    const starBtn = document.createElement("button");
-    starBtn.type = "button";
-    starBtn.className = `star-toggle-btn card-star-btn${item.starred ? " active" : ""}`;
-    starBtn.title = item.starred ? "取消星标" : "设为星标";
-    starBtn.setAttribute("aria-label", item.starred ? `取消“${itemName(item)}”的星标` : `将“${itemName(item)}”设为星标`);
-    starBtn.innerHTML = item.starred
-      ? `<svg class="star-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
-      : `<svg class="star-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-    starBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleStarItem(item);
-    });
-
-    topbar.append(checkbox, starBtn);
-
-    // Thumbnail / Icon Area
-    const thumbContainer = document.createElement("div");
-    thumbContainer.className = "grid-thumb-container";
-
-    if (isImg) {
-      const img = document.createElement("img");
-      img.className = "grid-thumb-img";
-      img.loading = "lazy";
-      img.alt = itemName(item);
-      img.src = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
-      img.onerror = () => {
-        img.remove();
-        const icon = renderFileIcon(item, { baseClass: "file-icon grid-large-icon" });
-        thumbContainer.append(icon);
-      };
-      thumbContainer.append(img);
-    } else {
-      const icon = renderFileIcon(item, { baseClass: "file-icon grid-large-icon" });
-      thumbContainer.append(icon);
-    }
-
-    // Meta Info: Filename + Subtitle (Size or Folder location)
-    const metaWrap = document.createElement("div");
-    metaWrap.className = "grid-card-meta";
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "grid-card-name";
-    nameSpan.title = itemName(item);
-    if (state.searchActive) {
-      appendHighlightedText(nameSpan, itemName(item), state.searchTokens);
-    } else {
-      nameSpan.textContent = itemName(item);
-    }
-
-    const subSpan = document.createElement("span");
-    subSpan.className = "grid-card-sub";
-    if (state.searchActive || state.starredMode) {
-      const loc = item.folderPath ? item.folderPath : "全部文件";
-      subSpan.textContent = isFolder ? `文件夹 · ${loc}` : `${formatSize(item.size)} · ${loc}`;
-      subSpan.title = `位置：${loc}`;
-    } else {
-      subSpan.textContent = isFolder ? "文件夹" : formatSize(item.size);
-    }
-
-    metaWrap.append(nameSpan, subSpan);
-
-    // Hover Quick Actions
-    const actionsWrap = document.createElement("div");
-    actionsWrap.className = "grid-card-actions";
-
-    const aiBtn = aiActionSlot(item, options, index);
-    if (aiBtn) actionsWrap.append(aiBtn);
-
-    if (isFolder) {
-      const isLocked = Boolean(item.locked);
-      const lockSvg = isLocked
-        ? `<svg class="action-btn-svg lock-closed-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15" r="1.2" fill="currentColor"/><path d="M12 16.2v1.8"/></svg>`
-        : `<svg class="action-btn-svg lock-open-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 7.8-1.2"/></svg>`;
-      const lockBtn = document.createElement("button");
-      lockBtn.type = "button";
-      lockBtn.className = `grid-action-btn lock-action-btn ${isLocked ? "is-locked" : "is-unlocked"}`;
-      lockBtn.title = isLocked ? "修改文件夹密码 / 密码管理" : "加密文件夹 (设置访问密码)";
-      lockBtn.innerHTML = lockSvg;
-      lockBtn.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        await runAction(() => openFolderPasswordSettings(item));
-      });
-      actionsWrap.append(lockBtn);
-    }
-
-    const downloadBtn = document.createElement("button");
-    downloadBtn.type = "button";
-    downloadBtn.className = "grid-action-btn";
-    downloadBtn.title = isFolder ? "下载文件夹 (打包为 ZIP)" : "下载文件";
-    downloadBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.6 2.1A2 2 0 0 0 4.5 21h15a2 2 0 0 0 1.9-1.9L22 17"/></svg>`;
-    downloadBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      downloadFile(item);
-    });
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "grid-action-btn danger-action-btn";
-    deleteBtn.title = "删除";
-    deleteBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>`;
-    deleteBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      deleteItem(item);
-    });
-
-    actionsWrap.append(downloadBtn, deleteBtn);
-
-    card.append(topbar, thumbContainer, metaWrap, actionsWrap);
-
-    // Click handling
-    card.addEventListener("click", async (event) => {
-      if (event.target.closest("button") || event.target.closest("input")) return;
-      if (event.shiftKey) {
-        event.preventDefault();
-        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
-        return;
-      }
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        handleToggleSelection(item);
-        return;
-      }
-      if (state.selectionMode) {
-        toggleItemSelection(item, !state.selectedPaths.has(itemKeyOf(item)));
-        state.lastAnchorKey = itemKeyOf(item);
-        return;
-      }
-      state.lastAnchorKey = itemKeyOf(item);
-      await executeOpenItem(item);
-    });
-
-    // Double-click handling
-    card.addEventListener("dblclick", async (event) => {
-      if (event.target.closest("button") || event.target.closest("input")) return;
-      await executeOpenItem(item);
-    });
-
-    // Drag and drop
-    card.addEventListener("dragstart", (event) => {
-      state.draggedItemPath = item.path;
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("application/x-drive-path", item.path);
-      event.dataTransfer.setData("text/plain", itemName(item));
-      card.classList.add("dragging-row");
-    });
-    card.addEventListener("dragend", () => {
-      state.draggedItemPath = "";
-      card.classList.remove("dragging-row");
-      document.querySelectorAll(".drop-target-row").forEach((el) => el.classList.remove("drop-target-row"));
-    });
-
-    if (isFolder) {
-      card.addEventListener("dragover", (event) => {
-        const source = event.dataTransfer.getData("application/x-drive-path") || state.draggedItemPath;
-        if (!source || source === item.path) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        card.classList.add("drop-target-row");
-      });
-      card.addEventListener("dragleave", () => card.classList.remove("drop-target-row"));
-      card.addEventListener("drop", async (event) => {
-        const source = event.dataTransfer.getData("application/x-drive-path") || state.draggedItemPath;
-        if (!source || source === item.path || event.dataTransfer.files.length) return;
-        event.preventDefault();
-        card.classList.remove("drop-target-row");
-        const sourceItem = state.items.find((entry) => entry.path === source);
-        const sourceName = sourceItem ? itemName(sourceItem) : source.split("/").filter(Boolean).pop() || "选中项目";
-        const ok = await showConfirmDialog("移动项目", `确认将“${sourceName}”移动到“${itemName(item)}”吗？`);
-        if (!ok) return;
-        await moveItemToFolder(source, item.path);
-      });
-    }
-
-    fragment.append(card);
-  });
-
-  fileGrid.append(fragment);
-}
-
 function renderRows(options = {}) {
   closeContextMenu();
   closeRowActionMenus();
   document.querySelectorAll(".row-action-menu").forEach((menu) => menu.remove());
   document.querySelectorAll(".row-action-menu-bridge").forEach((bridge) => bridge.remove());
   fileRows.innerHTML = "";
-  if (fileGrid) fileGrid.innerHTML = "";
-  updateViewModeUi();
   emptyState.classList.toggle("hidden", state.items.length > 0);
   const emptyTitle = emptyState.querySelector("strong");
   const emptyText = emptyState.querySelector("span");
@@ -5588,11 +5337,6 @@ function renderRows(options = {}) {
       fragment.append(tr);
     });
     fileRows.append(fragment);
-    return;
-  }
-
-  if (state.viewMode === "grid") {
-    renderGridCards(options);
     return;
   }
 
@@ -8380,12 +8124,6 @@ $("#refreshBtn").addEventListener("click", () => {
   }
   loadFolder(state.path, { replaceHistory: true, forceRefresh: true, animateAi: state.aiModeEnabled });
 });
-viewModeToggleBtn?.addEventListener("click", () => {
-  state.viewMode = state.viewMode === "grid" ? "list" : "grid";
-  localStorage.setItem(VIEW_MODE_KEY, state.viewMode);
-  updateViewModeUi();
-  renderRows();
-});
 closePreviewBtn.addEventListener("click", closePreview);
 
 for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal]) {
@@ -9938,21 +9676,13 @@ bulkRestoreTrashBtn?.addEventListener("click", bulkRestoreSelectedTrash);
 bulkPermanentDeleteBtn?.addEventListener("click", bulkPermanentDeleteSelectedTrash);
 clearTrashSelectionBtn?.addEventListener("click", clearSelection);
 
-// 绑定表格行与宫格卡片右键上下文菜单事件
+// 绑定表格行右键上下文菜单事件
 fileRows?.addEventListener("contextmenu", (event) => {
   const tr = event.target.closest("tr[data-path]");
   if (!tr) return;
   event.preventDefault();
   event.stopPropagation();
   handleRowContextMenu(event, tr);
-});
-
-fileGrid?.addEventListener("contextmenu", (event) => {
-  const card = event.target.closest(".grid-card[data-path]");
-  if (!card) return;
-  event.preventDefault();
-  event.stopPropagation();
-  handleRowContextMenu(event, card);
 });
 
 mySharesBtn?.addEventListener("click", () => {
