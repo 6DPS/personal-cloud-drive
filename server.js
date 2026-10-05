@@ -4100,7 +4100,13 @@ app.post("/api/admin/users/:id/quota", requireAuth, ensureAdminUser, async (req,
   }
 });
 
-app.post("/api/admin/users/:id/reset-password", requireAuth, ensureAdminUser, async (req, res, next) => {
+app.post("/api/admin/users/:id/reset-password", requireAuth, ensureAdminUser, createRateLimitMiddleware({
+  id: "admin-reset-password",
+  windowMs: 15 * 60 * 1000,
+  maxHits: 40,
+  message: "管理员重置密码操作过于频繁，请稍后再试",
+  key: (req) => `${clientIp(req)}:${req.user?.id || "-"}`,
+}), async (req, res, next) => {
   try {
     const targetId = String(req.params.id || "").trim();
     const targetUser = accountsStore.users.find(
@@ -4254,7 +4260,15 @@ app.post("/api/login", loginIpRateLimit, loginAccountRateLimit, (req, res) => {
   return res.status(401).json({ error: "账号或密码不正确" });
 });
 
-app.post("/api/password-reset", createRateLimitMiddleware({
+const passwordResetIpRateLimit = createRateLimitMiddleware({
+  id: "password-reset-ip",
+  windowMs: 15 * 60 * 1000,
+  maxHits: 30,
+  message: "来自当前网络的密码重置尝试过于频繁，请稍后再试",
+  key: (req) => clientIp(req),
+});
+
+app.post("/api/password-reset", passwordResetIpRateLimit, createRateLimitMiddleware({
   id: "password-reset",
   windowMs: 15 * 60 * 1000,
   maxHits: 6,
@@ -4278,7 +4292,7 @@ app.post("/api/password-reset", createRateLimitMiddleware({
       return res.status(400).json({ error: "新密码长度至少需要 6 位" });
     }
     const targetUser = accountsStore.users.find(
-      (item) => item.username.toLowerCase() === username.toLowerCase()
+      (item) => item.username.toLowerCase() === username.toLowerCase() || item.id.toLowerCase() === username.toLowerCase()
     );
     if (!targetUser) {
       return res.status(404).json({ error: "这个账号不存在" });
@@ -4286,7 +4300,7 @@ app.post("/api/password-reset", createRateLimitMiddleware({
     const isTargetAdmin = targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID;
     const inputKeyNormalized = normalizeRecoveryKey(recoveryKey);
     const userKeyNormalized = targetUser.recoveryKey ? normalizeRecoveryKey(targetUser.recoveryKey) : "";
-    const matchesUserKey = Boolean(userKeyNormalized && inputKeyNormalized === userKeyNormalized);
+    const matchesUserKey = Boolean(userKeyNormalized && safeCompare(inputKeyNormalized, userKeyNormalized));
 
     const matchesAdminFallback = Boolean(isTargetAdmin && (
       String(recoveryKey) === ADMIN_PASSWORD ||

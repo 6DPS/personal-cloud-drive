@@ -1156,11 +1156,11 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
 
-  // Schedule auto-resize and focus AFTER the 380ms GPU animation completes smoothly!
+  // Schedule auto-resize and focus AFTER the 300ms GPU animation completes smoothly!
   window.setTimeout(() => {
     autoResizeAiPromptInput();
     aiPromptInput?.focus({ preventScroll: true });
-  }, 380);
+  }, 300);
 
   const currentScope = getCurrentAiScope();
   setStatus(state.aiDrawer.mode === "item" && item
@@ -1247,12 +1247,12 @@ function closeAiDrawer() {
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
-  }, 380);
+  }, 300);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
   window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();
-  }, 400);
+  }, 320);
 }
 
 function aiSuggestionButton(label, prompt) {
