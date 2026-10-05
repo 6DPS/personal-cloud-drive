@@ -1288,12 +1288,9 @@ tr:hover .name-cell .star-toggle-btn {
   justify-content: space-between;
   padding: 0 8px 0 10px;
   box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.sidebar-user-dock:hover {
-  border-color: rgba(147, 197, 253, 0.85);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.09);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+  user-select: none;
 }
 
 .user-dock-left {

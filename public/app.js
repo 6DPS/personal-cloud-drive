@@ -8278,13 +8278,11 @@ function closeRegisterSuccessModal() {
   registerSuccessModal.setAttribute("aria-hidden", "true");
 }
 
-// 绑定侧边栏 Dock 及 Popover 交互
-sidebarUserDock?.addEventListener("click", (e) => {
-  if (e.target.closest("#userAvatarContainer")) {
-    openUserAvatarModal();
-    return;
-  }
-  toggleUserAccountPopover();
+// 绑定侧边栏交互：仅点击圆形折叠箭头触发 Popover，点击头像打开头像设置，点击跑道外框不弹出
+userAvatarContainer?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  closeUserAccountPopover();
+  openUserAvatarModal();
 });
 
 sidebarUserMenuBtn?.addEventListener("click", (e) => {
@@ -8666,7 +8664,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("click", (event) => {
-  if (!event.target?.closest?.("#sidebarUserDock") && !event.target?.closest?.("#userAccountPopover")) {
+  if (!event.target?.closest?.("#sidebarUserMenuBtn") && !event.target?.closest?.("#userAccountPopover")) {
     closeUserAccountPopover();
   }
   if (isFolderDropdownInteraction(event)) return;
