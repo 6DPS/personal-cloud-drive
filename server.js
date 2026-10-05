@@ -477,6 +477,29 @@ function maskRegistrationKey(value = "") {
   return `${normalized.slice(0, 10)}-****-${normalized.slice(-4)}`;
 }
 
+function normalizeRecoveryKey(value = "") {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function generateRecoveryKeyValue() {
+  let raw = "";
+  while (raw.length < 8) {
+    raw += crypto.randomBytes(6).toString("base64url").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  }
+  raw = raw.slice(0, 8);
+  return `DPSIR-RCV-${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
+}
+
+function maskRecoveryKey(value = "") {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (!normalized) return "DPSIR-RCV-****-****";
+  const parts = normalized.split("-");
+  if (parts.length >= 4) {
+    return `${parts[0]}-${parts[1]}-****-${parts[3]}`;
+  }
+  return "DPSIR-RCV-****-****";
+}
+
 function registrationKeyStatus(record, now = Date.now()) {
   if (record?.status === "used") return "used";
   if (record?.status === "disabled") return "disabled";
@@ -915,6 +938,7 @@ function publicUser(user) {
     role: isAdm ? "admin" : (user.role || "user"),
     quotaBytes: isAdm ? null : (user.quotaBytes !== undefined ? user.quotaBytes : DEFAULT_USER_QUOTA_BYTES),
     hasCustomAvatar: hasUserAvatar(user.id),
+    maskedRecoveryKey: maskRecoveryKey(user.recoveryKey),
   };
 }
 
@@ -941,12 +965,14 @@ function normalizeAccountsUsers(users) {
     } else if (quotaBytes === undefined) {
       quotaBytes = DEFAULT_USER_QUOTA_BYTES;
     }
+    const recoveryKey = user.recoveryKey || generateRecoveryKeyValue();
     return {
       ...user,
       id,
       username,
       role: isAdm ? "admin" : (user.role || "user"),
       quotaBytes,
+      recoveryKey,
       storageRoot: `users/${id}/files`,
       createdAt: user.createdAt || new Date().toISOString(),
     };
@@ -1725,6 +1751,10 @@ async function ensureAccountsFile() {
     }
     if (!user.role) {
       user.role = user.id === SINGLE_USER_ID ? "admin" : "user";
+      changed = true;
+    }
+    if (!user.recoveryKey) {
+      user.recoveryKey = generateRecoveryKeyValue();
       changed = true;
     }
     await ensureUserStorage(user);
@@ -4090,11 +4120,13 @@ app.post("/api/register", createRateLimitMiddleware({
       registrationRecord?.quotaBytes !== undefined
         ? registrationRecord.quotaBytes
         : DEFAULT_USER_QUOTA_BYTES;
+    const recoveryKey = generateRecoveryKeyValue();
     const user = {
       id,
       username,
       role: "user",
       quotaBytes,
+      recoveryKey,
       password: createPasswordRecord(password),
       storageRoot: `users/${id}/files`,
       createdAt: new Date().toISOString(),
@@ -4108,7 +4140,7 @@ app.post("/api/register", createRateLimitMiddleware({
     const token = createSessionToken(user);
     setSessionCookie(res, token);
     clearUnlockedFoldersCookie(res);
-    res.json({ ok: true, user: publicUser(user), token });
+    res.json({ ok: true, user: publicUser(user), recoveryKey, token });
   } catch (error) {
     next(error);
   }
@@ -4168,13 +4200,19 @@ app.post("/api/password-reset", createRateLimitMiddleware({
 }), async (req, res, next) => {
   try {
     const username = String(req.body?.username || "").trim();
-    const recoveryPassword = String(req.body?.recoveryPassword || "");
+    const recoveryKey = String(req.body?.recoveryKey || req.body?.recoveryPassword || "").trim();
     const newPassword = String(req.body?.newPassword || "");
     if (!username) {
       return res.status(400).json({ error: "请输入要找回的账号" });
     }
+    if (!recoveryKey) {
+      return res.status(400).json({ error: "请输入该账号专属的安全恢复密钥" });
+    }
     if (!newPassword.trim()) {
       return res.status(400).json({ error: "新密码不能为空" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "新密码长度至少需要 6 位" });
     }
     const targetUser = accountsStore.users.find(
       (item) => item.username.toLowerCase() === username.toLowerCase()
@@ -4182,17 +4220,74 @@ app.post("/api/password-reset", createRateLimitMiddleware({
     if (!targetUser) {
       return res.status(404).json({ error: "这个账号不存在" });
     }
-    const adminUser = accountsStore.users.find((item) => item.id === SINGLE_USER_ID);
-    const recoveryOk =
-      String(recoveryPassword || "") === ADMIN_PASSWORD ||
-      (FILE_PASSWORD && String(recoveryPassword || "") === FILE_PASSWORD) ||
-      verifyPasswordRecord(adminUser?.password, recoveryPassword);
-    if (!recoveryOk) {
-      return res.status(401).json({ error: "管理员/本机恢复密码错误" });
+    const isTargetAdmin = targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID;
+    const inputKeyNormalized = normalizeRecoveryKey(recoveryKey);
+    const userKeyNormalized = targetUser.recoveryKey ? normalizeRecoveryKey(targetUser.recoveryKey) : "";
+    const matchesUserKey = Boolean(userKeyNormalized && inputKeyNormalized === userKeyNormalized);
+
+    const matchesAdminFallback = Boolean(isTargetAdmin && (
+      String(recoveryKey) === ADMIN_PASSWORD ||
+      (FILE_PASSWORD && String(recoveryKey) === FILE_PASSWORD) ||
+      verifyPasswordRecord(targetUser.password, recoveryKey)
+    ));
+
+    if (!matchesUserKey && !matchesAdminFallback) {
+      return res.status(401).json({ error: "安全恢复密钥错误或不匹配该账号" });
     }
     targetUser.password = createPasswordRecord(newPassword);
     await saveAccountsStore();
     res.json({ ok: true, user: publicUser(targetUser) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/user/change-password", requireAuth, createRateLimitMiddleware({
+  id: "change-password",
+  windowMs: 15 * 60 * 1000,
+  maxHits: 10,
+  message: "修改密码尝试过于频繁，请稍后再试",
+  key: (req) => `${clientIp(req)}:${req.user?.id || "-"}`,
+}), async (req, res, next) => {
+  try {
+    const oldPassword = String(req.body?.oldPassword || "");
+    const newPassword = String(req.body?.newPassword || "");
+    if (!oldPassword.trim()) {
+      return res.status(400).json({ error: "请输入当前原密码" });
+    }
+    if (!newPassword.trim()) {
+      return res.status(400).json({ error: "新密码不能为空" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "新密码长度至少需要 6 位" });
+    }
+    const isOldCorrect = verifyPasswordRecord(req.user.password, oldPassword);
+    if (!isOldCorrect) {
+      return res.status(401).json({ error: "当前原密码输入错误，请重新输入" });
+    }
+    req.user.password = createPasswordRecord(newPassword);
+    await saveAccountsStore();
+    res.json({ ok: true, message: "密码修改成功" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/user/recovery-key", requireAuth, (req, res) => {
+  const user = req.user;
+  if (!user.recoveryKey) {
+    user.recoveryKey = generateRecoveryKeyValue();
+    saveAccountsStore().catch(() => {});
+  }
+  res.json({ ok: true, recoveryKey: user.recoveryKey });
+});
+
+app.post("/api/user/recovery-key/regenerate", requireAuth, async (req, res, next) => {
+  try {
+    const user = req.user;
+    user.recoveryKey = generateRecoveryKeyValue();
+    await saveAccountsStore();
+    res.json({ ok: true, recoveryKey: user.recoveryKey });
   } catch (error) {
     next(error);
   }

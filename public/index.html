@@ -78,24 +78,24 @@
             </button>
           </header>
           <p class="modal-description">
-            这里不会显示旧密码，只会用管理员/本机恢复密码验证后，为指定账号设置一个新登录密码。
+            输入账号及该账号专属的安全恢复密钥验证后，设置新登录密码。
           </p>
           <label class="field">
             要找回的账号
-            <input id="resetUsernameInput" autocomplete="username" />
+            <input id="resetUsernameInput" autocomplete="username" placeholder="请输入要找回的账号" />
           </label>
           <label class="field">
-            管理员/本机恢复密码
-            <input id="resetRecoveryPasswordInput" type="password" autocomplete="current-password" />
+            账号安全恢复密钥
+            <input id="resetRecoveryPasswordInput" type="text" autocomplete="off" placeholder="例如 DPSIR-RCV-XXXX-XXXX" />
           </label>
           <label class="field">
             新登录密码
-            <input id="resetNewPasswordInput" type="password" autocomplete="new-password" />
+            <input id="resetNewPasswordInput" type="password" autocomplete="new-password" placeholder="请输入新密码（至少 6 位）" />
           </label>
-          <p class="modal-hint">如果管理员密码也忘了，可以在服务器电脑本地查看 .cloudflared 里的网盘密码文件。</p>
+          <p class="modal-hint">普通账号若遗失专属安全恢复密钥，请联系系统管理员重置；管理员可在服务器本地查看密码文件。</p>
           <p id="passwordResetError" class="error modal-error"></p>
           <div class="modal-actions">
-            <button id="confirmPasswordResetBtn" class="primary" type="button">重置密码</button>
+            <button id="confirmPasswordResetBtn" class="primary" type="button">重置并更新密码</button>
             <button id="cancelPasswordResetBtn" class="ghost" type="button">取消</button>
           </div>
         </div>
@@ -229,6 +229,152 @@
           <div class="modal-actions">
             <button id="saveUserAvatarBtn" class="primary" type="button" disabled>保存头像</button>
             <button id="cancelUserAvatarBtn" class="ghost" type="button">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 密码与安全设置模态框 (双轨切换) -->
+      <section id="userSecurityModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card user-security-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">账号安全</p>
+              <h2>密码与安全设置</h2>
+            </div>
+            <button id="closeUserSecurityModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </header>
+
+          <!-- 顶部分段切换 Tab Segment -->
+          <div class="security-segmented-control">
+            <button id="secTabChangeBtn" class="sec-segment-btn active" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="7.5" cy="15.5" r="4.5"/>
+                <path d="M10.8 12.2L21 2M16 7l2 2M19 4l2 2"/>
+              </svg>
+              <span>记得原密码 · 修改密码</span>
+            </button>
+            <button id="secTabRecoverBtn" class="sec-segment-btn" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <span>忘记原密码 · 凭密钥重置</span>
+            </button>
+          </div>
+
+          <!-- Tab 1 内容：修改密码 -->
+          <div id="secChangeView" class="sec-tab-view">
+            <label class="field">
+              <span class="field-label-row">
+                <span>当前原密码</span>
+                <button id="secForgotOldPwdLink" class="text-link-btn" type="button">忘记原密码？点此找回 ➔</button>
+              </span>
+              <input id="secOldPasswordInput" type="password" autocomplete="current-password" placeholder="请输入当前登录原密码" />
+            </label>
+            <label class="field">
+              <span>设置新登录密码</span>
+              <input id="secNewPasswordInput" type="password" autocomplete="new-password" placeholder="请输入新密码（至少 6 位）" />
+            </label>
+            <label class="field">
+              <span>再次确认新密码</span>
+              <input id="secConfirmPasswordInput" type="password" autocomplete="new-password" placeholder="请再次输入新密码" />
+            </label>
+            <p id="secChangeError" class="error modal-error"></p>
+            <div class="modal-actions">
+              <button id="confirmSecChangeBtn" class="primary" type="button">确认修改密码</button>
+              <button id="cancelSecChangeBtn" class="ghost" type="button">取消</button>
+            </div>
+          </div>
+
+          <!-- Tab 2 内容：忘记原密码，凭专属恢复密钥重置 -->
+          <div id="secRecoverView" class="sec-tab-view hidden">
+            <div class="sec-account-badge-row">
+              <span class="sec-account-badge-label">当前账号：</span>
+              <strong id="secCurrentUsernameText" class="sec-account-badge-val">admin</strong>
+              <span class="sec-account-badge-tip">（免登出系统内直接找回）</span>
+            </div>
+            <label class="field">
+              <span>账号专属安全恢复密钥</span>
+              <input id="secRecoveryKeyInput" type="text" autocomplete="off" placeholder="请输入专属密钥，例如 DPSIR-RCV-XXXX-XXXX" />
+            </label>
+            <label class="field">
+              <span>设置新登录密码</span>
+              <input id="secRecoverNewPasswordInput" type="password" autocomplete="new-password" placeholder="请输入新密码（至少 6 位）" />
+            </label>
+            <label class="field">
+              <span>再次确认新密码</span>
+              <input id="secRecoverConfirmPasswordInput" type="password" autocomplete="new-password" placeholder="请再次输入新密码" />
+            </label>
+            <p id="secRecoverError" class="error modal-error"></p>
+            <div class="modal-actions">
+              <button id="confirmSecRecoverBtn" class="primary sec-amber-btn" type="button">重置并更新密码</button>
+              <button id="cancelSecRecoverBtn" class="ghost" type="button">取消</button>
+            </div>
+          </div>
+
+          <!-- 底部独立卡片：我的专属安全恢复密钥 -->
+          <div class="recovery-key-card">
+            <div class="recovery-key-header">
+              <div class="recovery-key-title-group">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span class="recovery-key-title">我的专属安全恢复密钥</span>
+              </div>
+              <button id="secRegenerateKeyBtn" class="ghost compact recovery-regen-btn" type="button" title="重新生成后旧密钥将立即作废失效">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                <span>重新生成</span>
+              </button>
+            </div>
+            <p class="recovery-key-desc">用于在遗忘登录密码时自主找回，专属绑定当前账号，请妥善保存在备忘录中。</p>
+            <div class="recovery-key-display-box">
+              <span id="secRecoveryKeyVal" class="recovery-key-code">DPSIR-RCV-••••-••••</span>
+              <div class="recovery-key-actions">
+                <button id="secToggleKeyVisibilityBtn" class="icon-button tiny-icon" type="button" title="显示/隐藏密钥">
+                  <svg id="secKeyEyeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+                <button id="secCopyKeyBtn" class="copy-key-pill-btn" type="button" title="复制恢复密钥到剪贴板">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  <span id="secCopyKeyBtnText">复制</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 注册成功专属恢复密钥通知模态框 -->
+      <section id="registerSuccessModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small dialog-modal-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow" style="color: #10b981; font-weight: 700;">🎉 注册成功</p>
+              <h2>欢迎加入 DPSir 智云盘</h2>
+            </div>
+          </header>
+          <p class="modal-description">
+            系统已为您生成专属的<strong>安全恢复密钥</strong>。日后若遗忘登录密码，可凭此密钥自主找回：
+          </p>
+          <div class="recovery-key-display-box" style="margin: 14px 0;">
+            <span id="newAccountRecoveryKeyText" class="recovery-key-code">DPSIR-RCV-XXXX-XXXX</span>
+            <button id="copyNewAccountRecoveryKeyBtn" class="copy-key-pill-btn" type="button">
+              <span>复制</span>
+            </button>
+          </div>
+          <p class="modal-hint">请妥善复制并保存在备忘录中。登录后也可随时在左侧个人中心查看或更新。</p>
+          <div class="modal-actions">
+            <button id="confirmRegisterSuccessBtn" class="primary" type="button">我已保存，进入网盘</button>
           </div>
         </div>
       </section>
@@ -371,32 +517,69 @@
               </button>
             </div>
 
-            <div id="sidebarUserDock" class="sidebar-user-dock">
-              <div class="user-dock-left">
-                <div class="user-avatar-wrapper">
-                  <div id="userAvatarContainer" class="user-dock-avatar" role="button" tabindex="0" title="点击更换自定义头像">
-                    <img id="sidebarUserAvatarImg" class="user-avatar-image hidden" alt="头像" />
-                    <span id="sidebarUserInitial" class="user-avatar-initial">A</span>
-                    <div class="user-avatar-hover-overlay" aria-hidden="true">
-                      <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.5 4.5h-2l-1-1.5h-3l-1 1.5h-2A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 16 14V6a1.5 1.5 0 0 0-1.5-1.5z"/>
-                        <circle cx="10" cy="10" r="3"/>
-                      </svg>
-                    </div>
+            <div class="sidebar-user-dock-wrapper">
+              <!-- 账号与个人中心 Popover 气泡菜单 -->
+              <div id="userAccountPopover" class="user-account-popover hidden" aria-hidden="true">
+                <div class="popover-header">
+                  <div class="popover-avatar-wrap">
+                    <img id="popoverAvatarImg" class="popover-avatar-img hidden" alt="头像" />
+                    <span id="popoverUserInitial" class="popover-avatar-initial">A</span>
+                    <span class="popover-online-badge"></span>
                   </div>
-                  <span class="user-online-dot" aria-hidden="true" title="在线"></span>
+                  <div class="popover-user-meta">
+                    <span id="popoverUsername" class="popover-username">admin</span>
+                    <span id="popoverRoleTag" class="popover-role-tag">超级管理员</span>
+                  </div>
                 </div>
-                <div class="user-dock-info">
-                  <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>
-                  <span id="sidebarUserRole" class="user-dock-role">超级管理员</span>
+                <div class="popover-body">
+                  <button id="popoverChangeAvatarBtn" class="popover-menu-item" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    <span>更换自定义头像</span>
+                  </button>
+                  <button id="popoverSecurityBtn" class="popover-menu-item" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="7.5" cy="15.5" r="4.5"/>
+                      <path d="M10.8 12.2L21 2M16 7l2 2M19 4l2 2"/>
+                    </svg>
+                    <span>密码与安全设置</span>
+                  </button>
+                  <div class="popover-divider"></div>
+                  <button id="popoverLogoutBtn" class="popover-menu-item popover-logout-item" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>退出登录</span>
+                  </button>
                 </div>
               </div>
-              <button id="logoutBtn" class="sidebar-logout-pill" type="button" title="退出当前账号">
-                <svg class="btn-icon" width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M6.5 15.5H3.5A1.5 1.5 0 0 1 2 14V4a1.5 1.5 0 0 1 1.5-1.5h3M12 12.5l3.5-3.5L12 5.5M15.5 9H6"/>
-                </svg>
-                <span>退出</span>
-              </button>
+
+              <!-- 底部身份栏 Dock -->
+              <div id="sidebarUserDock" class="sidebar-user-dock" role="button" tabindex="0" title="点击呼出账号与个人中心">
+                <div class="user-dock-left">
+                  <div class="user-avatar-wrapper">
+                    <div id="userAvatarContainer" class="user-dock-avatar">
+                      <img id="sidebarUserAvatarImg" class="user-avatar-image hidden" alt="头像" />
+                      <span id="sidebarUserInitial" class="user-avatar-initial">A</span>
+                    </div>
+                    <span class="user-online-dot" aria-hidden="true" title="在线"></span>
+                  </div>
+                  <div class="user-dock-info">
+                    <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>
+                    <span id="sidebarUserRole" class="user-dock-role">超级管理员</span>
+                  </div>
+                </div>
+                <button id="sidebarUserMenuBtn" class="dock-more-trigger" type="button" title="账号与安全菜单" aria-label="账号与安全菜单">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="18 15 12 9 6 15"/>
+                  </svg>
+                </button>
+                <button id="logoutBtn" class="hidden" type="button" aria-hidden="true" style="display:none;"></button>
+              </div>
             </div>
           </div>
         </aside>

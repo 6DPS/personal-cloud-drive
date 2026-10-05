@@ -171,6 +171,55 @@ const userAvatarModalError = $("#userAvatarModalError");
 const userAvatarContainer = $("#userAvatarContainer");
 const sidebarUserAvatarImg = $("#sidebarUserAvatarImg");
 
+// Popover & 账号个人中心
+const sidebarUserDock = $("#sidebarUserDock");
+const sidebarUserMenuBtn = $("#sidebarUserMenuBtn");
+const userAccountPopover = $("#userAccountPopover");
+const popoverAvatarImg = $("#popoverAvatarImg");
+const popoverUserInitial = $("#popoverUserInitial");
+const popoverUsername = $("#popoverUsername");
+const popoverRoleTag = $("#popoverRoleTag");
+const popoverChangeAvatarBtn = $("#popoverChangeAvatarBtn");
+const popoverSecurityBtn = $("#popoverSecurityBtn");
+const popoverLogoutBtn = $("#popoverLogoutBtn");
+
+// 密码与安全设置模态框
+const userSecurityModal = $("#userSecurityModal");
+const closeUserSecurityModalBtn = $("#closeUserSecurityModalBtn");
+const secTabChangeBtn = $("#secTabChangeBtn");
+const secTabRecoverBtn = $("#secTabRecoverBtn");
+const secChangeView = $("#secChangeView");
+const secRecoverView = $("#secRecoverView");
+
+const secOldPasswordInput = $("#secOldPasswordInput");
+const secNewPasswordInput = $("#secNewPasswordInput");
+const secConfirmPasswordInput = $("#secConfirmPasswordInput");
+const secChangeError = $("#secChangeError");
+const confirmSecChangeBtn = $("#confirmSecChangeBtn");
+const cancelSecChangeBtn = $("#cancelSecChangeBtn");
+const secForgotOldPwdLink = $("#secForgotOldPwdLink");
+
+const secCurrentUsernameText = $("#secCurrentUsernameText");
+const secRecoveryKeyInput = $("#secRecoveryKeyInput");
+const secRecoverNewPasswordInput = $("#secRecoverNewPasswordInput");
+const secRecoverConfirmPasswordInput = $("#secRecoverConfirmPasswordInput");
+const secRecoverError = $("#secRecoverError");
+const confirmSecRecoverBtn = $("#confirmSecRecoverBtn");
+const cancelSecRecoverBtn = $("#cancelSecRecoverBtn");
+
+const secRegenerateKeyBtn = $("#secRegenerateKeyBtn");
+const secRecoveryKeyVal = $("#secRecoveryKeyVal");
+const secToggleKeyVisibilityBtn = $("#secToggleKeyVisibilityBtn");
+const secKeyEyeIcon = $("#secKeyEyeIcon");
+const secCopyKeyBtn = $("#secCopyKeyBtn");
+const secCopyKeyBtnText = $("#secCopyKeyBtnText");
+
+// 注册成功展示恢复密钥模态框
+const registerSuccessModal = $("#registerSuccessModal");
+const newAccountRecoveryKeyText = $("#newAccountRecoveryKeyText");
+const copyNewAccountRecoveryKeyBtn = $("#copyNewAccountRecoveryKeyBtn");
+const confirmRegisterSuccessBtn = $("#confirmRegisterSuccessBtn");
+
 const breadcrumb = $("#breadcrumb");
 const statusLine = $("#statusLine");
 const storageRoot = $("#storageRoot");
@@ -7157,12 +7206,23 @@ function syncAdminUi() {
     sidebarUserRole.classList.toggle("role-user", !isAdmin);
   }
 
-  // Update avatar display strictly per-user across all platforms (desktop & mobile)
+  // 同步左侧栏气泡卡片 (Popover) 身份信息
+  if (popoverUsername) popoverUsername.textContent = username;
+  if (popoverUserInitial) popoverUserInitial.textContent = userInitial;
+  if (popoverRoleTag) {
+    popoverRoleTag.textContent = isAdmin ? "超级管理员" : "普通用户";
+    popoverRoleTag.classList.toggle("role-user", !isAdmin);
+  }
+
+  // Update avatar display strictly per-user across all platforms (desktop & mobile & popover)
+  const token = sessionToken() || state.token || "";
+  const authParam = token ? `&auth=${encodeURIComponent(token)}` : "";
+  const avatarSrc = state.currentUser?.hasCustomAvatar && userId
+    ? `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}${authParam}`
+    : "";
+
   if (sidebarUserAvatarImg) {
-    if (state.currentUser?.hasCustomAvatar && userId) {
-      const token = sessionToken() || state.token || "";
-      const authParam = token ? `&auth=${encodeURIComponent(token)}` : "";
-      const avatarSrc = `/api/user/avatar?v=${state.avatarVersion || Date.now()}&u=${encodeURIComponent(userId)}${authParam}`;
+    if (avatarSrc) {
       sidebarUserAvatarImg.onload = () => {
         sidebarUserAvatarImg.classList.remove("hidden");
         sidebarUserInitial?.classList.add("hidden");
@@ -7176,6 +7236,24 @@ function syncAdminUi() {
       sidebarUserAvatarImg.src = "";
       sidebarUserAvatarImg.classList.add("hidden");
       sidebarUserInitial?.classList.remove("hidden");
+    }
+  }
+
+  if (popoverAvatarImg) {
+    if (avatarSrc) {
+      popoverAvatarImg.onload = () => {
+        popoverAvatarImg.classList.remove("hidden");
+        popoverUserInitial?.classList.add("hidden");
+      };
+      popoverAvatarImg.onerror = () => {
+        popoverAvatarImg.classList.add("hidden");
+        popoverUserInitial?.classList.remove("hidden");
+      };
+      popoverAvatarImg.src = avatarSrc;
+    } else {
+      popoverAvatarImg.src = "";
+      popoverAvatarImg.classList.add("hidden");
+      popoverUserInitial?.classList.remove("hidden");
     }
   }
 }
@@ -7745,6 +7823,7 @@ async function submitPasswordReset() {
       method: "POST",
       body: JSON.stringify({
         username: targetUsername,
+        recoveryKey: resetRecoveryPasswordInput.value,
         recoveryPassword: resetRecoveryPasswordInput.value,
         newPassword: resetNewPasswordInput.value,
       }),
@@ -7829,6 +7908,9 @@ async function handleLoginSubmit(event) {
     });
     setSessionToken(result?.token || "");
     await enterDrive(result?.user || null);
+    if (state.authMode === "register" && result?.recoveryKey) {
+      openRegisterSuccessModal(result.recoveryKey);
+    }
   } catch (error) {
     loginError.textContent = error.message;
   } finally {
@@ -7905,8 +7987,333 @@ closeUserAvatarModalBtn?.addEventListener("click", closeUserAvatarModal);
 cancelUserAvatarBtn?.addEventListener("click", closeUserAvatarModal);
 selectAvatarImageBtn?.addEventListener("click", () => userAvatarFileInput?.click());
 userAvatarFileInput?.addEventListener("change", handleAvatarFileSelect);
-saveUserAvatarBtn?.addEventListener("click", saveUserAvatar);
-resetAvatarDefaultBtn?.addEventListener("click", resetUserAvatar);
+// --- 账号与个人中心 Popover 及密码安全 ---
+let isRecoveryKeyVisible = false;
+let currentFullRecoveryKey = "";
+
+function openUserAccountPopover() {
+  if (!userAccountPopover || !sidebarUserDock) return;
+  syncAdminUi();
+  userAccountPopover.classList.remove("hidden");
+  userAccountPopover.setAttribute("aria-hidden", "false");
+  sidebarUserDock.classList.add("popover-open");
+}
+
+function closeUserAccountPopover() {
+  if (!userAccountPopover || !sidebarUserDock) return;
+  userAccountPopover.classList.add("hidden");
+  userAccountPopover.setAttribute("aria-hidden", "true");
+  sidebarUserDock.classList.remove("popover-open");
+}
+
+function toggleUserAccountPopover() {
+  if (userAccountPopover && !userAccountPopover.classList.contains("hidden")) {
+    closeUserAccountPopover();
+  } else {
+    openUserAccountPopover();
+  }
+}
+
+function switchSecurityModalTab(mode = "change") {
+  if (mode === "change") {
+    secTabChangeBtn?.classList.add("active");
+    secTabChangeBtn?.classList.remove("amber-active");
+    secTabRecoverBtn?.classList.remove("active", "amber-active");
+    secChangeView?.classList.remove("hidden");
+    secRecoverView?.classList.add("hidden");
+    if (secChangeError) secChangeError.textContent = "";
+    window.setTimeout(() => secOldPasswordInput?.focus(), 50);
+  } else {
+    secTabRecoverBtn?.classList.add("active", "amber-active");
+    secTabChangeBtn?.classList.remove("active");
+    secRecoverView?.classList.remove("hidden");
+    secChangeView?.classList.add("hidden");
+    if (secRecoverError) secRecoverError.textContent = "";
+    window.setTimeout(() => secRecoveryKeyInput?.focus(), 50);
+  }
+}
+
+async function fetchUserRecoveryKey() {
+  try {
+    const res = await api("/api/user/recovery-key");
+    currentFullRecoveryKey = res?.recoveryKey || "";
+    renderRecoveryKeyDisplay();
+  } catch (err) {
+    console.warn("获取个人恢复密钥失败:", err.message);
+  }
+}
+
+function renderRecoveryKeyDisplay() {
+  if (!secRecoveryKeyVal) return;
+  if (!currentFullRecoveryKey) {
+    secRecoveryKeyVal.textContent = "DPSIR-RCV-••••-••••";
+    return;
+  }
+  if (isRecoveryKeyVisible) {
+    secRecoveryKeyVal.textContent = currentFullRecoveryKey;
+    if (secKeyEyeIcon) {
+      secKeyEyeIcon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+    }
+  } else {
+    const parts = currentFullRecoveryKey.split("-");
+    if (parts.length >= 4) {
+      secRecoveryKeyVal.textContent = `${parts[0]}-${parts[1]}-••••-${parts[3]}`;
+    } else {
+      secRecoveryKeyVal.textContent = "DPSIR-RCV-••••-••••";
+    }
+    if (secKeyEyeIcon) {
+      secKeyEyeIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+  }
+}
+
+async function openUserSecurityModal(tab = "change") {
+  closeUserAccountPopover();
+  if (secChangeError) secChangeError.textContent = "";
+  if (secRecoverError) secRecoverError.textContent = "";
+  if (secOldPasswordInput) secOldPasswordInput.value = "";
+  if (secNewPasswordInput) secNewPasswordInput.value = "";
+  if (secConfirmPasswordInput) secConfirmPasswordInput.value = "";
+  if (secRecoveryKeyInput) secRecoveryKeyInput.value = "";
+  if (secRecoverNewPasswordInput) secRecoverNewPasswordInput.value = "";
+  if (secRecoverConfirmPasswordInput) secRecoverConfirmPasswordInput.value = "";
+  if (secCurrentUsernameText) secCurrentUsernameText.textContent = state.currentUser?.username || "admin";
+  isRecoveryKeyVisible = false;
+
+  switchSecurityModalTab(tab);
+  userSecurityModal?.classList.remove("hidden");
+  userSecurityModal?.setAttribute("aria-hidden", "false");
+  await fetchUserRecoveryKey();
+}
+
+function closeUserSecurityModal() {
+  userSecurityModal?.classList.add("hidden");
+  userSecurityModal?.setAttribute("aria-hidden", "true");
+}
+
+async function submitChangePassword() {
+  if (secChangeError) secChangeError.textContent = "";
+  const oldPassword = secOldPasswordInput?.value || "";
+  const newPassword = secNewPasswordInput?.value || "";
+  const confirmPassword = secConfirmPasswordInput?.value || "";
+
+  if (!oldPassword.trim()) {
+    if (secChangeError) secChangeError.textContent = "请输入当前原密码";
+    secOldPasswordInput?.focus();
+    return;
+  }
+  if (!newPassword.trim()) {
+    if (secChangeError) secChangeError.textContent = "请输入新密码";
+    secNewPasswordInput?.focus();
+    return;
+  }
+  if (newPassword.length < 6) {
+    if (secChangeError) secChangeError.textContent = "新密码长度至少需要 6 位";
+    secNewPasswordInput?.focus();
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    if (secChangeError) secChangeError.textContent = "两次输入的新密码不一致，请重新核对";
+    secConfirmPasswordInput?.focus();
+    return;
+  }
+
+  if (confirmSecChangeBtn) {
+    confirmSecChangeBtn.disabled = true;
+    confirmSecChangeBtn.textContent = "正在修改...";
+  }
+
+  try {
+    await api("/api/user/change-password", {
+      method: "POST",
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+    closeUserSecurityModal();
+    setStatus("密码修改成功！下次登录请使用新密码。");
+  } catch (err) {
+    if (secChangeError) secChangeError.textContent = err.message;
+  } finally {
+    if (confirmSecChangeBtn) {
+      confirmSecChangeBtn.disabled = false;
+      confirmSecChangeBtn.textContent = "确认修改密码";
+    }
+  }
+}
+
+async function submitRecoverPasswordInApp() {
+  if (secRecoverError) secRecoverError.textContent = "";
+  const recoveryKey = secRecoveryKeyInput?.value.trim() || "";
+  const newPassword = secRecoverNewPasswordInput?.value || "";
+  const confirmPassword = secRecoverConfirmPasswordInput?.value || "";
+
+  if (!recoveryKey) {
+    if (secRecoverError) secRecoverError.textContent = "请输入该账号专属的安全恢复密钥";
+    secRecoveryKeyInput?.focus();
+    return;
+  }
+  if (!newPassword.trim()) {
+    if (secRecoverError) secRecoverError.textContent = "请输入新密码";
+    secRecoverNewPasswordInput?.focus();
+    return;
+  }
+  if (newPassword.length < 6) {
+    if (secRecoverError) secRecoverError.textContent = "新密码长度至少需要 6 位";
+    secRecoverNewPasswordInput?.focus();
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    if (secRecoverError) secRecoverError.textContent = "两次输入的新密码不一致，请重新核对";
+    secRecoverConfirmPasswordInput?.focus();
+    return;
+  }
+
+  if (confirmSecRecoverBtn) {
+    confirmSecRecoverBtn.disabled = true;
+    confirmSecRecoverBtn.textContent = "正在重置...";
+  }
+
+  try {
+    await api("/api/password-reset", {
+      method: "POST",
+      body: JSON.stringify({
+        username: state.currentUser?.username || "",
+        recoveryKey,
+        newPassword,
+      }),
+    });
+    closeUserSecurityModal();
+    setStatus("密码已凭安全密钥成功重置！下次登录请使用新密码。");
+  } catch (err) {
+    if (secRecoverError) secRecoverError.textContent = err.message;
+  } finally {
+    if (confirmSecRecoverBtn) {
+      confirmSecRecoverBtn.disabled = false;
+      confirmSecRecoverBtn.textContent = "重置并更新密码";
+    }
+  }
+}
+
+async function handleRegenerateRecoveryKey() {
+  const confirmed = await showConfirmDialog(
+    "重新生成安全恢复密钥",
+    "重新生成后，旧的安全恢复密钥将立即作废失效。您确定要为当前账号生成新的安全恢复密钥吗？"
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await api("/api/user/recovery-key/regenerate", { method: "POST" });
+    currentFullRecoveryKey = res?.recoveryKey || "";
+    isRecoveryKeyVisible = true;
+    renderRecoveryKeyDisplay();
+    setStatus("已成功生成全新的专属安全恢复密钥，请妥善保存！");
+  } catch (err) {
+    alert("重新生成密钥失败：" + err.message);
+  }
+}
+
+function copyRecoveryKeyText(key, btnTextEl) {
+  if (!key) return;
+  let copied = false;
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    navigator.clipboard.writeText(key).then(() => {
+      onCopySuccess();
+    }).catch(() => {
+      fallbackCopy();
+    });
+  } else {
+    fallbackCopy();
+  }
+
+  function fallbackCopy() {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = key;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.append(textarea);
+      textarea.select();
+      copied = document.execCommand("copy");
+      textarea.remove();
+      if (copied) onCopySuccess();
+      else setStatus("复制失败，请手动选中文本复制");
+    } catch {
+      setStatus("复制失败，请手动选中文本复制");
+    }
+  }
+
+  function onCopySuccess() {
+    if (btnTextEl) {
+      const orig = btnTextEl.textContent;
+      btnTextEl.textContent = "已复制✓";
+      window.setTimeout(() => {
+        btnTextEl.textContent = orig;
+      }, 2000);
+    }
+    setStatus("安全恢复密钥已复制到剪贴板！");
+  }
+}
+
+function openRegisterSuccessModal(key) {
+  if (!registerSuccessModal) return;
+  if (newAccountRecoveryKeyText) newAccountRecoveryKeyText.textContent = key || "DPSIR-RCV-XXXX-XXXX";
+  registerSuccessModal.classList.remove("hidden");
+  registerSuccessModal.setAttribute("aria-hidden", "false");
+}
+
+function closeRegisterSuccessModal() {
+  if (!registerSuccessModal) return;
+  registerSuccessModal.classList.add("hidden");
+  registerSuccessModal.setAttribute("aria-hidden", "true");
+}
+
+// 绑定侧边栏 Dock 及 Popover 交互
+sidebarUserDock?.addEventListener("click", (e) => {
+  if (e.target.closest("#userAvatarContainer")) {
+    openUserAvatarModal();
+    return;
+  }
+  toggleUserAccountPopover();
+});
+
+sidebarUserMenuBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleUserAccountPopover();
+});
+
+popoverChangeAvatarBtn?.addEventListener("click", () => {
+  closeUserAccountPopover();
+  openUserAvatarModal();
+});
+
+popoverSecurityBtn?.addEventListener("click", () => {
+  closeUserAccountPopover();
+  openUserSecurityModal("change");
+});
+
+popoverLogoutBtn?.addEventListener("click", () => {
+  closeUserAccountPopover();
+  $("#logoutBtn").click();
+});
+
+secTabChangeBtn?.addEventListener("click", () => switchSecurityModalTab("change"));
+secTabRecoverBtn?.addEventListener("click", () => switchSecurityModalTab("recover"));
+secForgotOldPwdLink?.addEventListener("click", () => switchSecurityModalTab("recover"));
+confirmSecChangeBtn?.addEventListener("click", submitChangePassword);
+cancelSecChangeBtn?.addEventListener("click", closeUserSecurityModal);
+closeUserSecurityModalBtn?.addEventListener("click", closeUserSecurityModal);
+confirmSecRecoverBtn?.addEventListener("click", submitRecoverPasswordInApp);
+cancelSecRecoverBtn?.addEventListener("click", closeUserSecurityModal);
+
+secRegenerateKeyBtn?.addEventListener("click", handleRegenerateRecoveryKey);
+secToggleKeyVisibilityBtn?.addEventListener("click", () => {
+  isRecoveryKeyVisible = !isRecoveryKeyVisible;
+  renderRecoveryKeyDisplay();
+});
+secCopyKeyBtn?.addEventListener("click", () => copyRecoveryKeyText(currentFullRecoveryKey, secCopyKeyBtnText));
+
+copyNewAccountRecoveryKeyBtn?.addEventListener("click", () => copyRecoveryKeyText(newAccountRecoveryKeyText?.textContent, copyNewAccountRecoveryKeyBtn?.querySelector("span")));
+confirmRegisterSuccessBtn?.addEventListener("click", closeRegisterSuccessModal);
 
 $("#logoutBtn").addEventListener("click", async () => {
   const ok = await showConfirmDialog("退出登录", "确认退出当前网盘账号吗？");
@@ -8126,7 +8533,7 @@ $("#refreshBtn").addEventListener("click", () => {
 });
 closePreviewBtn.addEventListener("click", closePreview);
 
-for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal]) {
+for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal, userSecurityModal, registerSuccessModal]) {
   if (!modal) continue;
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
@@ -8139,6 +8546,8 @@ for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordMod
     if (modal === registrationKeysModal) return;
     if (modal === userQuotasModal) return;
     if (modal === userAvatarModal) return closeUserAvatarModal();
+    if (modal === userSecurityModal) return closeUserSecurityModal();
+    if (modal === registerSuccessModal) return closeRegisterSuccessModal();
   });
 }
 
@@ -8221,6 +8630,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   const hadOpenModal = Boolean(document.querySelector(".modal:not(.hidden)"));
+  closeUserAccountPopover();
   closeUploadModal();
   closeBulkMoveModal();
   closePreview();
@@ -8229,6 +8639,8 @@ document.addEventListener("keydown", (event) => {
   closeRegistrationKeysModal();
   closeUserQuotasModal();
   closeUserAvatarModal();
+  closeUserSecurityModal();
+  closeRegisterSuccessModal();
   if (zipArchiveModal) zipArchiveModal.classList.add("hidden");
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");
@@ -8239,6 +8651,9 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.addEventListener("click", (event) => {
+  if (!event.target?.closest?.("#sidebarUserDock") && !event.target?.closest?.("#userAccountPopover")) {
+    closeUserAccountPopover();
+  }
   if (isFolderDropdownInteraction(event)) return;
   closeAllFolderDropdowns();
 });
