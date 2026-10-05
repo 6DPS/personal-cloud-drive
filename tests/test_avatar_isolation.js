@@ -79,33 +79,35 @@ async function run() {
     adminBackupAvatar = fs.readFileSync(adminAvatarDiskPath);
   }
 
-  // 3. 管理员上传专属头像 (Blue)
-  console.log("\n[Test 3] 管理员上传专属头像 (蓝色)...");
-  {
-    const uploadRes = await apiRequest("/api/user/avatar", {
-      method: "POST",
-      token: adminToken,
-      body: { dataUrl: BLUE_PNG_DATA_URL },
-    });
-    assert.strictEqual(uploadRes.status, 200, "管理员上传头像应成功");
+  let testUsername = null;
+  try {
+    // 3. 管理员上传专属头像 (Blue)
+    console.log("\n[Test 3] 管理员上传专属头像 (蓝色)...");
+    {
+      const uploadRes = await apiRequest("/api/user/avatar", {
+        method: "POST",
+        token: adminToken,
+        body: { dataUrl: BLUE_PNG_DATA_URL },
+      });
+      assert.strictEqual(uploadRes.status, 200, "管理员上传头像应成功");
 
-    const meRes = await apiRequest("/api/me", { token: adminToken });
-    assert.strictEqual(meRes.data.user.hasCustomAvatar, true, "管理员 hasCustomAvatar 应为 true");
+      const meRes = await apiRequest("/api/me", { token: adminToken });
+      assert.strictEqual(meRes.data.user.hasCustomAvatar, true, "管理员 hasCustomAvatar 应为 true");
 
-    const avatarRes = await apiRequest("/api/user/avatar", { token: adminToken });
-    assert.strictEqual(avatarRes.status, 200);
-    assert.strictEqual(avatarRes.headers.get("content-type"), "image/png");
-    assert.ok(avatarRes.headers.get("cache-control")?.includes("no-store"));
-    assert.strictEqual(Buffer.compare(avatarRes.data, BLUE_PNG_BUFFER), 0, "管理员头像二进制数据应为蓝色图");
-    assert.ok(fs.existsSync(adminAvatarDiskPath), "磁盘上必须存在 admin/.avatar.png");
-    console.log("  ✓ 管理员头像上传与持久化存储成功");
-  }
+      const avatarRes = await apiRequest("/api/user/avatar", { token: adminToken });
+      assert.strictEqual(avatarRes.status, 200);
+      assert.strictEqual(avatarRes.headers.get("content-type"), "image/png");
+      assert.ok(avatarRes.headers.get("cache-control")?.includes("no-store"));
+      assert.strictEqual(Buffer.compare(avatarRes.data, BLUE_PNG_BUFFER), 0, "管理员头像二进制数据应为蓝色图");
+      assert.ok(fs.existsSync(adminAvatarDiskPath), "磁盘上必须存在 admin/.avatar.png");
+      console.log("  ✓ 管理员头像上传与持久化存储成功");
+    }
 
-  // 4. 管理员生成注册密钥，创建测试独立子账号
-  console.log("\n[Test 4] 创建全新普通测试账号 (test_isolate_sub)...");
-  const testUsername = `test_iso_${Date.now().toString().slice(-4)}`;
-  const testPassword = "SubUserP@ss123!";
-  let subUserToken;
+    // 4. 管理员生成注册密钥，创建测试独立子账号
+    console.log("\n[Test 4] 创建全新普通测试账号 (test_isolate_sub)...");
+    testUsername = `test_iso_${Date.now().toString().slice(-4)}`;
+    const testPassword = "SubUserP@ss123!";
+    let subUserToken;
   {
     const regKeyRes = await apiRequest("/api/registration-keys", {
       method: "POST",
@@ -195,9 +197,8 @@ async function run() {
     console.log("  ✓ 单向删除隔离生效：子账号删除头像对管理员零影响");
   }
 
-  // 8. 清理工作
-  console.log("\n[Test 8] 测试后环境还原与清理...");
-  {
+    console.log("\n🎉 所有严格隔离性与稳定性检查全部通过！100% 隔离无混淆！");
+  } finally {
     // 还原管理员原头像
     if (adminBackupAvatar) {
       fs.writeFileSync(adminAvatarDiskPath, adminBackupAvatar);
@@ -207,28 +208,15 @@ async function run() {
       console.log("  ✓ 管理员头像已恢复默认");
     }
 
-    // 清理测试子账号目录
-    const subDir = path.resolve(`D:/PersonalCloudDrive/users/${testUsername.toLowerCase()}`);
-    if (fs.existsSync(subDir)) {
-      await fsp.rm(subDir, { recursive: true, force: true }).catch(() => {});
-    }
-
-    // 清理 accounts.json 中的测试子账号
-    const accountsPath = "D:/PersonalCloudDrive/accounts.json";
-    if (fs.existsSync(accountsPath)) {
-      try {
-        const raw = await fsp.readFile(accountsPath, "utf8");
-        const parsed = JSON.parse(raw);
-        parsed.users = (parsed.users || []).filter((u) => u.id !== testUsername.toLowerCase());
-        await fsp.writeFile(accountsPath, JSON.stringify(parsed, null, 2), "utf8");
-        console.log("  ✓ 测试子账号数据已从数据库中干净抹除");
-      } catch (e) {
-        console.warn("  ! 清理测试账号记录警告:", e.message);
-      }
+    if (testUsername) {
+      console.log(`\n[Cleanup] 彻底清理测试账号: ${testUsername}...`);
+      await apiRequest(`/api/admin/users/${testUsername.toLowerCase()}`, {
+        method: "DELETE",
+        token: adminToken,
+      });
+      console.log("  ✓ 测试子账号数据已彻底删除，零残留！");
     }
   }
-
-  console.log("\n🎉 所有严格隔离性与稳定性检查全部通过！100% 隔离无混淆！");
 }
 
 run().catch((err) => {

@@ -187,13 +187,13 @@
         </div>
       </section>
 
-      <!-- 管理员重置普通用户凭据模态框 -->
+      <!-- 管理员重置普通用户密码模态框 (专注单一方案：直接重置密码) -->
       <section id="adminResetUserModal" class="modal hidden" aria-hidden="true">
         <div class="modal-card small dialog-modal-card admin-reset-user-card">
           <header class="modal-header">
             <div>
-              <p class="eyebrow">管理员救济</p>
-              <h2>重置用户凭证</h2>
+              <p class="eyebrow">管理员操作</p>
+              <h2>重置用户登录密码</h2>
             </div>
             <button id="closeAdminResetUserModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
               <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -206,47 +206,25 @@
             <div class="sec-badge-avatar">👤</div>
             <div class="sec-badge-info">
               <div class="sec-badge-name" id="adminResetTargetUsername">username</div>
-              <div class="sec-badge-role">普通成员 · 密码或恢复密钥遗失救济</div>
+              <div class="sec-badge-role">普通成员 · 密码遗失救济重置</div>
             </div>
           </div>
 
-          <!-- 方案一：直接设置临时密码 -->
           <div class="admin-reset-panel">
             <div class="admin-reset-panel-header">
-              <strong class="admin-reset-panel-title">方案一：直接设置临时登录密码</strong>
-              <span class="admin-reset-panel-tip">为该用户设置新密码，用户凭此密码可直接登录</span>
+              <strong class="admin-reset-panel-title">设置新登录密码</strong>
+              <span class="admin-reset-panel-tip">为该用户直接指派新的登录密码。重置后旧密码与此前会话立即失效，用户可凭新密码直接登录。</span>
             </div>
             <div class="admin-reset-pwd-row">
-              <input id="adminResetPasswordInput" class="admin-reset-input" type="text" placeholder="输入临时新密码（至少6位）" autocomplete="off" />
+              <input id="adminResetPasswordInput" class="admin-reset-input" type="text" placeholder="输入临时新密码（至少 6 位）" autocomplete="off" />
               <button id="adminGenRandomPwdBtn" class="ghost compact" type="button">随机生成</button>
-            </div>
-            <button id="adminSubmitNewPwdBtn" class="primary compact" style="width: 100%; margin-top: 10px;" type="button">确认重置为此密码</button>
-          </div>
-
-          <div class="admin-reset-divider">
-            <span>或者</span>
-          </div>
-
-          <!-- 方案二：重新生成专属恢复密钥 -->
-          <div class="admin-reset-panel">
-            <div class="admin-reset-panel-header">
-              <strong class="admin-reset-panel-title">方案二：派发新专属恢复密钥</strong>
-              <span class="admin-reset-panel-tip">重新生成后旧密钥作废，将新密钥发给用户在登录页自助找回</span>
-            </div>
-            <button id="adminRegenUserKeyBtn" class="ghost compact" style="width: 100%; margin-top: 8px;" type="button">
-              重新生成恢复密钥并复制
-            </button>
-            <div id="adminUserKeyResultBox" class="recovery-key-display-box hidden" style="margin-top: 10px;">
-              <span id="adminUserKeyResultText" class="recovery-key-code"></span>
-              <button id="adminCopyUserKeyResultBtn" class="copy-key-pill-btn" type="button">
-                <span>复制</span>
-              </button>
             </div>
           </div>
 
           <p id="adminResetUserError" class="error modal-error"></p>
-          <div class="modal-actions" style="margin-top: 16px;">
-            <button id="cancelAdminResetUserModalBtn" class="ghost" type="button">关闭</button>
+          <div class="modal-actions">
+            <button id="cancelAdminResetUserModalBtn" class="ghost" type="button">取消</button>
+            <button id="adminSubmitNewPwdBtn" class="primary" type="button">确认重置密码</button>
           </div>
         </div>
       </section>

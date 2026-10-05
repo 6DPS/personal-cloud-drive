@@ -52,11 +52,13 @@ async function run() {
     console.log(`  ✓ 管理员专属安全恢复密钥获取成功: ${keyRes.data.recoveryKey}`);
   }
 
-  // 2. 创建普通测试用户并获取注册时返回的专属恢复密钥
-  console.log("\n[Test 2] 生成邀请码并注册独立测试账号...");
-  const testUsername = `test_pwd_${Math.floor(1000 + Math.random() * 9000)}`;
-  const initialPassword = "Initial_Pass_123456";
-  let subToken;
+  let testUsername = null;
+  try {
+    // 2. 创建普通测试用户并获取注册时返回的专属恢复密钥
+    console.log("\n[Test 2] 生成邀请码并注册独立测试账号...");
+    testUsername = `test_pwd_${Math.floor(1000 + Math.random() * 9000)}`;
+    const initialPassword = "Initial_Pass_123456";
+    let subToken;
   let subRecoveryKey;
   {
     const keyGenRes = await apiRequest("/api/registration-keys", {
@@ -96,15 +98,31 @@ async function run() {
     console.log("  ✓ 错误原密码被正确拒绝 (401)");
 
     // 3.2 输对原密码应成功修改
+    const oldSubToken = subToken;
     const correctRes = await apiRequest("/api/user/change-password", {
       method: "POST",
-      token: subToken,
+      token: oldSubToken,
       body: { oldPassword: initialPassword, newPassword: newPassword1 },
     });
     assert.strictEqual(correctRes.status, 200, "原密码正确修改应成功");
     console.log("  ✓ 原密码正确，修改密码成功 (200)");
 
-    // 3.3 验证使用新密码可以成功登录
+    // 3.3 验证旧 token 已因 tokenVersion 自增而失效
+    const oldTokenCheck = await apiRequest("/api/me", { token: oldSubToken });
+    assert.strictEqual(oldTokenCheck.data?.authenticated, false, "旧 session token 必须立即失效");
+    const protectedCheck = await apiRequest("/api/user/recovery-key", { token: oldSubToken });
+    assert.strictEqual(protectedCheck.status, 401, "旧 session token 访问受保护接口必须被拦截 (401)");
+    console.log("  ✓ 凭据变更即刻生效：旧登录会话 token 瞬间作废 (401 拦截)");
+
+    // 3.4 验证旧密码登录被拒绝 (401)
+    const oldLoginCheck = await apiRequest("/api/login", {
+      method: "POST",
+      body: { username: testUsername, password: initialPassword },
+    });
+    assert.strictEqual(oldLoginCheck.status, 401, "旧密码登录必须被拒绝 (401)");
+    console.log("  ✓ 旧密码即刻失效，登录被拦截 (401)");
+
+    // 3.5 验证使用新密码可以成功登录
     const reloginRes = await apiRequest("/api/login", {
       method: "POST",
       body: { username: testUsername, password: newPassword1 },
@@ -206,25 +224,17 @@ async function run() {
     console.log("  ✓ 最新密钥重置密码成功 (200)");
   }
 
-  // 7. 测试环境还原与清理
-  console.log("\n[Test 7] 测试环境还原与清理...");
-  {
-    // 从 accountsStore 中清理测试账号
-    const accountsPath = path.resolve("D:/PersonalCloudDrive/system/accounts.json");
-    if (fs.existsSync(accountsPath)) {
-      const data = JSON.parse(fs.readFileSync(accountsPath, "utf8"));
-      data.users = data.users.filter((u) => u.username !== testUsername);
-      fs.writeFileSync(accountsPath, JSON.stringify(data, null, 2), "utf8");
+    console.log("\n🎉 所有密码修改、找回重置、专属恢复密钥与越权防范测试 100% 全部通过！");
+  } finally {
+    if (testUsername) {
+      console.log(`\n[Cleanup] 彻底清理测试账号: ${testUsername}...`);
+      const delRes = await apiRequest(`/api/admin/users/${testUsername}`, {
+        method: "DELETE",
+        token: adminToken,
+      });
+      console.log(`  ✓ 测试账号清理结果: status=${delRes.status}, data=${JSON.stringify(delRes.data)}`);
     }
-    // 清理测试用户目录
-    const testUserDir = path.resolve(`D:/PersonalCloudDrive/users/${testUsername}`);
-    if (fs.existsSync(testUserDir)) {
-      fs.rmSync(testUserDir, { recursive: true, force: true });
-    }
-    console.log(`  ✓ 测试账号 ${testUsername} 数据已完全清理还原`);
   }
-
-  console.log("\n🎉 所有密码修改、找回重置、专属恢复密钥与越权防范测试 100% 全部通过！");
 }
 
 run().catch((err) => {

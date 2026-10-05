@@ -1847,7 +1847,7 @@ tr:hover .name-cell .star-toggle-btn {
 
 /* 密码与安全模态框 (统一尺寸 + 防抖动设计) */
 .user-security-card {
-  width: 480px !important;
+  width: 500px !important;
   max-width: 94vw !important;
   height: 570px !important;
   min-height: 570px !important;
@@ -2112,39 +2112,63 @@ tr:hover .name-cell .star-toggle-btn {
   justify-content: space-between;
   background: #ffffff;
   border: 1px solid rgba(203, 213, 225, 0.95);
-  border-radius: 10px;
-  padding: 8px 12px;
-  gap: 10px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  gap: 8px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+  flex-wrap: nowrap !important;
 }
 
 .recovery-key-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  user-select: all;
 }
 
 .recovery-key-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  flex-wrap: nowrap !important;
 }
 
 .copy-key-pill-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
-  font-size: 11.5px;
+  padding: 0 10px !important;
+  min-height: unset !important;
+  height: 26px !important;
+  font-size: 11.5px !important;
   font-weight: 600;
+  line-height: 24px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
   color: #2563eb;
   background: #eff6ff;
   border: 1px solid rgba(191, 219, 254, 0.9);
   border-radius: 999px;
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
+}
+
+.copy-key-pill-btn span {
+  white-space: nowrap !important;
+  display: inline-block !important;
+}
+
+.copy-key-pill-btn svg {
+  flex-shrink: 0 !important;
 }
 
 .copy-key-pill-btn:hover {
@@ -2208,6 +2232,11 @@ tr:hover .name-cell .star-toggle-btn {
   margin-top: 10px;
 }
 
+.admin-reset-pwd-row button {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
 .admin-reset-input {
   flex: 1;
   min-height: 34px !important;
@@ -2266,6 +2295,7 @@ tr:hover .name-cell .star-toggle-btn {
   align-items: center !important;
   justify-content: center !important;
   padding: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 .tiny-icon:hover {

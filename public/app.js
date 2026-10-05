@@ -235,10 +235,6 @@ const adminResetTargetUsername = $("#adminResetTargetUsername");
 const adminResetPasswordInput = $("#adminResetPasswordInput");
 const adminGenRandomPwdBtn = $("#adminGenRandomPwdBtn");
 const adminSubmitNewPwdBtn = $("#adminSubmitNewPwdBtn");
-const adminRegenUserKeyBtn = $("#adminRegenUserKeyBtn");
-const adminUserKeyResultBox = $("#adminUserKeyResultBox");
-const adminUserKeyResultText = $("#adminUserKeyResultText");
-const adminCopyUserKeyResultBtn = $("#adminCopyUserKeyResultBtn");
 const adminResetUserError = $("#adminResetUserError");
 
 const breadcrumb = $("#breadcrumb");
@@ -7607,8 +7603,8 @@ function renderUserQuotas() {
       const resetBtn = document.createElement("button");
       resetBtn.className = "ghost";
       resetBtn.type = "button";
-      resetBtn.textContent = "重置密码/密钥";
-      resetBtn.title = `协助 ${user.username} 重设登录密码或重发专属恢复密钥`;
+      resetBtn.textContent = "重置密码";
+      resetBtn.title = `为用户 ${user.username} 重置登录密码`;
       resetBtn.addEventListener("click", () => {
         openAdminResetUserModal(user);
       });
@@ -8362,8 +8358,6 @@ function openAdminResetUserModal(user) {
   if (adminResetTargetUsername) adminResetTargetUsername.textContent = user.username;
   if (adminResetPasswordInput) adminResetPasswordInput.value = "";
   if (adminResetUserError) adminResetUserError.textContent = "";
-  if (adminUserKeyResultBox) adminUserKeyResultBox.classList.add("hidden");
-  if (adminUserKeyResultText) adminUserKeyResultText.textContent = "";
   adminResetUserModal.classList.remove("hidden");
   adminResetUserModal.setAttribute("aria-hidden", "false");
   window.setTimeout(() => adminResetPasswordInput?.focus(), 50);
@@ -8419,37 +8413,7 @@ adminSubmitNewPwdBtn?.addEventListener("click", async () => {
     if (adminResetUserError) adminResetUserError.textContent = err.message;
   } finally {
     adminSubmitNewPwdBtn.disabled = false;
-    adminSubmitNewPwdBtn.textContent = "确认重置为此密码";
-  }
-});
-
-adminRegenUserKeyBtn?.addEventListener("click", async () => {
-  if (!currentAdminResetTarget) return;
-  adminRegenUserKeyBtn.disabled = true;
-  adminRegenUserKeyBtn.textContent = "正在重新生成...";
-  if (adminResetUserError) adminResetUserError.textContent = "";
-  try {
-    const res = await api(`/api/admin/users/${encodeURIComponent(currentAdminResetTarget.id)}/recovery-key`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
-    const newKey = res.recoveryKey;
-    if (adminUserKeyResultText) adminUserKeyResultText.textContent = newKey;
-    if (adminUserKeyResultBox) adminUserKeyResultBox.classList.remove("hidden");
-    copyRecoveryKeyText(newKey, adminCopyUserKeyResultBtn?.querySelector("span"));
-    setStatus(`已为用户“${currentAdminResetTarget.username}”重新生成专属恢复密钥，并已复制到剪贴板！`);
-  } catch (err) {
-    if (adminResetUserError) adminResetUserError.textContent = err.message;
-  } finally {
-    adminRegenUserKeyBtn.disabled = false;
-    adminRegenUserKeyBtn.textContent = "重新生成恢复密钥并复制";
-  }
-});
-
-adminCopyUserKeyResultBtn?.addEventListener("click", () => {
-  const text = adminUserKeyResultText?.textContent?.trim();
-  if (text) {
-    copyRecoveryKeyText(text, adminCopyUserKeyResultBtn.querySelector("span"));
+    adminSubmitNewPwdBtn.textContent = "确认重置密码";
   }
 });
 

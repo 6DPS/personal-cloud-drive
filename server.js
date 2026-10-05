@@ -1031,6 +1031,7 @@ function createSessionToken(user) {
   const payload = JSON.stringify({
     userId: user.id,
     user: user.username,
+    tokenVersion: Number(user.tokenVersion) || 0,
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
     nonce: crypto.randomBytes(12).toString("base64url"),
   });
@@ -1058,11 +1059,18 @@ function sessionUser(token) {
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     if (payload.exp <= Date.now()) return null;
-    return (
+    const user = (
       accountsStore.users.find((item) => item.id === payload.userId) ||
       accountsStore.users.find((item) => item.username.toLowerCase() === String(payload.user || "").toLowerCase()) ||
       null
     );
+    if (!user) return null;
+    if (user.tokenVersion !== undefined && payload.tokenVersion !== undefined) {
+      if (Number(payload.tokenVersion) !== Number(user.tokenVersion)) {
+        return null; // 会话已因密码重置而失效，要求使用最新密码重新鉴权
+      }
+    }
+    return user;
   } catch {
     return null;
   }
@@ -4108,9 +4116,38 @@ app.post("/api/admin/users/:id/reset-password", requireAuth, ensureAdminUser, as
       return res.status(400).json({ error: "新密码长度至少需要 6 位字符" });
     }
     targetUser.password = createPasswordRecord(newPassword);
+    targetUser.tokenVersion = (Number(targetUser.tokenVersion) || 0) + 1;
     targetUser.updatedAt = new Date().toISOString();
     await saveAccountsStore();
     res.json({ ok: true, message: `已成功将用户 ${targetUser.username} 的密码重置` });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete("/api/admin/users/:id", requireAuth, ensureAdminUser, async (req, res, next) => {
+  try {
+    const targetId = String(req.params.id || "").trim();
+    const index = accountsStore.users.findIndex(
+      (u) => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase()
+    );
+    if (index === -1) {
+      return res.status(404).json({ error: "指定用户不存在" });
+    }
+    const targetUser = accountsStore.users[index];
+    if (targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID) {
+      return res.status(400).json({ error: "管理员账号不可删除" });
+    }
+    accountsStore.users.splice(index, 1);
+    await saveAccountsStore();
+
+    // 清理该用户在磁盘上的私有存储与头像数据
+    const userFolder = userRoot(targetUser.id);
+    try {
+      await fsp.rm(userFolder, { recursive: true, force: true });
+    } catch {}
+
+    res.json({ ok: true, message: `用户 ${targetUser.username} 已彻底清除` });
   } catch (error) {
     next(error);
   }
@@ -4282,6 +4319,8 @@ app.post("/api/password-reset", createRateLimitMiddleware({
       return res.status(401).json({ error: "安全恢复密钥错误或不匹配该账号" });
     }
     targetUser.password = createPasswordRecord(newPassword);
+    targetUser.tokenVersion = (Number(targetUser.tokenVersion) || 0) + 1;
+    targetUser.updatedAt = new Date().toISOString();
     await saveAccountsStore();
     res.json({ ok: true, user: publicUser(targetUser) });
   } catch (error) {
@@ -4313,8 +4352,12 @@ app.post("/api/user/change-password", requireAuth, createRateLimitMiddleware({
       return res.status(401).json({ error: "当前原密码输入错误，请重新输入" });
     }
     req.user.password = createPasswordRecord(newPassword);
+    req.user.tokenVersion = (Number(req.user.tokenVersion) || 0) + 1;
+    req.user.updatedAt = new Date().toISOString();
     await saveAccountsStore();
-    res.json({ ok: true, message: "密码修改成功" });
+    const token = createSessionToken(req.user);
+    setSessionCookie(res, token);
+    res.json({ ok: true, message: "密码修改成功", token });
   } catch (error) {
     next(error);
   }
