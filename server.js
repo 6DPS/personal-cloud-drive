@@ -4091,6 +4091,53 @@ app.post("/api/admin/users/:id/quota", requireAuth, ensureAdminUser, async (req,
   }
 });
 
+app.post("/api/admin/users/:id/reset-password", requireAuth, ensureAdminUser, async (req, res, next) => {
+  try {
+    const targetId = String(req.params.id || "").trim();
+    const targetUser = accountsStore.users.find(
+      (u) => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase()
+    );
+    if (!targetUser) {
+      return res.status(404).json({ error: "指定用户不存在" });
+    }
+    if (targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID) {
+      return res.status(400).json({ error: "不可通过此入口重置管理员自身密码，请在个人设置中修改" });
+    }
+    const newPassword = String(req.body?.newPassword || "").trim();
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: "新密码长度至少需要 6 位字符" });
+    }
+    targetUser.password = createPasswordRecord(newPassword);
+    targetUser.updatedAt = new Date().toISOString();
+    await saveAccountsStore();
+    res.json({ ok: true, message: `已成功将用户 ${targetUser.username} 的密码重置` });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/admin/users/:id/recovery-key", requireAuth, ensureAdminUser, async (req, res, next) => {
+  try {
+    const targetId = String(req.params.id || "").trim();
+    const targetUser = accountsStore.users.find(
+      (u) => u.id === targetId || u.username.toLowerCase() === targetId.toLowerCase()
+    );
+    if (!targetUser) {
+      return res.status(404).json({ error: "指定用户不存在" });
+    }
+    if (targetUser.role === "admin" || targetUser.id === SINGLE_USER_ID) {
+      return res.status(400).json({ error: "不可通过此入口重置管理员恢复密钥" });
+    }
+    const newKey = generateRecoveryKeyValue();
+    targetUser.recoveryKey = newKey;
+    targetUser.updatedAt = new Date().toISOString();
+    await saveAccountsStore();
+    res.json({ ok: true, recoveryKey: newKey, message: `已为用户 ${targetUser.username} 重新生成专属恢复密钥` });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/register", createRateLimitMiddleware({
   id: "register",
   windowMs: 10 * 60 * 1000,

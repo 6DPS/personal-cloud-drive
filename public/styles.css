@@ -2044,10 +2044,10 @@ tr:hover .name-cell .star-toggle-btn {
   background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px solid rgba(203, 213, 225, 0.85);
   border-radius: 16px;
-  padding: 16px 18px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 10px;
 }
 
 .recovery-hero-top {
@@ -2153,6 +2153,107 @@ tr:hover .name-cell .star-toggle-btn {
   border-color: #2563eb;
 }
 
+.download-pill-btn {
+  color: #0f766e !important;
+  background: #f0fdfa !important;
+  border-color: rgba(153, 246, 228, 0.95) !important;
+}
+
+.download-pill-btn:hover {
+  background: #0d9488 !important;
+  color: #ffffff !important;
+  border-color: #0d9488 !important;
+}
+
+/* 管理员重置普通用户凭据弹窗 */
+.admin-reset-user-card {
+  width: min(480px, 94vw) !important;
+  max-width: 480px !important;
+  background: #ffffff !important;
+  border-radius: 26px !important;
+  padding: 24px 28px 28px 28px !important;
+  box-sizing: border-box !important;
+}
+
+.admin-reset-panel {
+  background: #f8fafc;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 14px;
+  padding: 13px 15px;
+  box-sizing: border-box;
+}
+
+.admin-reset-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-reset-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.admin-reset-panel-tip {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.admin-reset-pwd-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-reset-input {
+  flex: 1;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.admin-reset-input:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+.admin-reset-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+  position: relative;
+}
+
+.admin-reset-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(226, 232, 240, 0.9);
+}
+
+.admin-reset-divider span {
+  position: relative;
+  background: #ffffff;
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
 .tiny-icon {
   width: 26px !important;
   height: 26px !important;
@@ -2175,20 +2276,20 @@ tr:hover .name-cell .star-toggle-btn {
 .recovery-guide-box {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: #ffffff;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 8px 12px;
 }
 
 .recovery-guide-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 11.5px;
+  gap: 7px;
+  font-size: 11px;
   color: #475569;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .recovery-guide-item strong {

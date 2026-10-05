@@ -218,12 +218,28 @@ const secToggleKeyVisibilityBtn = $("#secToggleKeyVisibilityBtn");
 const secKeyEyeIcon = $("#secKeyEyeIcon");
 const secCopyKeyBtn = $("#secCopyKeyBtn");
 const secCopyKeyBtnText = $("#secCopyKeyBtnText");
+const secDownloadKeyBtn = $("#secDownloadKeyBtn");
 
 // 注册成功展示恢复密钥模态框
 const registerSuccessModal = $("#registerSuccessModal");
 const newAccountRecoveryKeyText = $("#newAccountRecoveryKeyText");
 const copyNewAccountRecoveryKeyBtn = $("#copyNewAccountRecoveryKeyBtn");
+const downloadNewAccountRecoveryKeyBtn = $("#downloadNewAccountRecoveryKeyBtn");
 const confirmRegisterSuccessBtn = $("#confirmRegisterSuccessBtn");
+
+// 管理员重置普通用户凭据模态框
+const adminResetUserModal = $("#adminResetUserModal");
+const closeAdminResetUserModalBtn = $("#closeAdminResetUserModalBtn");
+const cancelAdminResetUserModalBtn = $("#cancelAdminResetUserModalBtn");
+const adminResetTargetUsername = $("#adminResetTargetUsername");
+const adminResetPasswordInput = $("#adminResetPasswordInput");
+const adminGenRandomPwdBtn = $("#adminGenRandomPwdBtn");
+const adminSubmitNewPwdBtn = $("#adminSubmitNewPwdBtn");
+const adminRegenUserKeyBtn = $("#adminRegenUserKeyBtn");
+const adminUserKeyResultBox = $("#adminUserKeyResultBox");
+const adminUserKeyResultText = $("#adminUserKeyResultText");
+const adminCopyUserKeyResultBtn = $("#adminCopyUserKeyResultBtn");
+const adminResetUserError = $("#adminResetUserError");
 
 const breadcrumb = $("#breadcrumb");
 const statusLine = $("#statusLine");
@@ -7587,7 +7603,17 @@ function renderUserQuotas() {
         editPanel.append(label, select, stepper.stepperWrap, saveBtn, cancelBtn);
         row.append(editPanel);
       });
-      actions.append(editBtn);
+
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "ghost";
+      resetBtn.type = "button";
+      resetBtn.textContent = "重置密码/密钥";
+      resetBtn.title = `协助 ${user.username} 重设登录密码或重发专属恢复密钥`;
+      resetBtn.addEventListener("click", () => {
+        openAdminResetUserModal(user);
+      });
+
+      actions.append(editBtn, resetBtn);
     } else {
       const badge = document.createElement("span");
       badge.className = "registration-key-status used";
@@ -7839,7 +7865,12 @@ async function submitPasswordReset() {
     password.value = "";
     loginError.textContent = "密码已重置，请用新密码登录。";
   } catch (error) {
-    passwordResetError.textContent = error.message;
+    const msg = error.message || "";
+    if (msg.includes("恢复密钥") || msg.includes("错误") || msg.includes("不正确") || msg.includes("失效")) {
+      passwordResetError.textContent = `${msg}。若未保存或遗失恢复密钥，请联系管理员为您重置密码。`;
+    } else {
+      passwordResetError.textContent = msg;
+    }
   }
 }
 
@@ -7914,7 +7945,7 @@ async function handleLoginSubmit(event) {
     setSessionToken(result?.token || "");
     await enterDrive(result?.user || null);
     if (state.authMode === "register" && result?.recoveryKey) {
-      openRegisterSuccessModal(result.recoveryKey);
+      openRegisterSuccessModal(result.recoveryKey, result.user?.username || username.value.trim());
     }
   } catch (error) {
     loginError.textContent = error.message;
@@ -8265,8 +8296,9 @@ function copyRecoveryKeyText(key, btnTextEl) {
   }
 }
 
-function openRegisterSuccessModal(key) {
+function openRegisterSuccessModal(key, username) {
   if (!registerSuccessModal) return;
+  state.lastRegisteredUsername = username || state.currentUser?.username || "";
   if (newAccountRecoveryKeyText) newAccountRecoveryKeyText.textContent = key || "DPSIR-RCV-XXXX-XXXX";
   registerSuccessModal.classList.remove("hidden");
   registerSuccessModal.setAttribute("aria-hidden", "false");
@@ -8277,6 +8309,149 @@ function closeRegisterSuccessModal() {
   registerSuccessModal.classList.add("hidden");
   registerSuccessModal.setAttribute("aria-hidden", "true");
 }
+
+function downloadRecoveryCredentialCard(username, recoveryKey) {
+  const cleanUser = String(username || state.currentUser?.username || "user").trim();
+  const cleanKey = String(recoveryKey || "").trim();
+  if (!cleanKey || cleanKey.includes("•")) {
+    setStatus("恢复密钥无效或未完整显示，无法下载凭据");
+    return;
+  }
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const origin = window.location.origin;
+
+  const content = `================================================================
+              DPSir 智云盘 - 账号安全应急凭据卡
+================================================================
+账号名称: ${cleanUser}
+专属安全恢复密钥: ${cleanKey}
+凭据生成时间: ${timeStr}
+网盘访问地址: ${origin}
+
+【核心安全使用说明】
+1. 当您遗忘登录密码时，此密钥是在登录页自助找回账号的唯一凭据。
+2. 出于数据安全保护机制，在未登录状态下系统无法直接查询此密钥。
+3. 请将本文件妥善保存在个人受保护的离线存储（如个人U盘、安全备忘录或密码管理器中）。
+4. 若日后在云盘个人设置中重新生成了新密钥，此旧凭据卡将立即作废失效。
+================================================================`;
+
+  try {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `DPSir_安全恢复凭据_${cleanUser}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus("应急凭据卡已成功生成并下载至本地！");
+  } catch (err) {
+    setStatus("生成凭据文件失败：" + err.message);
+  }
+}
+
+// 管理员重置普通用户凭据弹窗控制器
+let currentAdminResetTarget = null;
+
+function openAdminResetUserModal(user) {
+  if (!adminResetUserModal || !user) return;
+  currentAdminResetTarget = user;
+  if (adminResetTargetUsername) adminResetTargetUsername.textContent = user.username;
+  if (adminResetPasswordInput) adminResetPasswordInput.value = "";
+  if (adminResetUserError) adminResetUserError.textContent = "";
+  if (adminUserKeyResultBox) adminUserKeyResultBox.classList.add("hidden");
+  if (adminUserKeyResultText) adminUserKeyResultText.textContent = "";
+  adminResetUserModal.classList.remove("hidden");
+  adminResetUserModal.setAttribute("aria-hidden", "false");
+  window.setTimeout(() => adminResetPasswordInput?.focus(), 50);
+}
+
+function closeAdminResetUserModal() {
+  if (!adminResetUserModal) return;
+  adminResetUserModal.classList.add("hidden");
+  adminResetUserModal.setAttribute("aria-hidden", "true");
+  currentAdminResetTarget = null;
+}
+
+function generateRandomTempPassword(length = 8) {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789#@!%";
+  let pwd = "";
+  for (let i = 0; i < length; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+}
+
+closeAdminResetUserModalBtn?.addEventListener("click", closeAdminResetUserModal);
+cancelAdminResetUserModalBtn?.addEventListener("click", closeAdminResetUserModal);
+
+adminGenRandomPwdBtn?.addEventListener("click", () => {
+  if (adminResetPasswordInput) {
+    adminResetPasswordInput.value = generateRandomTempPassword(8);
+  }
+});
+
+adminSubmitNewPwdBtn?.addEventListener("click", async () => {
+  if (!currentAdminResetTarget) return;
+  const newPwd = adminResetPasswordInput?.value?.trim();
+  if (!newPwd || newPwd.length < 6) {
+    if (adminResetUserError) adminResetUserError.textContent = "临时密码至少需要 6 位字符";
+    return;
+  }
+  adminSubmitNewPwdBtn.disabled = true;
+  adminSubmitNewPwdBtn.textContent = "正在重置...";
+  if (adminResetUserError) adminResetUserError.textContent = "";
+  try {
+    const res = await api(`/api/admin/users/${encodeURIComponent(currentAdminResetTarget.id)}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({ newPassword: newPwd }),
+    });
+    setStatus(`已将用户“${currentAdminResetTarget.username}”的密码重置为：${newPwd}`);
+    await showConfirmDialog(
+      "密码重置成功",
+      `已成功将用户“${currentAdminResetTarget.username}”的登录密码重置为：\n\n${newPwd}\n\n请将该临时密码告知用户，并提醒其登录后及时在个人设置中修改。`
+    );
+    closeAdminResetUserModal();
+  } catch (err) {
+    if (adminResetUserError) adminResetUserError.textContent = err.message;
+  } finally {
+    adminSubmitNewPwdBtn.disabled = false;
+    adminSubmitNewPwdBtn.textContent = "确认重置为此密码";
+  }
+});
+
+adminRegenUserKeyBtn?.addEventListener("click", async () => {
+  if (!currentAdminResetTarget) return;
+  adminRegenUserKeyBtn.disabled = true;
+  adminRegenUserKeyBtn.textContent = "正在重新生成...";
+  if (adminResetUserError) adminResetUserError.textContent = "";
+  try {
+    const res = await api(`/api/admin/users/${encodeURIComponent(currentAdminResetTarget.id)}/recovery-key`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    const newKey = res.recoveryKey;
+    if (adminUserKeyResultText) adminUserKeyResultText.textContent = newKey;
+    if (adminUserKeyResultBox) adminUserKeyResultBox.classList.remove("hidden");
+    copyRecoveryKeyText(newKey, adminCopyUserKeyResultBtn?.querySelector("span"));
+    setStatus(`已为用户“${currentAdminResetTarget.username}”重新生成专属恢复密钥，并已复制到剪贴板！`);
+  } catch (err) {
+    if (adminResetUserError) adminResetUserError.textContent = err.message;
+  } finally {
+    adminRegenUserKeyBtn.disabled = false;
+    adminRegenUserKeyBtn.textContent = "重新生成恢复密钥并复制";
+  }
+});
+
+adminCopyUserKeyResultBtn?.addEventListener("click", () => {
+  const text = adminUserKeyResultText?.textContent?.trim();
+  if (text) {
+    copyRecoveryKeyText(text, adminCopyUserKeyResultBtn.querySelector("span"));
+  }
+});
 
 // 绑定侧边栏交互：仅点击圆形折叠箭头触发 Popover，点击头像打开头像设置，点击跑道外框不弹出
 userAvatarContainer?.addEventListener("click", (e) => {
@@ -8325,7 +8500,26 @@ secToggleKeyVisibilityBtn?.addEventListener("click", () => {
 });
 secCopyKeyBtn?.addEventListener("click", () => copyRecoveryKeyText(currentFullRecoveryKey, secCopyKeyBtnText));
 
+secDownloadKeyBtn?.addEventListener("click", async () => {
+  let keyToDownload = currentFullRecoveryKey;
+  if (!keyToDownload || keyToDownload.includes("•")) {
+    try {
+      const res = await api("/api/user/recovery-key");
+      if (res?.recoveryKey) {
+        currentFullRecoveryKey = res.recoveryKey;
+        keyToDownload = res.recoveryKey;
+      }
+    } catch {}
+  }
+  downloadRecoveryCredentialCard(state.currentUser?.username || "user", keyToDownload);
+});
+
 copyNewAccountRecoveryKeyBtn?.addEventListener("click", () => copyRecoveryKeyText(newAccountRecoveryKeyText?.textContent, copyNewAccountRecoveryKeyBtn?.querySelector("span")));
+downloadNewAccountRecoveryKeyBtn?.addEventListener("click", () => {
+  const key = newAccountRecoveryKeyText?.textContent?.trim();
+  const uname = state.lastRegisteredUsername || state.currentUser?.username || "新用户";
+  downloadRecoveryCredentialCard(uname, key);
+});
 confirmRegisterSuccessBtn?.addEventListener("click", closeRegisterSuccessModal);
 
 $("#logoutBtn").addEventListener("click", async () => {
@@ -8546,7 +8740,7 @@ $("#refreshBtn").addEventListener("click", () => {
 });
 closePreviewBtn.addEventListener("click", closePreview);
 
-for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal, userSecurityModal, registerSuccessModal]) {
+for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordModal, dialogModal, passwordResetModal, registrationKeysModal, userQuotasModal, userAvatarModal, userSecurityModal, registerSuccessModal, adminResetUserModal]) {
   if (!modal) continue;
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
@@ -8561,6 +8755,7 @@ for (const modal of [uploadModal, previewModal, bulkMoveModal, folderPasswordMod
     if (modal === userAvatarModal) return closeUserAvatarModal();
     if (modal === userSecurityModal) return closeUserSecurityModal();
     if (modal === registerSuccessModal) return closeRegisterSuccessModal();
+    if (modal === adminResetUserModal) return closeAdminResetUserModal();
   });
 }
 
@@ -8654,6 +8849,7 @@ document.addEventListener("keydown", (event) => {
   closeUserAvatarModal();
   closeUserSecurityModal();
   closeRegisterSuccessModal();
+  closeAdminResetUserModal();
   if (zipArchiveModal) zipArchiveModal.classList.add("hidden");
   if (shareModal) shareModal.classList.add("hidden");
   if (mySharesModal) mySharesModal.classList.add("hidden");
