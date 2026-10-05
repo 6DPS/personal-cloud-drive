@@ -9363,5 +9363,323 @@ tbody tr.context-active-row {
   font-weight: 600 !important;
 }
 
+/* =========================================================================
+   宫格缩略图视图样式 (Grid View & Card Thumbnails Subsystem)
+   ========================================================================= */
+
+#fileTable.hidden {
+  display: none !important;
+}
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 14px;
+  padding: 14px 16px 28px;
+  width: 100%;
+  box-sizing: border-box;
+  align-content: start;
+}
+
+.file-grid.hidden {
+  display: none !important;
+}
+
+.grid-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgba(218, 226, 237, 0.88);
+  border-radius: 14px;
+  padding: 8px 8px 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 150ms ease,
+              background-color 150ms ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.grid-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05);
+  border-color: rgba(37, 99, 235, 0.38);
+}
+
+.grid-card.selected-card {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1.5px #2563eb, 0 8px 18px rgba(37, 99, 235, 0.14);
+}
+
+.grid-card.context-active-row {
+  border-color: #2563eb;
+  background: #f0f7ff;
+}
+
+.grid-card.dragging-row {
+  opacity: 0.55;
+  transform: scale(0.96);
+}
+
+.grid-card.drop-target-row {
+  background: #e7f8f4 !important;
+  border-color: #008d7f !important;
+  box-shadow: 0 0 0 2px #008d7f !important;
+}
+
+/* Card Top Bar: Checkbox & Star */
+.grid-card-topbar {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  right: 7px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.grid-card-topbar > * {
+  pointer-events: auto;
+}
+
+.grid-card .card-select {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 120ms ease, transform 120ms ease;
+  margin: 0 !important;
+}
+
+.grid-card:hover .card-select,
+.grid-card.selected-card .card-select,
+.selection-active .grid-card .card-select,
+.selection-mode-active .grid-card .card-select {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.grid-card .card-star-btn {
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 120ms ease, background 120ms ease, transform 120ms ease;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+}
+
+.grid-card:hover .card-star-btn,
+.grid-card .card-star-btn.active {
+  opacity: 1;
+}
+
+.grid-card .card-star-btn:hover {
+  background: #ffffff;
+  transform: scale(1.08);
+}
+
+/* Thumbnail / Icon Container */
+.grid-thumb-container {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 9px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.grid-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid-card:hover .grid-thumb-img {
+  transform: scale(1.04);
+}
+
+/* Large Icon Inside Grid Card */
+.file-icon.grid-large-icon {
+  width: 56px;
+  height: 44px;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 11px;
+}
+
+.file-icon.grid-large-icon.folder,
+.file-icon.grid-large-icon.archive {
+  width: 58px;
+  height: 44px;
+}
+
+.file-icon.grid-large-icon.folder::before,
+.file-icon.grid-large-icon.archive::before {
+  left: 6px;
+  top: -7px;
+  width: 24px;
+  height: 11px;
+  border-radius: 6px 6px 0 0;
+}
+
+.file-icon.grid-large-icon.folder::after,
+.file-icon.grid-large-icon.archive::after {
+  top: 9px;
+  border-radius: 9px 9px 8px 8px;
+}
+
+.file-icon.grid-large-icon .lock-badge::before {
+  top: 9px;
+  width: 12px;
+  height: 10px;
+  border-width: 2.2px;
+}
+
+.file-icon.grid-large-icon .lock-badge::after {
+  top: 18px;
+  width: 18px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+/* Card Meta Details */
+.grid-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 0 2px;
+}
+
+.grid-card-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  max-height: 34px;
+}
+
+.grid-card-sub {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Quick Hover Action Bar */
+.grid-card-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  transition: opacity 130ms ease, transform 130ms ease;
+  z-index: 5;
+}
+
+.grid-card:hover .grid-card-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.grid-action-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  color: #334155;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.grid-action-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.grid-action-btn.danger-action-btn:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 10px;
+    padding: 8px 10px 24px;
+  }
+  .grid-card {
+    padding: 6px 6px 8px;
+    border-radius: 11px;
+  }
+  .grid-thumb-container {
+    border-radius: 7px;
+  }
+  .file-icon.grid-large-icon {
+    width: 44px;
+    height: 36px;
+    font-size: 11px;
+  }
+  .file-icon.grid-large-icon.folder,
+  .file-icon.grid-large-icon.archive {
+    width: 46px;
+    height: 36px;
+  }
+  .grid-card-name {
+    font-size: 11.5px;
+    max-height: 30px;
+  }
+  .grid-card-sub {
+    font-size: 10px;
+  }
+  .grid-card-actions {
+    display: none;
+  }
+  .grid-card .card-select {
+    opacity: 0.85;
+  }
+}
+
+
 
 
