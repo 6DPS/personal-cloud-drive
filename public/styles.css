@@ -1382,8 +1382,18 @@ tr:hover .name-cell .star-toggle-btn {
 
 /* 自定义头像设置弹窗 */
 .user-avatar-card {
-  max-width: 420px !important;
+  max-width: 440px !important;
   width: 90% !important;
+  border-radius: 26px !important;
+  background: #ffffff !important;
+  padding: 24px 28px 28px 28px !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.user-avatar-card .modal-header {
+  padding: 0 0 14px 0 !important;
+  border-bottom: 0 !important;
 }
 
 .user-avatar-modal-body {
@@ -1391,7 +1401,19 @@ tr:hover .name-cell .star-toggle-btn {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 12px 0 6px 0;
+  padding: 8px 0 2px 0;
+}
+
+.user-avatar-card .modal-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 20px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.85) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .avatar-modal-preview-wrapper {
@@ -1827,16 +1849,22 @@ tr:hover .name-cell .star-toggle-btn {
 .user-security-card {
   width: 480px !important;
   max-width: 94vw !important;
-  height: 590px !important;
-  min-height: 590px !important;
-  max-height: min(590px, 94vh) !important;
-  border-radius: 22px !important;
-  padding: 24px 28px !important;
+  height: 570px !important;
+  min-height: 570px !important;
+  max-height: min(570px, 94vh) !important;
+  border-radius: 26px !important;
+  background: #ffffff !important;
+  padding: 24px 28px 28px 28px !important;
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.06) !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+}
+
+.user-security-card .modal-header {
+  padding: 0 0 12px 0 !important;
+  border-bottom: 0 !important;
 }
 
 .security-segmented-control {
@@ -1846,7 +1874,7 @@ tr:hover .name-cell .star-toggle-btn {
   background: #f1f5f9;
   padding: 4px;
   border-radius: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   flex-shrink: 0;
 }
 
@@ -1971,9 +1999,10 @@ tr:hover .name-cell .star-toggle-btn {
   gap: 10px !important;
   margin-top: auto !important;
   padding-top: 14px !important;
-  border-top: 1px solid #f1f5f9 !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.85) !important;
   width: 100% !important;
   flex-shrink: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .sec-account-badge-row {
@@ -5248,18 +5277,24 @@ body.ai-drawer-open .ai-drawer,
 }
 
 .modal-error {
-  margin-top: 12px;
-  min-height: 20px;
+  margin-top: 10px;
+  min-height: 18px;
+}
+
+.modal-error:empty {
+  display: none !important;
+  margin: 0 !important;
+  min-height: 0 !important;
 }
 
 .password-modal-card {
   width: min(520px, 100%);
-  padding: 24px;
+  padding: 24px 28px 28px 28px !important;
 }
 
 .dialog-modal-card {
   width: min(520px, 100%);
-  padding: 24px;
+  padding: 24px 28px 28px 28px !important;
   background: #ffffff !important;
   color: #1e293b !important;
   border: 1px solid rgba(200, 215, 235, 0.95) !important;
@@ -7231,7 +7266,7 @@ tbody tr.drop-target-row {
 
 .modal-card.small {
   border-radius: 26px !important;
-  padding: 24px !important;
+  padding: 24px 28px 28px 28px !important;
 }
 
 .modal-header {
@@ -7249,7 +7284,12 @@ tbody tr.drop-target-row {
   display: flex !important;
   gap: 10px !important;
   justify-content: flex-end !important;
-  margin-top: 18px !important;
+  align-items: center !important;
+  margin-top: 20px;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(226, 232, 240, 0.75) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .modal-actions.compact {
@@ -9229,12 +9269,10 @@ select:focus {
 .conflict-modal-card {
   width: min(580px, 94vw) !important;
   max-width: 580px !important;
-  padding: 20px 22px 16px !important;
-  background: rgba(255, 255, 255, 0.96) !important;
-  backdrop-filter: blur(40px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  padding: 22px 26px 24px 26px !important;
+  background: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
-  border-radius: 22px !important;
+  border-radius: 26px !important;
   box-shadow: 0 32px 80px rgba(12, 35, 75, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
@@ -9651,9 +9689,9 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 11px;
-  padding-top: 9px;
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
 }
 
 .conflict-apply-all-label {
