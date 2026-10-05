@@ -3962,6 +3962,20 @@ async function showConfirmDialog(title, description) {
   return result !== null;
 }
 
+async function showSuccessAlert(title, description, confirmText = "前往重新登录") {
+  const result = await openDialog({
+    eyebrow: "安全提示",
+    title,
+    description,
+    confirmText,
+    hideCancel: true,
+    validate() {
+      return "";
+    },
+  });
+  return result !== null;
+}
+
 function fillFolderPasswordDialog(config) {
   state.folderPasswordDialog = config;
   folderPasswordError.textContent = "";
@@ -4051,6 +4065,8 @@ function closeDialogModal() {
   closeFolderDropdown(dialogSelect);
   confirmDialogBtn.classList.remove("danger");
   confirmDialogBtn.textContent = "确定";
+  cancelDialogBtn?.classList.remove("hidden");
+  closeDialogModalBtn?.classList.remove("hidden");
   dialogModal.classList.add("hidden");
   dialogModal.setAttribute("aria-hidden", "true");
   dialogError.textContent = "";
@@ -4069,6 +4085,13 @@ function openDialog(config) {
     confirmDialogBtn.classList.remove("danger");
   }
   dialogError.textContent = "";
+  if (config.hideCancel) {
+    cancelDialogBtn?.classList.add("hidden");
+    closeDialogModalBtn?.classList.add("hidden");
+  } else {
+    cancelDialogBtn?.classList.remove("hidden");
+    closeDialogModalBtn?.classList.remove("hidden");
+  }
 
   dialogInputField.classList.toggle("hidden", !config.input);
   if (config.input) {
@@ -7859,7 +7882,8 @@ async function submitPasswordReset() {
     setAuthMode("login");
     username.value = targetUsername;
     password.value = "";
-    loginError.textContent = "密码已重置，请用新密码登录。";
+    showLoginNotice("密码已成功重置，请使用新密码登录", true);
+    window.setTimeout(() => password?.focus(), 80);
   } catch (error) {
     const msg = error.message || "";
     if (msg.includes("恢复密钥") || msg.includes("错误") || msg.includes("不正确") || msg.includes("失效")) {
@@ -7867,6 +7891,18 @@ async function submitPasswordReset() {
     } else {
       passwordResetError.textContent = msg;
     }
+  }
+}
+
+function showLoginNotice(msg, isSuccess = true) {
+  if (!loginError) return;
+  loginError.textContent = msg;
+  if (isSuccess) {
+    loginError.style.color = "#16a34a";
+    loginError.style.fontWeight = "600";
+  } else {
+    loginError.style.color = "";
+    loginError.style.fontWeight = "";
   }
 }
 
@@ -7925,6 +7961,8 @@ async function handleLoginSubmit(event) {
   const originalBtnText = loginSubmitBtn ? loginSubmitBtn.textContent : "";
   isSubmittingAuth = true;
   loginError.textContent = "";
+  loginError.style.color = "";
+  loginError.style.fontWeight = "";
 
   if (loginSubmitBtn) {
     loginSubmitBtn.disabled = true;
@@ -8162,12 +8200,19 @@ async function submitChangePassword() {
   }
 
   try {
+    const targetUsername = state.currentUser?.username || "";
     await api("/api/user/change-password", {
       method: "POST",
       body: JSON.stringify({ oldPassword, newPassword }),
     });
     closeUserSecurityModal();
-    setStatus("密码修改成功！下次登录请使用新密码。");
+    setSessionToken("");
+    await showSuccessAlert(
+      "密码修改成功",
+      "您的登录密码已成功更新！为保障账号安全，系统已注销所有现有登录会话，请使用新密码重新登录。",
+      "前往重新登录"
+    );
+    clearUserSessionAndNavigateToLogin(targetUsername, "密码修改成功，请使用新密码登录");
   } catch (err) {
     if (secChangeError) secChangeError.textContent = err.message;
   } finally {
@@ -8211,22 +8256,29 @@ async function submitRecoverPasswordInApp() {
   }
 
   try {
+    const targetUsername = state.currentUser?.username || "";
     await api("/api/password-reset", {
       method: "POST",
       body: JSON.stringify({
-        username: state.currentUser?.username || "",
+        username: targetUsername,
         recoveryKey,
         newPassword,
       }),
     });
     closeUserSecurityModal();
-    setStatus("密码已凭安全密钥成功重置！下次登录请使用新密码。");
+    setSessionToken("");
+    await showSuccessAlert(
+      "密码重置成功",
+      "您已凭专属安全恢复密钥成功重置登录密码！为保障账号安全，系统已注销所有现有登录会话，请使用新密码重新登录。",
+      "前往重新登录"
+    );
+    clearUserSessionAndNavigateToLogin(targetUsername, "密码重置成功，请使用新密码登录");
   } catch (err) {
     if (secRecoverError) secRecoverError.textContent = err.message;
   } finally {
     if (confirmSecRecoverBtn) {
       confirmSecRecoverBtn.disabled = false;
-      confirmSecRecoverBtn.textContent = "重置并更新密码";
+      confirmSecRecoverBtn.textContent = "凭密钥重置密码";
     }
   }
 }
@@ -8486,10 +8538,7 @@ downloadNewAccountRecoveryKeyBtn?.addEventListener("click", () => {
 });
 confirmRegisterSuccessBtn?.addEventListener("click", closeRegisterSuccessModal);
 
-$("#logoutBtn").addEventListener("click", async () => {
-  const ok = await showConfirmDialog("退出登录", "确认退出当前网盘账号吗？");
-  if (!ok) return;
-  await api("/api/logout", { method: "POST", body: "{}" });
+function clearUserSessionAndNavigateToLogin(prefilledUsername = "", successNotice = "") {
   setSessionToken("");
   state.currentUser = null;
   state.avatarVersion = null;
@@ -8545,6 +8594,23 @@ $("#logoutBtn").addEventListener("click", async () => {
   driveView.classList.add("hidden");
   loginView.classList.remove("hidden");
   setAuthMode("login");
+  if (prefilledUsername && username) {
+    username.value = prefilledUsername;
+  }
+  if (password) {
+    password.value = "";
+    window.setTimeout(() => password.focus(), 80);
+  }
+  if (successNotice) {
+    showLoginNotice(successNotice, true);
+  }
+}
+
+$("#logoutBtn").addEventListener("click", async () => {
+  const ok = await showConfirmDialog("退出登录", "确认退出当前网盘账号吗？");
+  if (!ok) return;
+  await api("/api/logout", { method: "POST", body: "{}" }).catch(() => {});
+  clearUserSessionAndNavigateToLogin();
 });
 
 backBtn.addEventListener("click", () => {

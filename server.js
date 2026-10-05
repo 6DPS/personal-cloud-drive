@@ -4322,7 +4322,9 @@ app.post("/api/password-reset", createRateLimitMiddleware({
     targetUser.tokenVersion = (Number(targetUser.tokenVersion) || 0) + 1;
     targetUser.updatedAt = new Date().toISOString();
     await saveAccountsStore();
-    res.json({ ok: true, user: publicUser(targetUser) });
+    clearSessionCookie(res);
+    clearUnlockedFoldersCookie(res);
+    res.json({ ok: true, message: "密码重置成功，请使用新密码重新登录", user: publicUser(targetUser) });
   } catch (error) {
     next(error);
   }
@@ -4355,9 +4357,9 @@ app.post("/api/user/change-password", requireAuth, createRateLimitMiddleware({
     req.user.tokenVersion = (Number(req.user.tokenVersion) || 0) + 1;
     req.user.updatedAt = new Date().toISOString();
     await saveAccountsStore();
-    const token = createSessionToken(req.user);
-    setSessionCookie(res, token);
-    res.json({ ok: true, message: "密码修改成功", token });
+    clearSessionCookie(res);
+    clearUnlockedFoldersCookie(res);
+    res.json({ ok: true, message: "密码修改成功，请使用新密码重新登录" });
   } catch (error) {
     next(error);
   }
