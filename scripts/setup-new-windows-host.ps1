@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # DPSir 个人网盘 - Windows 小主机/新电脑 一键部署与迁移配置向导
 # ==============================================================================
 
@@ -173,17 +173,17 @@ if (Test-Path -LiteralPath $envFilePath) {
         $newContent = $exampleContent -replace "(?m)^\s*STORAGE_BASE_ROOT\s*=.*$", "STORAGE_BASE_ROOT=$currentStorage"
         Set-Content -LiteralPath $envFilePath -Value $newContent -Encoding UTF8
     } else {
-        $envContent = @"
-# DPSir 个人网盘配置文件
-STORAGE_BASE_ROOT=$currentStorage
-PORT=8081
-HOST=0.0.0.0
-CLOUD_DRIVE_USER=admin
-# CLOUD_DRIVE_PASSWORD=
-# DEEPSEEK_API_KEY=
-PUBLIC_ACCESS_URL=
-"@
-        Set-Content -LiteralPath $envFilePath -Value $envContent -Encoding UTF8
+        $envLines = @(
+            "# DPSir 个人网盘配置文件",
+            "STORAGE_BASE_ROOT=$currentStorage",
+            "PORT=8081",
+            "HOST=0.0.0.0",
+            "CLOUD_DRIVE_USER=admin",
+            "# CLOUD_DRIVE_PASSWORD=",
+            "# DEEPSEEK_API_KEY=",
+            "PUBLIC_ACCESS_URL="
+        )
+        Set-Content -LiteralPath $envFilePath -Value $envLines -Encoding UTF8
     }
 }
 Write-Host "  [OK] 存储配置已锁定: $currentStorage" -ForegroundColor Green
