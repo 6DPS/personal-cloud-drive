@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # DPSir 个人网盘 - Windows 小主机/新电脑 一键部署与迁移配置向导
 # ==============================================================================
 
@@ -87,7 +87,7 @@ if (-not $nodeCmd) {
         Write-Host "  👉 华为云极速直链: https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
         Write-Host "  👉 阿里云极速直链: https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
         Write-Host "  👉 官方主页地址: https://nodejs.org/" -ForegroundColor Gray
-        Write-Host "  下载安装后重新双击【一键部署新电脑.bat】即可！" -ForegroundColor Yellow
+        Write-Host "  下载安装后重新双击【一键部署新电脑(Windows).bat】即可！" -ForegroundColor Yellow
         Write-Host ""
         Read-Host "按回车键退出..."
         exit 1

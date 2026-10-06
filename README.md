@@ -177,13 +177,13 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 详细协同逻辑与沙盒调试请参阅：👉 **[个人网盘后续开发与版本迭代指南.md](./个人网盘后续开发与版本迭代指南.md)**
 
 ```text
-【本地开发】修改代码 ──(双击 上传到GitHub.bat)──> 【GitHub】 ──(双击 一键云端同步更新.bat)──> 【服务器】3秒热更新
+【本地开发】修改代码 ──(双击 上传到GitHub(Windows).bat 或 (Mac).command)──> 【GitHub】 ──(双击 一键云端同步更新(Windows).bat 或 (Mac).command)──> 【服务器】3秒热更新
 ```
 
 1. **在本地修改代码后**：
-   双击运行 `上传到GitHub.bat`，自动暂存所有修改并安全推送到 GitHub 远程仓库（自动过滤 130MB 大体积 EXE 与个人隐私数据）。
+   双击运行 `上传到GitHub(Windows).bat`（Mac 电脑双击 `上传到GitHub(Mac).command`），自动暂存所有修改并安全推送到 GitHub 远程仓库（自动过滤 130MB 大体积 EXE 与个人隐私数据）。
 2. **在服务器 / 小主机上升效**：
-   双击运行 `一键云端同步更新.bat`，自动拉取最新更新并热重启，数据零影响。
+   双击运行 `一键云端同步更新(Windows).bat`（Mac 电脑双击 `一键云端同步更新(Mac).command`），自动拉取最新更新并热重启，数据零影响。
 
 ---
 
