@@ -219,6 +219,14 @@ const secKeyEyeIcon = $("#secKeyEyeIcon");
 const secCopyKeyBtn = $("#secCopyKeyBtn");
 const secCopyKeyBtnText = $("#secCopyKeyBtnText");
 const secDownloadKeyBtn = $("#secDownloadKeyBtn");
+const secTabDeregisterBtn = $("#secTabDeregisterBtn");
+const secDeregisterView = $("#secDeregisterView");
+const secDeregisterPasswordInput = $("#secDeregisterPasswordInput");
+const secDeregisterAgreeCheckbox = $("#secDeregisterAgreeCheckbox");
+const secDeregisterError = $("#secDeregisterError");
+const cancelSecDeregisterBtn = $("#cancelSecDeregisterBtn");
+const confirmSecDeregisterBtn = $("#confirmSecDeregisterBtn");
+const popoverDeregisterBtn = $("#popoverDeregisterBtn");
 
 // 注册成功展示恢复密钥模态框
 const registerSuccessModal = $("#registerSuccessModal");
@@ -7264,6 +7272,14 @@ function syncAdminUi() {
     popoverRoleTag.classList.toggle("role-user", !isAdmin);
   }
 
+  // 普通用户可自愿注销账户，超级管理员为系统根基不可注销
+  popoverDeregisterBtn?.classList.toggle("hidden", isAdmin);
+  secTabDeregisterBtn?.classList.toggle("hidden", isAdmin);
+  const secSegmentControl = document.querySelector(".security-segmented-control");
+  if (secSegmentControl) {
+    secSegmentControl.classList.toggle("has-deregister", !isAdmin);
+  }
+
   // Update avatar display strictly per-user across all platforms (desktop & mobile & popover)
   const token = sessionToken() || state.token || "";
   const authParam = token ? `&auth=${encodeURIComponent(token)}` : "";
@@ -8095,12 +8111,14 @@ function toggleUserAccountPopover() {
 }
 
 function switchSecurityModalTab(mode = "change") {
-  secTabChangeBtn?.classList.remove("active", "amber-active");
-  secTabRecoverBtn?.classList.remove("active", "amber-active");
-  secTabKeyBtn?.classList.remove("active", "amber-active");
+  secTabChangeBtn?.classList.remove("active", "amber-active", "danger-active");
+  secTabRecoverBtn?.classList.remove("active", "amber-active", "danger-active");
+  secTabKeyBtn?.classList.remove("active", "amber-active", "danger-active");
+  secTabDeregisterBtn?.classList.remove("active", "amber-active", "danger-active");
   secChangeView?.classList.add("hidden");
   secRecoverView?.classList.add("hidden");
   secKeyView?.classList.add("hidden");
+  secDeregisterView?.classList.add("hidden");
 
   if (mode === "change") {
     secTabChangeBtn?.classList.add("active");
@@ -8116,6 +8134,14 @@ function switchSecurityModalTab(mode = "change") {
     secTabKeyBtn?.classList.add("active");
     secKeyView?.classList.remove("hidden");
     renderRecoveryKeyDisplay();
+  } else if (mode === "deregister") {
+    secTabDeregisterBtn?.classList.add("active", "danger-active");
+    secDeregisterView?.classList.remove("hidden");
+    if (secDeregisterError) secDeregisterError.textContent = "";
+    if (secDeregisterPasswordInput) secDeregisterPasswordInput.value = "";
+    if (secDeregisterAgreeCheckbox) secDeregisterAgreeCheckbox.checked = false;
+    updateConfirmDeregisterBtnState();
+    window.setTimeout(() => secDeregisterPasswordInput?.focus(), 50);
   }
 }
 
@@ -8157,14 +8183,18 @@ async function openUserSecurityModal(tab = "change") {
   closeUserAccountPopover();
   if (secChangeError) secChangeError.textContent = "";
   if (secRecoverError) secRecoverError.textContent = "";
+  if (secDeregisterError) secDeregisterError.textContent = "";
   if (secOldPasswordInput) secOldPasswordInput.value = "";
   if (secNewPasswordInput) secNewPasswordInput.value = "";
   if (secConfirmPasswordInput) secConfirmPasswordInput.value = "";
   if (secRecoveryKeyInput) secRecoveryKeyInput.value = "";
   if (secRecoverNewPasswordInput) secRecoverNewPasswordInput.value = "";
   if (secRecoverConfirmPasswordInput) secRecoverConfirmPasswordInput.value = "";
+  if (secDeregisterPasswordInput) secDeregisterPasswordInput.value = "";
+  if (secDeregisterAgreeCheckbox) secDeregisterAgreeCheckbox.checked = false;
   if (secCurrentUsernameText) secCurrentUsernameText.textContent = state.currentUser?.username || "admin";
   isRecoveryKeyVisible = false;
+  updateConfirmDeregisterBtnState();
 
   switchSecurityModalTab(tab);
   userSecurityModal?.classList.remove("hidden");
@@ -8308,6 +8338,57 @@ async function handleRegenerateRecoveryKey() {
     setStatus("已成功生成全新的专属安全恢复密钥，请妥善保存！");
   } catch (err) {
     alert("重新生成密钥失败：" + err.message);
+  }
+}
+
+function updateConfirmDeregisterBtnState() {
+  const pwd = secDeregisterPasswordInput?.value?.trim() || "";
+  const agreed = Boolean(secDeregisterAgreeCheckbox?.checked);
+  if (confirmSecDeregisterBtn) {
+    confirmSecDeregisterBtn.disabled = !(pwd && agreed);
+  }
+}
+
+async function submitDeregisterAccount() {
+  if (secDeregisterError) secDeregisterError.textContent = "";
+  const password = secDeregisterPasswordInput?.value || "";
+  const agreed = Boolean(secDeregisterAgreeCheckbox?.checked);
+
+  if (!password.trim()) {
+    if (secDeregisterError) secDeregisterError.textContent = "请输入当前登录密码以验证本人身份";
+    secDeregisterPasswordInput?.focus();
+    return;
+  }
+  if (!agreed) {
+    if (secDeregisterError) secDeregisterError.textContent = "请确认并勾选注销风险与自愿免责条款";
+    return;
+  }
+
+  const ok = await showConfirmDialog(
+    "⚠️ 高危操作：确认注销账号与清空数据",
+    `【最后警告】您正在彻底注销账号“${state.currentUser?.username || ""}”！\n\n点击“确定”后，您存放在服务器 D 盘中的所有私有文件、相册、文档以及回收站内容将被物理粉碎永久清空，账号立即作废。\n\n此操作不可逆，后果由用户本人自行承担。确定继续执行物理销毁并注销吗？`
+  );
+  if (!ok) return;
+
+  if (confirmSecDeregisterBtn) {
+    confirmSecDeregisterBtn.disabled = true;
+    confirmSecDeregisterBtn.textContent = "正在永久注销并清空数据...";
+  }
+
+  try {
+    const res = await api("/api/user/deregister", {
+      method: "POST",
+      body: JSON.stringify({ password, confirmed: true }),
+    });
+
+    closeUserSecurityModal();
+    clearUserSessionAndNavigateToLogin("", res?.message || "您的账号及存放于服务器 D 盘的所有个人数据已彻底清除注销");
+  } catch (err) {
+    if (secDeregisterError) secDeregisterError.textContent = err.message || "注销失败，请重试";
+    if (confirmSecDeregisterBtn) {
+      confirmSecDeregisterBtn.disabled = false;
+      confirmSecDeregisterBtn.textContent = "确认注销并清空我的全部数据";
+    }
   }
 }
 
@@ -8518,6 +8599,16 @@ closeUserSecurityModalBtn?.addEventListener("click", closeUserSecurityModal);
 confirmSecRecoverBtn?.addEventListener("click", submitRecoverPasswordInApp);
 cancelSecRecoverBtn?.addEventListener("click", closeUserSecurityModal);
 closeSecKeyViewBtn?.addEventListener("click", closeUserSecurityModal);
+
+popoverDeregisterBtn?.addEventListener("click", () => {
+  closeUserAccountPopover();
+  openUserSecurityModal("deregister");
+});
+secTabDeregisterBtn?.addEventListener("click", () => switchSecurityModalTab("deregister"));
+secDeregisterPasswordInput?.addEventListener("input", updateConfirmDeregisterBtnState);
+secDeregisterAgreeCheckbox?.addEventListener("change", updateConfirmDeregisterBtnState);
+confirmSecDeregisterBtn?.addEventListener("click", submitDeregisterAccount);
+cancelSecDeregisterBtn?.addEventListener("click", closeUserSecurityModal);
 
 secRegenerateKeyBtn?.addEventListener("click", handleRegenerateRecoveryKey);
 secToggleKeyVisibilityBtn?.addEventListener("click", () => {

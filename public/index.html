@@ -312,6 +312,14 @@
               </svg>
               <span>安全恢复密钥</span>
             </button>
+            <button id="secTabDeregisterBtn" class="sec-segment-btn sec-tab-danger-btn hidden" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span>注销账户</span>
+            </button>
           </div>
 
           <!-- Tab 1 内容：修改密码 -->
@@ -447,6 +455,49 @@
             <div class="modal-actions" style="margin-top: 18px;">
               <button id="secKeyGoResetLink" class="ghost text-link-btn" type="button" style="margin-right: auto; padding: 0 4px;">忘记密码？前往重置 ➔</button>
               <button id="closeSecKeyViewBtn" class="primary" type="button">完成</button>
+            </div>
+          </div>
+
+          <!-- Tab 4 内容：自愿注销账户与永久清空数据 -->
+          <div id="secDeregisterView" class="sec-tab-view hidden">
+            <div class="deregister-warning-card">
+              <div class="deregister-warning-header">
+                <span class="deregister-warning-badge">⚠️ 高危操作 · 后果自负</span>
+                <strong class="deregister-warning-title">账户注销与物理数据销毁须知</strong>
+              </div>
+              <ul class="deregister-warning-list">
+                <li>
+                  <strong>物理永久删除：</strong>您存放在服务器 D 盘中的所有私有文件、相册、文档以及回收站内容将被<strong>彻底物理粉碎清空</strong>，没有任何人能够恢复。
+                </li>
+                <li>
+                  <strong>外链全部失效：</strong>您之前创建的所有公开或加密外链分享将全部立即注销失效。
+                </li>
+                <li>
+                  <strong>账号作废退出：</strong>您的账号将从服务器永久剔除，所有已登录设备将即刻失效并被强制退出。
+                </li>
+                <li>
+                  <strong>自愿与免责声明：</strong>注销属于不可逆操作，<strong>请在注销前自行下载备份好所有重要文件</strong>。一旦执行，因注销引发的数据灭失责任由用户本人自行承担，系统不提供找回服务。
+                </li>
+              </ul>
+            </div>
+
+            <div class="field" style="margin-top: 14px;">
+              <label for="secDeregisterPasswordInput">当前登录密码（身份验证）</label>
+              <input id="secDeregisterPasswordInput" type="password" autocomplete="current-password" placeholder="请输入当前登录密码以验证本人身份" />
+            </div>
+
+            <div class="deregister-checkbox-wrap">
+              <label class="deregister-checkbox-label">
+                <input id="secDeregisterAgreeCheckbox" type="checkbox" />
+                <span>我已充分阅读并了解上述注销后果，确认已自行备份重要数据，自愿注销并自行承担数据永久清空的一切后果。</span>
+              </label>
+            </div>
+
+            <p id="secDeregisterError" class="error modal-error"></p>
+
+            <div class="modal-actions" style="margin-top: 10px;">
+              <button id="cancelSecDeregisterBtn" class="ghost" type="button">放弃并返回</button>
+              <button id="confirmSecDeregisterBtn" class="primary sec-danger-btn" type="button" disabled>确认注销并清空我的全部数据</button>
             </div>
           </div>
         </div>
@@ -660,6 +711,15 @@
                       <line x1="21" y1="12" x2="9" y2="12"/>
                     </svg>
                     <span>退出登录</span>
+                  </button>
+                  <button id="popoverDeregisterBtn" class="popover-menu-item popover-deregister-item hidden" type="button" title="自愿注销此账户并清空服务器物理数据">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      <line x1="10" y1="11" x2="10" y2="17"/>
+                      <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    <span>注销账户</span>
                   </button>
                 </div>
               </div>

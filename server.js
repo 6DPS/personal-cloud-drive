@@ -954,6 +954,38 @@ async function saveAccountsStore() {
   }
 }
 
+async function purgeUserData(userId) {
+  if (!userId) return;
+  // 1. 清理用户在磁盘上的私有目录（真实文件、回收站、预览缓存、密码锁配置、头像）
+  const userFolder = userRoot(userId);
+  try {
+    await fsp.rm(userFolder, { recursive: true, force: true });
+  } catch (err) {
+    console.warn(`[Purge] 清理用户私有目录失败 (${userId}):`, err.message);
+  }
+
+  // 2. 清理临时分片上传目录
+  const userTemp = userTempRoot(userId);
+  try {
+    await fsp.rm(userTemp, { recursive: true, force: true });
+  } catch {}
+
+  // 3. 清理该用户创建的所有外链分享
+  try {
+    const shares = await readShares();
+    const remaining = shares.filter((s) => s.userId !== userId);
+    if (remaining.length !== shares.length) {
+      await writeShares(remaining);
+    }
+  } catch (err) {
+    console.warn(`[Purge] 清理用户分享记录失败 (${userId}):`, err.message);
+  }
+
+  // 4. 清理内存缓存
+  folderPasswordStores.delete(userId);
+  activeClients.delete(userId);
+}
+
 function normalizeAccountsUsers(users) {
   return (Array.isArray(users) ? users : []).map((user) => {
     const username = String(user.username || user.id || ADMIN_USER).trim();
@@ -4148,11 +4180,8 @@ app.delete("/api/admin/users/:id", requireAuth, ensureAdminUser, async (req, res
     accountsStore.users.splice(index, 1);
     await saveAccountsStore();
 
-    // 清理该用户在磁盘上的私有存储与头像数据
-    const userFolder = userRoot(targetUser.id);
-    try {
-      await fsp.rm(userFolder, { recursive: true, force: true });
-    } catch {}
+    // 物理清除该用户在服务器磁盘上的所有私有存储、临时目录与外链数据
+    await purgeUserData(targetUser.id);
 
     res.json({ ok: true, message: `用户 ${targetUser.username} 已彻底清除` });
   } catch (error) {
@@ -4353,6 +4382,49 @@ app.post("/api/user/change-password", requireAuth, createRateLimitMiddleware({
     clearSessionCookie(res);
     clearUnlockedFoldersCookie(res);
     res.json({ ok: true, message: "密码修改成功，请使用新密码重新登录" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/user/deregister", requireAuth, createRateLimitMiddleware({
+  id: "deregister",
+  windowMs: 15 * 60 * 1000,
+  maxHits: 5,
+  message: "注销尝试过于频繁，请稍后再试",
+  key: (req) => `${clientIp(req)}:${req.user?.id || "-"}`,
+}), async (req, res, next) => {
+  try {
+    const user = req.user;
+    if (user.role === "admin" || user.id === SINGLE_USER_ID) {
+      return res.status(400).json({ error: "超级管理员账号不可注销" });
+    }
+    const password = String(req.body?.password || "");
+    if (!password.trim()) {
+      return res.status(400).json({ error: "请输入当前登录密码以验证本人身份" });
+    }
+    const isPasswordCorrect = verifyPasswordRecord(user.password, password);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ error: "当前登录密码验证失败，无法注销" });
+    }
+    const confirmed = Boolean(req.body?.confirmed);
+    if (!confirmed) {
+      return res.status(400).json({ error: "请确认并勾选注销风险与自愿免责条款" });
+    }
+
+    const index = accountsStore.users.findIndex((u) => u.id === user.id);
+    if (index !== -1) {
+      accountsStore.users.splice(index, 1);
+      await saveAccountsStore();
+    }
+
+    // 物理清除该用户在服务器磁盘上的所有数据
+    await purgeUserData(user.id);
+
+    clearSessionCookie(res);
+    clearUnlockedFoldersCookie(res);
+
+    res.json({ ok: true, message: "您的账号及存放于服务器 D 盘的所有个人数据已彻底清除注销" });
   } catch (error) {
     next(error);
   }

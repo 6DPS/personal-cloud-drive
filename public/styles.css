@@ -1902,8 +1902,121 @@ tr:hover .name-cell .star-toggle-btn {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
-.sec-segment-btn.active.amber-active {
-  color: #d97706;
+.security-segmented-control.has-deregister {
+  grid-template-columns: 1fr 1fr 1fr 1.05fr;
+}
+
+.sec-segment-btn.sec-tab-danger-btn {
+  color: #94a3b8;
+}
+
+.sec-segment-btn.sec-tab-danger-btn:hover {
+  color: #dc2626;
+}
+
+.sec-segment-btn.active.danger-active {
+  color: #dc2626;
+}
+
+.popover-menu-item.popover-deregister-item {
+  color: #dc2626;
+}
+
+.popover-menu-item.popover-deregister-item:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.deregister-warning-card {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deregister-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deregister-warning-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+.deregister-warning-title {
+  color: #9f1239;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.deregister-warning-list {
+  margin: 0;
+  padding-left: 17px;
+  color: #881337;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.deregister-warning-list li {
+  margin-bottom: 4px;
+}
+
+.deregister-warning-list strong {
+  color: #4c0519;
+}
+
+.deregister-checkbox-wrap {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.deregister-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+  user-select: none;
+}
+
+.deregister-checkbox-label input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #e11d48;
+}
+
+.sec-danger-btn {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  border: none !important;
+  transition: all 0.16s ease !important;
+}
+
+.sec-danger-btn:hover:not(:disabled) {
+  background: #be123c !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25) !important;
+}
+
+.sec-danger-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
 }
 
 .sec-tab-tip {
