@@ -8083,6 +8083,8 @@ closeUserAvatarModalBtn?.addEventListener("click", closeUserAvatarModal);
 cancelUserAvatarBtn?.addEventListener("click", closeUserAvatarModal);
 selectAvatarImageBtn?.addEventListener("click", () => userAvatarFileInput?.click());
 userAvatarFileInput?.addEventListener("change", handleAvatarFileSelect);
+saveUserAvatarBtn?.addEventListener("click", saveUserAvatar);
+resetAvatarDefaultBtn?.addEventListener("click", resetUserAvatar);
 // --- 账号与个人中心 Popover 及密码安全 ---
 let isRecoveryKeyVisible = false;
 let currentFullRecoveryKey = "";

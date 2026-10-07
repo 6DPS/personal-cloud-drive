@@ -4479,7 +4479,8 @@ app.get("/api/user/avatar", (req, res) => {
   if (!user || !user.id) {
     return res.status(401).json({ error: "请先登录" });
   }
-  const avatarPath = userAvatarFile(user.id);
+  const targetUserId = req.query.u ? String(req.query.u).trim() : user.id;
+  const avatarPath = userAvatarFile(targetUserId);
   if (!fs.existsSync(avatarPath)) {
     return res.status(404).json({ error: "未设置自定义头像" });
   }
