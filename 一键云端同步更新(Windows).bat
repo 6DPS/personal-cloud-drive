@@ -16,6 +16,10 @@ if %errorlevel% equ 0 (
         git branch --set-upstream-to=origin/main main
         echo [成功] 已自动完成云端关联！
         echo.
+    ) else (
+        echo [云端同步] 正在从 GitHub 云端拉取最新更新...
+        git pull
+        echo.
     )
 )
 
