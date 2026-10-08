@@ -115,13 +115,13 @@ while ($true) {
   if (-not $tunnelProcess) {
     $tunnelProcess = Start-TunnelWithRetries
     if (-not $tunnelProcess) {
-      Start-Sleep -Seconds 10
+      Start-Sleep -Seconds 15
       continue
     }
     $unhealthyCount = 0
   }
 
-  Start-Sleep -Seconds 10
+  Start-Sleep -Seconds 15
 
   $tunnelProcess = Get-ExistingTunnelProcess
   if (-not $tunnelProcess) {

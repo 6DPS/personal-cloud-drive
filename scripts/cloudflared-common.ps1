@@ -33,7 +33,12 @@ function Test-PortOpen {
 function Ensure-Drive-Running {
   param([Parameter(Mandatory = $true)][string]$Root)
 
-  Write-Host "Ensuring DPSir cloud drive watchdog is running..."
+  # 优先检测：若网盘端口已正常监听，直接返回，保持完全静默，避免频繁唤醒进程与 CPU
+  if (Test-PortOpen -Port 8081) {
+    return
+  }
+
+  Write-Host "检测到网盘服务离线，正在拉起守护进程..."
   $env:HOST = "0.0.0.0"
   $env:PORT = "8081"
 

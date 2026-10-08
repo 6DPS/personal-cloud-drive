@@ -30,6 +30,9 @@ Write-Host ""
 Write-Host "[1/3] 正在安全释放可能卡顿的旧后台进程..." -ForegroundColor Yellow
 Stop-Process -Name node -Force -ErrorAction SilentlyContinue
 Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.ProcessId -ne $PID -and ($_.CommandLine -like "*run-cloudflare-domain-hidden.ps1*" -or $_.CommandLine -like "*run-lan-drive-hidden.ps1*") } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Seconds 1
 Write-Host "  ✓ 旧进程已安全释放" -ForegroundColor Green
 
