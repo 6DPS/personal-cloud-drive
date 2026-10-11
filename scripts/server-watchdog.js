@@ -106,10 +106,10 @@ function acquireLock() {
     const existing = fs.existsSync(LOCK_FILE) ? Number(fs.readFileSync(LOCK_FILE, "utf8").trim()) : 0;
     if (isProcessAlive(existing)) {
       console.log(`\n======================================================`);
-      console.log(`[提示] DPSir 智云盘服务已经在后台稳定运行中 (PID: ${existing})！`);
-      console.log(`无需重复启动。访问地址如下：`);
-      console.log(`- 本机访问：http://127.0.0.1:${PORT}`);
-      console.log(`- 局域网/公网地址请直接双击运行: show-addresses.bat`);
+      console.log(`[INFO] DPSir Personal Cloud Drive is already running in background (PID: ${existing})!`);
+      console.log(`No need to start a duplicate instance. Access URLs:`);
+      console.log(`- Local URL: http://127.0.0.1:${PORT}`);
+      console.log(`- For LAN/Public URLs, double-click: show-addresses.bat`);
       console.log(`======================================================\n`);
       log(`watchdog already running as pid ${existing}; exiting duplicate starter`);
       process.exit(0);

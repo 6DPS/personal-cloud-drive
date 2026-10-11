@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DPSir 个人网盘 - macOS 苹果电脑 一键部署向导
+# DPSir Personal Cloud Drive - macOS Setup & Migration Wizard
 # ==============================================================================
 
-# 设置工作目录为项目根目录
+# Set working directory to project root
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
   DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
@@ -13,7 +13,7 @@ done
 ROOT_DIR="$( cd -P "$( dirname "$SOURCE" )/.." >/dev/null 2>&1 && pwd )"
 cd "$ROOT_DIR" || exit 1
 
-# 颜色定义
+# ANSI colors
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
@@ -23,31 +23,31 @@ NC='\033[0m'
 
 echo ""
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${YELLOW}       DPSir 个人网盘 - macOS 苹果电脑 一键部署向导           ${NC}"
+echo -e "${YELLOW}       DPSir Personal Cloud Drive - macOS Setup Wizard         ${NC}"
 echo -e "${CYAN}===============================================================${NC}"
 echo ""
 
-# 1. 检查并适配 Node.js 环境变量
-echo -e "${GREEN}[1/5] 正在检查 Node.js 运行环境...${NC}"
+# 1. Check and configure Node.js runtime environment
+echo -e "${GREEN}[1/5] Checking Node.js runtime environment...${NC}"
 
-# 自动补充 macOS 常见 Node.js 安装路径 (Homebrew Apple Silicon / Intel / nvm)
+# Include common macOS Node.js paths (Homebrew Apple Silicon / Intel / nvm)
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:$PATH"
 
 if ! command -v node >/dev/null 2>&1; then
-    echo -e "${YELLOW}  未检测到 Node.js 运行环境。${NC}"
-    echo -e "${CYAN}  正在尝试通过【国内极速镜像源】自动下载官方 LTS 安装包...${NC}"
+    echo -e "${YELLOW}  Node.js runtime not detected.${NC}"
+    echo -e "${CYAN}  Attempting automatic download of official Node.js LTS installer...${NC}"
     PKG_PATH="/tmp/node-v20.18.0.pkg"
     curl -fSL -A "Mozilla/5.0" "https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0.pkg" -o "$PKG_PATH" 2>/dev/null || \
     curl -fSL -A "Mozilla/5.0" "https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0.pkg" -o "$PKG_PATH" 2>/dev/null
     
     if [ -f "$PKG_PATH" ] && [ -s "$PKG_PATH" ]; then
-        echo -e "${GREEN}  ✓ 国内镜像极速下载完成，正在自动调起系统安装向导...${NC}"
+        echo -e "${GREEN}  [OK] Installer downloaded. Opening macOS package installer...${NC}"
         open "$PKG_PATH" 2>/dev/null
-        echo -e "${GRAY}  提示: 请在弹出的 macOS 安装窗口中点击【继续】并输入开机密码完成安装。${NC}"
-        read -p "安装完成后，请在此按回车键继续向导..."
+        echo -e "${GRAY}  Note: Please complete the installation in the popup window.${NC}"
+        read -p "Press Enter here after installation completes to continue..."
         rm -f "$PKG_PATH"
     elif command -v brew >/dev/null 2>&1; then
-        echo -e "${GRAY}  检测到 Homebrew，正在尝试通过 brew 自动安装 Node.js LTS...${NC}"
+        echo -e "${GRAY}  Homebrew detected. Installing Node.js LTS via brew...${NC}"
         brew install node
     fi
     export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
@@ -55,22 +55,22 @@ fi
 
 if ! command -v node >/dev/null 2>&1; then
     echo ""
-    echo -e "${RED}  [提示] 未能检测到已安装的 Node.js，建议直接在浏览器中打开以下国内秒速直链 (2~3秒下完):${NC}"
-    echo -e "${YELLOW}  👉 华为云极速直链: https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0.pkg${NC}"
-    echo -e "${YELLOW}  👉 阿里云极速直链: https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0.pkg${NC}"
-    echo -e "${GRAY}  👉 官方主页地址: https://nodejs.org/${NC}"
-    echo -e "${YELLOW}  下载后双击安装，然后重新双击本向导即可！${NC}"
+    echo -e "${RED}  [WARN] Node.js was not detected. Please download and install it from one of the links below:${NC}"
+    echo -e "${YELLOW}  -> Mirror 1 (Huawei Cloud): https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0.pkg${NC}"
+    echo -e "${YELLOW}  -> Mirror 2 (npmmirror)   : https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0.pkg${NC}"
+    echo -e "${GRAY}  -> Official Site          : https://nodejs.org/${NC}"
+    echo -e "${YELLOW}  After installing Node.js, re-run this setup wizard.${NC}"
     echo ""
-    read -p "按回车键退出..."
+    read -p "Press Enter to exit..."
     exit 1
 fi
 
 NODE_VER=$(node -v)
-echo -e "${GREEN}  ✓ Node.js 已就绪: ${NODE_VER}${NC}"
+echo -e "${GREEN}  [OK] Node.js is ready: ${NODE_VER}${NC}"
 
-# 2. 检查并配置存储路径 (STORAGE_BASE_ROOT)
+# 2. Check and configure data storage path (STORAGE_BASE_ROOT)
 echo ""
-echo -e "${GREEN}[2/5] 正在配置网盘数据存储路径...${NC}"
+echo -e "${GREEN}[2/5] Configuring cloud drive data storage path...${NC}"
 
 ENV_FILE="$ROOT_DIR/.env"
 CURRENT_STORAGE=""
@@ -82,32 +82,31 @@ fi
 DEFAULT_STORAGE="$HOME/PersonalCloudDrive"
 
 if [ -z "$CURRENT_STORAGE" ] || [[ "$CURRENT_STORAGE" == *:* ]]; then
-    # 如果为空或者包含 Windows 盘符冒号，回退到 macOS 标准家目录路径
+    # Fallback to macOS home directory path if empty or contains Windows drive letter colon
     CURRENT_STORAGE="$DEFAULT_STORAGE"
 fi
 
-echo -e "${CYAN}  当前推荐/已设定的数据根目录: [${CURRENT_STORAGE}]${NC}"
-echo -e "${GRAY}  提示: 如果你的数据存放在外接移动硬盘，可直接将移动硬盘里的 PersonalCloudDrive 文件夹拖入终端。${NC}"
-read -p "  请输入数据目录路径 [直接按回车默认使用 ${CURRENT_STORAGE}]: " USER_INPUT_STORAGE
+echo -e "${CYAN}  Recommended / current data root directory: [${CURRENT_STORAGE}]${NC}"
+echo -e "${GRAY}  Tip: If your data is on an external drive, you can drag the folder into this Terminal window.${NC}"
+read -p "  Enter data directory path [Press Enter for default: ${CURRENT_STORAGE}]: " USER_INPUT_STORAGE
 
 if [ -n "$USER_INPUT_STORAGE" ]; then
     CURRENT_STORAGE=$(echo "$USER_INPUT_STORAGE" | tr -d '"' | tr -d "'" | xargs)
 fi
 
-# 确保目录存在
+# Ensure directory exists
 mkdir -p "$CURRENT_STORAGE"
 
 ACCOUNTS_FILE="$CURRENT_STORAGE/accounts.json"
 if [ -f "$ACCOUNTS_FILE" ]; then
-    echo -e "${GREEN}  ✓ 检测到已迁移的历史账号数据 (accounts.json)，系统将自动无缝接管！${NC}"
+    echo -e "${GREEN}  [OK] Existing migrated account data (accounts.json) detected and loaded!${NC}"
 else
-    echo -e "${GRAY}  [提示] 当前目录暂无历史 accounts.json，系统将在启动时自动初始化默认管理员账户。${NC}"
+    echo -e "${GRAY}  [INFO] No existing accounts.json found. Default admin account will be initialized on startup.${NC}"
 fi
 
-# 写入/更新 .env 文件
+# Write or update .env file
 if [ -f "$ENV_FILE" ]; then
     if grep -q "STORAGE_BASE_ROOT" "$ENV_FILE"; then
-        # 兼容 macOS sed 语法
         sed -i '' "s|^[[:space:]]*STORAGE_BASE_ROOT=.*|STORAGE_BASE_ROOT=${CURRENT_STORAGE}|" "$ENV_FILE" 2>/dev/null || \
         sed -i "s|^[[:space:]]*STORAGE_BASE_ROOT=.*|STORAGE_BASE_ROOT=${CURRENT_STORAGE}|" "$ENV_FILE"
     else
@@ -120,7 +119,7 @@ else
         sed -i "s|^[[:space:]]*STORAGE_BASE_ROOT=.*|STORAGE_BASE_ROOT=${CURRENT_STORAGE}|" "$ENV_FILE"
     else
         cat <<EOF > "$ENV_FILE"
-# DPSir 个人网盘配置文件 (macOS)
+# DPSir Personal Cloud Drive Configuration (macOS)
 STORAGE_BASE_ROOT=${CURRENT_STORAGE}
 PORT=8081
 HOST=0.0.0.0
@@ -132,26 +131,25 @@ EOF
     fi
 fi
 
-echo -e "${GREEN}  ✓ 存储配置已锁定: ${CURRENT_STORAGE}${NC}"
+echo -e "${GREEN}  [OK] Storage path configured: ${CURRENT_STORAGE}${NC}"
 
-# 3. 检查依赖项 (node_modules)
+# 3. Check dependencies (node_modules)
 echo ""
-echo -e "${GREEN}[3/5] 正在检查程序运行依赖...${NC}"
+echo -e "${GREEN}[3/5] Checking application dependencies...${NC}"
 if [ ! -d "$ROOT_DIR/node_modules" ]; then
-    echo -e "${CYAN}  正在设置 npm 镜像为国内阿里云加速源 (npmmirror.com)...${NC}"
+    echo -e "${CYAN}  Setting npm registry mirror (npmmirror.com)...${NC}"
     npm config set registry https://registry.npmmirror.com >/dev/null 2>&1
-    echo -e "${YELLOW}  正在安装运行依赖包 (npm install --omit=dev)...${NC}"
+    echo -e "${YELLOW}  Installing dependencies (npm install --omit=dev)...${NC}"
     npm install --omit=dev
 fi
-echo -e "${GREEN}  ✓ 运行依赖已完整就绪${NC}"
+echo -e "${GREEN}  [OK] Application dependencies are ready.${NC}"
 
-# 4. 释放旧进程并启动守护服务
+# 4. Stop old processes and configure background launchd service
 echo ""
-echo -e "${GREEN}[4/5] 正在配置后台常驻守护任务...${NC}"
+echo -e "${GREEN}[4/5] Configuring macOS background auto-start service (launchd)...${NC}"
 
 mkdir -p "$ROOT_DIR/logs"
 
-# 终止可能正在占用 8081 端口的旧 Node 进程
 OLD_PID=$(lsof -ti :8081 2>/dev/null)
 if [ -n "$OLD_PID" ]; then
     kill -9 $OLD_PID 2>/dev/null
@@ -193,11 +191,11 @@ EOF
 launchctl unload "$PLIST_FILE" 2>/dev/null
 launchctl load -w "$PLIST_FILE" 2>/dev/null
 
-echo -e "${GREEN}  ✓ 已成功注册 macOS 用户级后台开机自启任务 (launchd)${NC}"
+echo -e "${GREEN}  [OK] Registered macOS LaunchAgent for automatic background startup.${NC}"
 
-# 5. 验证服务启动状态
+# 5. Verify service health
 echo ""
-echo -e "${GREEN}[5/5] 正在验证网盘核心服务就绪状态...${NC}"
+echo -e "${GREEN}[5/5] Verifying cloud drive core service status...${NC}"
 SERVICE_READY=false
 for i in {1..6}; do
     if curl -s -m 2 "http://127.0.0.1:8081/api/me" >/dev/null 2>&1; then
@@ -208,7 +206,6 @@ for i in {1..6}; do
 done
 
 if [ "$SERVICE_READY" = false ]; then
-    # 备用方案：后台直接 nohup 启动
     nohup "${NODE_BIN_PATH}" "${ROOT_DIR}/server.js" > "${ROOT_DIR}/logs/drive.log" 2>&1 &
     sleep 2
     if curl -s -m 2 "http://127.0.0.1:8081/api/me" >/dev/null 2>&1; then
@@ -216,28 +213,25 @@ if [ "$SERVICE_READY" = false ]; then
     fi
 fi
 
-# 获取本机局域网 IP
 LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || ipconfig getifaddr en2 2>/dev/null || echo "127.0.0.1")
 
 echo ""
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${GREEN}        🎉 恭喜！网盘服务已在您的 Mac 电脑成功就绪！           ${NC}"
+echo -e "${GREEN}       [OK] DPSir Personal Cloud Drive is Ready on macOS!      ${NC}"
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${YELLOW}  • 本机极速访问: http://127.0.0.1:8081${NC}"
+echo -e "${YELLOW}  * Local Access URL : http://127.0.0.1:8081${NC}"
 if [ "$LAN_IP" != "127.0.0.1" ]; then
-    echo -e "${YELLOW}  • 局域网访问地址: http://${LAN_IP}:8081${NC}"
+    echo -e "${YELLOW}  * LAN Access URL   : http://${LAN_IP}:8081${NC}"
 fi
-echo -e "${YELLOW}  • 超级管理员账号: admin${NC}"
-echo -e "${YELLOW}  • 超级管理员密码: admin123456 (或在 .env 中自定义)${NC}"
+echo -e "${YELLOW}  * Admin Username   : admin${NC}"
+echo -e "${YELLOW}  * Admin Password   : admin123456 (or custom password in .env)${NC}"
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${GRAY}提示: 以后开机 Mac 会在后台自动守护运行，无需每次手动开启。${NC}"
+echo -e "${GRAY}Note: The service will run automatically in the background on boot.${NC}"
 echo ""
 
-# 自动在默认浏览器中打开
 if command -v open >/dev/null 2>&1; then
     open "http://127.0.0.1:8081" 2>/dev/null
 fi
 
 echo ""
-read -p "向导执行完毕，按回车键退出..."
-
+read -p "Setup complete. Press Enter to exit..."

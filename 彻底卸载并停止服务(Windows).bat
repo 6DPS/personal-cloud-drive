@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title DPSir 个人网盘 - 彻底卸载并停止服务
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\uninstall-lan-autostart.ps1"
+title DPSir Personal Cloud Drive - Uninstall and Stop Services
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\uninstall-lan-autostart.ps1" -NoPause
 echo.
-echo 按任意键退出...
+echo Press any key to exit...
 pause >nul

@@ -1,9 +1,9 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $port = if ($env:PORT) { [int]$env:PORT } else { 8081 }
 
-# 自动适配常见 Node.js 安装路径，防止计划任务环境下 PATH 缺失
+# Auto-detect common Node.js installation paths in case PATH is incomplete in Task Scheduler
 $nodeExe = "node.exe"
 $commonNodeDirs = @(
     "C:\Program Files\nodejs",

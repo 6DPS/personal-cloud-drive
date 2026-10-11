@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DPSir 个人网盘 - 迁移准备与数据盘检查助手 (macOS)
+# DPSir Personal Cloud Drive - Migration & Storage Inspection Helper (macOS)
 # ==============================================================================
 
 SOURCE="${BASH_SOURCE[0]}"
@@ -22,7 +22,7 @@ NC='\033[0m'
 
 echo ""
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${YELLOW}         DPSir 个人网盘 - 换机迁移与数据打包助手 (Mac)          ${NC}"
+echo -e "${YELLOW}   DPSir Personal Cloud Drive - Migration Helper (macOS)       ${NC}"
 echo -e "${CYAN}===============================================================${NC}"
 echo ""
 
@@ -35,34 +35,34 @@ if [ -f "$ENV_FILE" ]; then
     fi
 fi
 
-echo -e "${GREEN}【1. 检查迁移数据源】${NC}"
-echo -e "${GRAY}  程序代码目录: ${ROOT_DIR}${NC}"
-echo -e "${GRAY}  数据存放目录: ${STORAGE_DIR}${NC}"
+echo -e "${GREEN}[1. Checking Migration Data Sources]${NC}"
+echo -e "${GRAY}  Application Directory : ${ROOT_DIR}${NC}"
+echo -e "${GRAY}  Data Storage Directory: ${STORAGE_DIR}${NC}"
 
 if [ -d "$STORAGE_DIR" ]; then
-    echo -e "${GRAY}  正在统计数据目录大小，请稍候...${NC}"
+    echo -e "${GRAY}  Calculating data storage size, please wait...${NC}"
     TOTAL_COUNT=$(find "$STORAGE_DIR" -type f 2>/dev/null | wc -l | xargs)
     TOTAL_SIZE=$(du -sh "$STORAGE_DIR" 2>/dev/null | cut -f1)
-    echo -e "${GREEN}  ✓ 数据根目录正常存在！${NC}"
-    echo -e "${CYAN}    - 文件总数量: ${TOTAL_COUNT} 个${NC}"
-    echo -e "${CYAN}    - 占用磁盘空间: ${TOTAL_SIZE}${NC}"
+    echo -e "${GREEN}  [OK] Data root directory exists!${NC}"
+    echo -e "${CYAN}    - Total Files: ${TOTAL_COUNT}${NC}"
+    echo -e "${CYAN}    - Disk Usage : ${TOTAL_SIZE}${NC}"
 else
-    echo -e "${YELLOW}  [警告] 未在 ${STORAGE_DIR} 找到数据目录，请检查路径是否正确。${NC}"
+    echo -e "${YELLOW}  [WARN] Data directory not found at ${STORAGE_DIR}. Please verify the path.${NC}"
 fi
 
 echo ""
-echo -e "${GREEN}【2. 换机迁移极简两步法】${NC}"
-echo -e "${YELLOW}  只需将以下两个文件夹拷贝到你的移动硬盘 / U 盘中：${NC}"
-echo -e "${WHITE}  ① 代码文件夹: ${ROOT_DIR}${NC}"
-echo -e "${WHITE}  ② 数据文件夹: ${STORAGE_DIR}${NC}"
+echo -e "${GREEN}[2. Two-Step Host Migration Guide]${NC}"
+echo -e "${YELLOW}  Simply copy the following two folders to your external drive / USB drive:${NC}"
+echo -e "${WHITE}  (1) Code Folder: ${ROOT_DIR}${NC}"
+echo -e "${WHITE}  (2) Data Folder: ${STORAGE_DIR}${NC}"
 echo ""
-echo -e "${GRAY}  拷贝完成后：${NC}"
-echo -e "${CYAN}  在目标电脑上插上移动硬盘：${NC}"
-echo -e "${CYAN}  • 若目标是 Windows 电脑：双击【一键部署新电脑(Windows).bat】${NC}"
-echo -e "${CYAN}  • 若目标是 Mac 电脑：双击【一键部署新电脑(Mac).command】${NC}"
+echo -e "${GRAY}  After copying:${NC}"
+echo -e "${CYAN}  Plug the external drive into the target computer:${NC}"
+echo -e "${CYAN}  * On Windows: Double-click setup-new-host.bat (or the Windows setup .bat script)${NC}"
+echo -e "${CYAN}  * On macOS  : Double-click the Mac setup .command script (or run scripts/setup-mac.sh)${NC}"
 echo ""
 
-read -p "是否现在为你自动打开这两个文件夹所在的访达(Finder)窗口？(Y/N) [默认 Y]: " OPEN_FINDER
+read -p "Open both folders in Finder now? (Y/N) [Default: Y]: " OPEN_FINDER
 if [ -z "$OPEN_FINDER" ] || [ "$OPEN_FINDER" = "Y" ] || [ "$OPEN_FINDER" = "y" ]; then
     open "$ROOT_DIR" 2>/dev/null
     if [ -d "$STORAGE_DIR" ]; then
@@ -71,7 +71,6 @@ if [ -z "$OPEN_FINDER" ] || [ "$OPEN_FINDER" = "Y" ] || [ "$OPEN_FINDER" = "y" ]
 fi
 
 echo ""
-echo -e "${GREEN}助手已就绪，随时可以开始拷贝迁移。${NC}"
+echo -e "${GREEN}Migration helper finished. Ready to copy files.${NC}"
 echo ""
-read -p "按回车键退出..."
-
+read -p "Press Enter to exit..."

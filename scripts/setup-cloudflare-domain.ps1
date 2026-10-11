@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "cloudflared-common.ps1")
@@ -21,7 +21,7 @@ Write-Host ""
 $hostname = Read-Host "Enter the domain to bind, for example pan.example.com"
 if (-not $hostname -or $hostname -notmatch "\.") {
   Write-Host "Invalid domain."
-  pause
+  Read-Host "Press Enter to exit..."
   exit 1
 }
 
@@ -31,7 +31,7 @@ $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringUni(
 )
 if (-not $plainPassword -or $plainPassword.Length -lt 8) {
   Write-Host "Password must be at least 8 characters."
-  pause
+  Read-Host "Press Enter to exit..."
   exit 1
 }
 [Environment]::SetEnvironmentVariable("CLOUD_DRIVE_PASSWORD", $plainPassword, "User")
@@ -44,7 +44,7 @@ $json = & $cloudflared tunnel info $tunnelName --output json | ConvertFrom-Json
 $tunnelId = $json.id
 if (-not $tunnelId) {
   Write-Host "Could not get Tunnel ID. Check whether cloudflared login succeeded."
-  pause
+  Read-Host "Press Enter to exit..."
   exit 1
 }
 
@@ -70,4 +70,4 @@ Write-Host ""
 Write-Host "Cloudflare fixed domain tunnel configured."
 Write-Host "Auto-start tasks are installed. Your fixed address is:"
 Write-Host "https://$hostname"
-pause
+Read-Host "Press Enter to exit..."

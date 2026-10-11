@@ -1,5 +1,5 @@
-﻿# ==============================================================================
-# DPSir 个人网盘 - 一键全服务重启与自动修复助手
+# ==============================================================================
+# DPSir Personal Cloud Drive - Full Service Restart & Auto-Repair Helper
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -23,30 +23,30 @@ if (Test-Path -LiteralPath $envPath) {
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "         DPSir 个人网盘 - 一键全服务重启与自动修复助手         " -ForegroundColor Yellow
+Write-Host "   DPSir Personal Cloud Drive - Restart & Auto-Repair Helper   " -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[1/3] 正在安全释放可能卡顿的旧后台进程..." -ForegroundColor Yellow
+Write-Host "[1/3] Stopping existing background processes..." -ForegroundColor Yellow
 Stop-Process -Name node -Force -ErrorAction SilentlyContinue
 Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue
 Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.ProcessId -ne $PID -and ($_.CommandLine -like "*run-cloudflare-domain-hidden.ps1*" -or $_.CommandLine -like "*run-lan-drive-hidden.ps1*") } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Seconds 1
-Write-Host "  ✓ 旧进程已安全释放" -ForegroundColor Green
+Write-Host "  [OK] Old background processes terminated safely." -ForegroundColor Green
 
-# 智能自愈：核验防火墙规则是否覆盖全网络 (Profile: Any)
+# Auto-heal: verify firewall rule covers all network profiles (Profile: Any)
 $fw = Get-NetFirewallRule -Name "DPSir-CloudDrive-LAN" -ErrorAction SilentlyContinue
 if (-not $fw -or $fw.Profile -ne "Any") {
     $allowScript = Join-Path $PSScriptRoot "allow-lan-firewall.ps1"
     if (Test-Path -LiteralPath $allowScript) {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $allowScript
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $allowScript -NoPause
     }
 }
 
 Write-Host ""
-Write-Host "[2/3] 正在重新唤醒网盘核心服务与 Cloudflare 公网隧道..." -ForegroundColor Yellow
+Write-Host "[2/3] Starting cloud drive core service and Cloudflare tunnel..." -ForegroundColor Yellow
 
 $lanTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive LAN" -ErrorAction SilentlyContinue
 if ($lanTask) {
@@ -68,11 +68,11 @@ if ($cfTask) {
     }
 }
 
-Write-Host "  ✓ 服务启动指令已就绪，正在等待网络握手 (约 4 秒)..." -ForegroundColor Green
+Write-Host "  [OK] Startup commands issued. Waiting for network readiness (approx. 4 seconds)..." -ForegroundColor Green
 Start-Sleep -Seconds 4
 
 Write-Host ""
-Write-Host "[3/3] 正在对本地与公网链路进行健康体检..." -ForegroundColor Yellow
+Write-Host "[3/3] Running health checks on local and public endpoints..." -ForegroundColor Yellow
 
 $localOk = $false
 try {
@@ -82,26 +82,29 @@ try {
 
 $publicOk = $false
 try {
-    $publicTarget = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://pan.yourdomain.com" }; if ($env:PUBLIC_ACCESS_URL) { $resp2 = Invoke-WebRequest -Uri "$publicTarget/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction SilentlyContinue }
-    if ($resp2.StatusCode -eq 200) { $publicOk = $true }
+    $publicTarget = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://pan.yourdomain.com" }
+    if ($env:PUBLIC_ACCESS_URL) {
+        $resp2 = Invoke-WebRequest -Uri "$publicTarget/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction SilentlyContinue
+        if ($resp2.StatusCode -eq 200) { $publicOk = $true }
+    }
 } catch {}
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
 if ($localOk -and $publicOk) {
-    Write-Host "        🎉 恭喜！网盘所有服务已完美重启，状态 100% 正常！       " -ForegroundColor Green
+    Write-Host "   [OK] All cloud drive services restarted and 100% online!    " -ForegroundColor Green
 } elseif ($localOk) {
-    Write-Host "        ✓ 本地服务已恢复正常，公网域名正在握手连通中...        " -ForegroundColor Yellow
+    Write-Host "   [OK] Local service is online; public tunnel is connecting..." -ForegroundColor Yellow
 } else {
-    Write-Host "        [提示] 服务正在后台拉起，请稍后刷新浏览器即可。        " -ForegroundColor Yellow
+    Write-Host "   [INFO] Services are starting in the background. Please refresh browser shortly." -ForegroundColor Yellow
 }
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
-$domainStr = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { '未配置公网域名' }
-$localStatus = if ($localOk) { '正常在线 [OK]' } else { '启动中...' }
-$publicStatus = if ($publicOk) { '正常在线 [OK]' } else { '握手中...' }
-Write-Host "  1. 本地局域网: http://127.0.0.1:8081  --> $localStatus" -ForegroundColor $(if ($localOk) { 'Green' } else { 'Yellow' })
-Write-Host "  2. 外网公网域名: $domainStr  --> $publicStatus" -ForegroundColor $(if ($publicOk) { 'Green' } else { 'Yellow' })
-Write-Host ''
-Write-Host '现在您可以直接回到浏览器按【F5】刷新网页了！' -ForegroundColor Cyan
-Write-Host ''
+$domainStr = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "Not configured" }
+$localStatus = if ($localOk) { "ONLINE [OK]" } else { "STARTING..." }
+$publicStatus = if ($publicOk) { "ONLINE [OK]" } else { "CONNECTING..." }
+Write-Host "  1. Local LAN URL : http://127.0.0.1:8081  --> $localStatus" -ForegroundColor $(if ($localOk) { "Green" } else { "Yellow" })
+Write-Host "  2. Public Domain : $domainStr  --> $publicStatus" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
+Write-Host ""
+Write-Host "You can now return to your browser and press [F5] to refresh." -ForegroundColor Cyan
+Write-Host ""

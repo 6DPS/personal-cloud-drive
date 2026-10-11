@@ -1,5 +1,5 @@
-﻿# ==============================================================================
-# DPSir 个人网盘 - Windows 小主机/新电脑 一键部署与迁移配置向导
+# ==============================================================================
+# DPSir Personal Cloud Drive - Windows Setup & Migration Wizard
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -11,12 +11,12 @@ Set-Location -LiteralPath $root
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "       DPSir 个人网盘 - Windows 小主机/新电脑 一键部署向导      " -ForegroundColor Yellow
+Write-Host "     DPSir Personal Cloud Drive - Windows Setup Wizard         " -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. 检查 Node.js 运行环境
-Write-Host "[1/5] 正在检查 Node.js 运行环境..." -ForegroundColor Green
+# 1. Check Node.js runtime environment
+Write-Host "[1/5] Checking Node.js runtime environment..." -ForegroundColor Green
 $commonNodeDirs = @(
     "C:\Program Files\nodejs",
     "C:\Program Files (x86)\nodejs",
@@ -31,14 +31,13 @@ foreach ($dir in $commonNodeDirs) {
 
 $nodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
-    # 优先检测当前目录或 tools 目录下是否已有离线安装包（0秒离线直装）
+    # Check if an offline installer exists in root or tools directory
     $localMsi = Get-ChildItem -Path $root, (Join-Path $root "tools") -Filter "node*x64.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($localMsi) {
-        Write-Host "  [离线加速] 检测到本地安装包: $($localMsi.Name)，正在进行极速安装..." -ForegroundColor Green
+        Write-Host "  [OFFLINE] Found local installer: $($localMsi.Name). Installing..." -ForegroundColor Green
         Start-Process "msiexec.exe" -ArgumentList "/i `"$($localMsi.FullName)`" /passive /norestart" -Wait
     } else {
-        # 优先使用国内极速镜像源 (华为云/阿里云 CDN，25MB 仅需 2~5 秒)
-        Write-Host "  未检测到 Node.js，正在通过【国内极速镜像源】自动下载官方 LTS 安装包..." -ForegroundColor Cyan
+        Write-Host "  Node.js not found. Downloading official LTS installer from mirror..." -ForegroundColor Cyan
         $msiPath = Join-Path $env:TEMP "node-v20.18.0-x64.msi"
         $mirrors = @(
             "https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi",
@@ -47,7 +46,7 @@ if (-not $nodeCmd) {
         $dlSuccess = $false
         foreach ($url in $mirrors) {
             try {
-                Write-Host "  正在极速下载: $url ..." -ForegroundColor Gray
+                Write-Host "  Downloading: $url ..." -ForegroundColor Gray
                 $wc = New-Object System.Net.WebClient
                 $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
                 $wc.DownloadFile($url, $msiPath)
@@ -59,20 +58,19 @@ if (-not $nodeCmd) {
         }
 
         if ($dlSuccess) {
-            Write-Host "  [OK] 下载完成，正在进行无感知静默安装 (约需 10 秒)..." -ForegroundColor Green
+            Write-Host "  [OK] Download complete. Running silent installation (approx. 10 seconds)..." -ForegroundColor Green
             Start-Process "msiexec.exe" -ArgumentList "/i `"$msiPath`" /passive /norestart" -Wait
             Remove-Item -LiteralPath $msiPath -Force -ErrorAction SilentlyContinue
         } else {
-            # 备用方案：尝试系统自带 winget
             $wingetCmd = Get-Command "winget" -ErrorAction SilentlyContinue
             if ($wingetCmd) {
-                Write-Host "  正在尝试通过系统 winget 安装 LTS 版本..." -ForegroundColor Gray
+                Write-Host "  Attempting installation via Windows winget..." -ForegroundColor Gray
                 Start-Process "winget" -ArgumentList "install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements" -Wait
             }
         }
     }
     
-    # 重新加载系统环境变量
+    # Reload environment PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     foreach ($dir in $commonNodeDirs) {
         if ((Test-Path -LiteralPath (Join-Path $dir "node.exe")) -and ($env:Path -notlike "*$dir*")) {
@@ -83,22 +81,22 @@ if (-not $nodeCmd) {
     
     if (-not $nodeCmd) {
         Write-Host ""
-        Write-Host "  [提示] 自动下载未能完成，建议直接用浏览器打开以下国内秒速直链 (25MB，2~3秒下完):" -ForegroundColor Yellow
-        Write-Host "  👉 华为云极速直链: https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
-        Write-Host "  👉 阿里云极速直链: https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
-        Write-Host "  👉 官方主页地址: https://nodejs.org/" -ForegroundColor Gray
-        Write-Host "  下载安装后重新双击【一键部署新电脑(Windows).bat】即可！" -ForegroundColor Yellow
+        Write-Host "  [WARN] Automatic download did not complete. Please download Node.js from one of these links:" -ForegroundColor Yellow
+        Write-Host "  -> Mirror 1 (Huawei Cloud): https://mirrors.huaweicloud.com/nodejs/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
+        Write-Host "  -> Mirror 2 (npmmirror)   : https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-x64.msi" -ForegroundColor Cyan
+        Write-Host "  -> Official Site          : https://nodejs.org/" -ForegroundColor Gray
+        Write-Host "  After installing Node.js, re-run setup-new-host.bat." -ForegroundColor Yellow
         Write-Host ""
-        Read-Host "按回车键退出..."
+        Read-Host "Press Enter to exit..."
         exit 1
     }
 }
 $nodeVersion = node -v
-Write-Host "  [OK] Node.js 运行环境已就绪: $nodeVersion" -ForegroundColor Green
+Write-Host "  [OK] Node.js runtime is ready: $nodeVersion" -ForegroundColor Green
 
-# 2. 检查并配置网盘数据存储路径 (STORAGE_BASE_ROOT)
+# 2. Check and configure data storage path (STORAGE_BASE_ROOT)
 Write-Host ""
-Write-Host "[2/5] 正在配置网盘数据存储路径..." -ForegroundColor Green
+Write-Host "[2/5] Configuring cloud drive data storage path..." -ForegroundColor Green
 
 $envFilePath = Join-Path $root ".env"
 $currentStorage = ""
@@ -111,7 +109,7 @@ if (Test-Path -LiteralPath $envFilePath) {
             if (-not $driveRoot -or (Test-Path -LiteralPath "$driveRoot\")) {
                 $currentStorage = $candidateStorage
             } else {
-                Write-Host "  [提示] 旧配置中的盘符 $driveRoot 在本台电脑上不存在，正在为您推荐可用盘符..." -ForegroundColor Yellow
+                Write-Host "  [INFO] Drive $driveRoot from previous config does not exist on this PC. Selecting available drive..." -ForegroundColor Yellow
             }
         }
     }
@@ -131,33 +129,33 @@ if (-not $currentStorage) {
     }
 }
 
-Write-Host "  当前推荐/已设定的数据根目录: [$currentStorage]" -ForegroundColor Cyan
-Write-Host "  提示: 如果你的新主机数据放在其他盘（如 E:\PersonalCloudDrive 或外接移动硬盘），请输入新路径。" -ForegroundColor Gray
-$userInputPath = Read-Host "  请输入数据目录路径 [直接按回车默认使用 $currentStorage]"
+Write-Host "  Recommended / current data root directory: [$currentStorage]" -ForegroundColor Cyan
+Write-Host "  Tip: If your data is on another drive (e.g. E:\PersonalCloudDrive), enter the custom path below." -ForegroundColor Gray
+$userInputPath = Read-Host "  Enter data directory path [Press Enter for default: $currentStorage]"
 if ($userInputPath.Trim()) {
     $candidateInput = $userInputPath.Trim().Trim('"').Trim("'").TrimEnd('\', '/')
     $candidateDrive = Split-Path $candidateInput -Qualifier
     if ($candidateDrive -and (-not (Test-Path -LiteralPath "$candidateDrive\"))) {
-        Write-Host "  [警告] 盘符 $candidateDrive 在此电脑不存在，回退使用推荐路径: $currentStorage" -ForegroundColor Red
+        Write-Host "  [WARN] Drive $candidateDrive does not exist on this PC. Using default path: $currentStorage" -ForegroundColor Red
     } else {
         $currentStorage = $candidateInput
     }
 }
 
-# 确保目录存在
+# Ensure directory exists
 if (-not (Test-Path -LiteralPath $currentStorage)) {
-    Write-Host "  正在初始化创建数据目录: $currentStorage ..." -ForegroundColor Gray
+    Write-Host "  Creating data directory: $currentStorage ..." -ForegroundColor Gray
     New-Item -ItemType Directory -Force -Path $currentStorage | Out-Null
 }
 
 $accountsFile = Join-Path $currentStorage "accounts.json"
 if (Test-Path -LiteralPath $accountsFile) {
-    Write-Host "  [OK] 检测到已迁移的历史账号数据 (accounts.json)，系统已自动继承所有账号与配额！" -ForegroundColor Green
+    Write-Host "  [OK] Existing migrated account data (accounts.json) detected! All accounts and quotas preserved." -ForegroundColor Green
 } else {
-    Write-Host "  [提示] 当前目录暂无历史 accounts.json，系统将在启动时自动初始化默认管理员账户。" -ForegroundColor Gray
+    Write-Host "  [INFO] No existing accounts.json found. Default admin account will be initialized on startup." -ForegroundColor Gray
 }
 
-# 写入/更新 .env 文件
+# Write or update .env file
 if (Test-Path -LiteralPath $envFilePath) {
     $existingContent = Get-Content -LiteralPath $envFilePath -Raw -Encoding UTF8
     if ($existingContent -match "(?m)^\s*STORAGE_BASE_ROOT\s*=.*$") {
@@ -174,7 +172,7 @@ if (Test-Path -LiteralPath $envFilePath) {
         Set-Content -LiteralPath $envFilePath -Value $newContent -Encoding UTF8
     } else {
         $envLines = @(
-            "# DPSir 个人网盘配置文件",
+            "# DPSir Personal Cloud Drive Configuration",
             "STORAGE_BASE_ROOT=$currentStorage",
             "PORT=8081",
             "HOST=0.0.0.0",
@@ -186,23 +184,23 @@ if (Test-Path -LiteralPath $envFilePath) {
         Set-Content -LiteralPath $envFilePath -Value $envLines -Encoding UTF8
     }
 }
-Write-Host "  [OK] 存储配置已锁定: $currentStorage" -ForegroundColor Green
+Write-Host "  [OK] Storage path locked: $currentStorage" -ForegroundColor Green
 
-# 3. 检查程序运行依赖 (node_modules)
+# 3. Check application dependencies (node_modules)
 Write-Host ""
-Write-Host "[3/5] 正在检查程序运行依赖..." -ForegroundColor Green
+Write-Host "[3/5] Checking application dependencies..." -ForegroundColor Green
 $modulesPath = Join-Path $root "node_modules"
 if (-not (Test-Path -LiteralPath $modulesPath)) {
-    Write-Host "  正在配置 npm 为国内阿里云镜像加速 (npmmirror.com)..." -ForegroundColor Cyan
+    Write-Host "  Configuring npm registry mirror (npmmirror.com)..." -ForegroundColor Cyan
     & npm config set registry https://registry.npmmirror.com
-    Write-Host "  正在一键安装必需依赖包 (npm install)..." -ForegroundColor Yellow
+    Write-Host "  Installing required packages (npm install)..." -ForegroundColor Yellow
     npm install
 }
-Write-Host "  [OK] 运行依赖已完整就绪" -ForegroundColor Green
+Write-Host "  [OK] Application dependencies are ready." -ForegroundColor Green
 
-# 4. 配置 Windows 防火墙（TCP 8081 全网络放行，公用+专用+域网络）
+# 4. Configure Windows Firewall (TCP 8081 across Public/Private/Domain profiles)
 Write-Host ""
-Write-Host "[4/5] 正在配置 Windows 防火墙全网络放行规则..." -ForegroundColor Green
+Write-Host "[4/5] Configuring Windows Firewall rules (TCP 8081)..." -ForegroundColor Green
 try {
     $allowScript = Join-Path $PSScriptRoot "allow-lan-firewall.ps1"
     if (Test-Path -LiteralPath $allowScript) {
@@ -212,7 +210,7 @@ try {
         if (-not $rule) {
             New-NetFirewallRule `
                 -Name "DPSir-CloudDrive-LAN" `
-                -DisplayName "DPSir 个人网盘 (8081 局域网放行)" `
+                -DisplayName "DPSir Personal Cloud Drive (LAN TCP 8081)" `
                 -Direction Inbound `
                 -Action Allow `
                 -Protocol TCP `
@@ -222,27 +220,27 @@ try {
         } else {
             Set-NetFirewallRule -InputObject $rule -Enabled True -Direction Inbound -Action Allow -Profile Any -ErrorAction SilentlyContinue
         }
-        Write-Host "  [OK] 已成功创建/刷新防火墙入站放行规则 (TCP 8081, 所有网络通用)" -ForegroundColor Green
+        Write-Host "  [OK] Created/updated inbound firewall rule (TCP 8081, All Profiles)" -ForegroundColor Green
     }
 } catch {
-    Write-Host "  [提示] 自动添加防火墙规则跳过（需管理员权限），后续可随时运行 allow-lan-firewall-as-admin.bat" -ForegroundColor Yellow
+    Write-Host "  [INFO] Firewall configuration skipped (requires Admin). You can run allow-lan-firewall-as-admin.bat anytime." -ForegroundColor Yellow
 }
 
-# 5. 注册开机静默自启动计划任务
+# 5. Register background auto-start task
 Write-Host ""
-Write-Host "[5/5] 正在安装 Windows 开机后台自启动任务..." -ForegroundColor Green
+Write-Host "[5/5] Installing Windows background auto-start task..." -ForegroundColor Green
 try {
     $installScript = Join-Path $PSScriptRoot "install-lan-autostart.ps1"
     if (Test-Path -LiteralPath $installScript) {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installScript
     }
 } catch {
-    Write-Host "  [提示] 自动注册自启遇到限制，您可以随时手动双击 install-lan-autostart.bat" -ForegroundColor Yellow
+    Write-Host "  [INFO] Auto-start task registration skipped. You can run install-lan-autostart.bat anytime." -ForegroundColor Yellow
 }
 
-# 6. 验证服务启动状态（确保新用户部署后立马可用）
+# 6. Verify service startup status
 Write-Host ""
-Write-Host "正在唤醒并验证网盘核心服务就绪状态..." -ForegroundColor Cyan
+Write-Host "Starting and verifying cloud drive core service..." -ForegroundColor Cyan
 Stop-Process -Name node -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
@@ -268,17 +266,17 @@ for ($i = 0; $i -lt 8; $i++) {
 }
 
 if ($serviceReady) {
-    Write-Host "  [OK] 网盘核心服务已成功就绪并正常监听 8081 端口！" -ForegroundColor Green
+    Write-Host "  [OK] Cloud drive core service is online and listening on port 8081!" -ForegroundColor Green
 } else {
-    Write-Host "  [提示] 后台服务正在启动中，可随时双击 start-lan-drive.bat 查看控制台输出。" -ForegroundColor Yellow
+    Write-Host "  [INFO] Background service is starting. You can run start-lan-drive.bat to view console logs." -ForegroundColor Yellow
 }
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "              🎉 恭喜！网盘服务已在您的电脑成功就绪！          " -ForegroundColor Green
+Write-Host "     [OK] DPSir Personal Cloud Drive is Ready on Windows!      " -ForegroundColor Green
 Write-Host "===============================================================" -ForegroundColor Cyan
 
-# 打印访问地址
+# Print access addresses
 $showScript = Join-Path $PSScriptRoot "show-addresses.ps1"
 if (Test-Path -LiteralPath $showScript) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $showScript -NoPause
@@ -286,20 +284,20 @@ if (Test-Path -LiteralPath $showScript) {
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "  - 浏览器访问地址: http://127.0.0.1:8081" -ForegroundColor Yellow
-Write-Host "  - 超级管理员账号: admin" -ForegroundColor Yellow
-Write-Host "  - 超级管理员密码: admin123456 (或在 .env 中自定义的密码)" -ForegroundColor Yellow
+Write-Host "  - Browser URL    : http://127.0.0.1:8081" -ForegroundColor Yellow
+Write-Host "  - Admin Username : admin" -ForegroundColor Yellow
+Write-Host "  - Admin Password : admin123456 (or custom password in .env)" -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "提示: 以后开机小主机会在后台自动守护运行，无需每次手动开启。" -ForegroundColor Gray
-Write-Host "正在为您在默认浏览器中自动打开网盘登录页..." -ForegroundColor Green
+Write-Host "Note: The service runs automatically in the background on Windows startup." -ForegroundColor Gray
+Write-Host "Opening cloud drive login page in your default browser..." -ForegroundColor Green
 try {
     Start-Process "http://127.0.0.1:8081"
 } catch {}
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "  🎉 向导全部执行完毕！服务已在后台健康运行。" -ForegroundColor Green
+Write-Host "  [OK] Setup wizard completed! Service is running in background." -ForegroundColor Green
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
-Read-Host "按回车键退出向导..."
+Read-Host "Press Enter to exit wizard..."
 exit 0

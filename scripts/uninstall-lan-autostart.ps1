@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$NoPause
 )
 
@@ -11,22 +11,22 @@ $taskName = "DPSir Personal Cloud Drive LAN"
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "            DPSir 个人网盘 - 停止服务与彻底卸载助手            " -ForegroundColor Yellow
+Write-Host "     DPSir Personal Cloud Drive - Stop & Uninstall Helper      " -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. 注销 Windows 计划任务
-Write-Host "[1/3] 正在注销开机自启动计划任务..." -ForegroundColor Green
+# 1. Unregister Windows Scheduled Task
+Write-Host "[1/3] Removing Windows startup scheduled task..." -ForegroundColor Green
 if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
   Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-  Write-Host "  ✓ 开机自启动计划任务已成功注销。" -ForegroundColor Green
+  Write-Host "  [OK] Startup scheduled task removed successfully." -ForegroundColor Green
 } else {
-  Write-Host "  ✓ 开机自启动计划任务原本未安装或已移除。" -ForegroundColor Gray
+  Write-Host "  [OK] Startup scheduled task was not installed or already removed." -ForegroundColor Gray
 }
 
-# 2. 终止后台常驻服务与看门狗进程，释放文件锁定
+# 2. Stop background cloud drive and watchdog processes, releasing file locks
 Write-Host ""
-Write-Host "[2/3] 正在终止后台运行的网盘服务进程并释放文件锁定..." -ForegroundColor Green
+Write-Host "[2/3] Stopping background cloud drive processes and releasing file locks..." -ForegroundColor Green
 $logDir = Join-Path $root "logs"
 $lockFile = Join-Path $logDir "server-watchdog.pid"
 if (Test-Path -LiteralPath $lockFile) {
@@ -39,7 +39,7 @@ if (Test-Path -LiteralPath $lockFile) {
   Remove-Item -LiteralPath $lockFile -Force -ErrorAction SilentlyContinue
 }
 
-# 停止由当前目录运行的 node.exe 服务
+# Stop node.exe processes started from this directory
 $killedCount = 0
 $nodeProcesses = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
   $_.Name -eq "node.exe" -and (
@@ -55,7 +55,7 @@ foreach ($p in $nodeProcesses) {
   } catch {}
 }
 
-# 确保端口 8081 释放
+# Ensure port 8081 is released
 try {
   $netstat = Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue
   foreach ($conn in $netstat) {
@@ -66,20 +66,20 @@ try {
   }
 } catch {}
 
-Write-Host "  ✓ 后台网盘服务已全部终止，所有文件句柄已释放（共终止 $killedCount 个关联进程）。" -ForegroundColor Green
+Write-Host "  [OK] All background services stopped and file handles released ($killedCount process(es) terminated)." -ForegroundColor Green
 
-# 3. 输出后续指引
+# 3. Output next steps
 Write-Host ""
-Write-Host "[3/3] 完成清理准备" -ForegroundColor Green
+Write-Host "[3/3] Cleanup Complete" -ForegroundColor Green
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "  🎉 网盘服务已彻底停止，开机自启已注销！" -ForegroundColor Green
-Write-Host "  如需彻底从电脑中删除网盘：" -ForegroundColor Yellow
-Write-Host "  1. 可以直接右键【删除】当前程序文件夹 ($root)" -ForegroundColor Gray
-Write-Host "  2. 可以直接右键【删除】数据文件夹 (默认 D:\PersonalCloudDrive)" -ForegroundColor Gray
-Write-Host "  现在删除绝不会再提示「文件夹正在被使用」！" -ForegroundColor Cyan
+Write-Host "  [OK] Cloud drive service stopped and auto-start removed!" -ForegroundColor Green
+Write-Host "  If you want to completely delete the cloud drive from this PC:" -ForegroundColor Yellow
+Write-Host "  1. You can now delete the application folder ($root)" -ForegroundColor Gray
+Write-Host "  2. You can delete the data folder if desired (default: D:\PersonalCloudDrive)" -ForegroundColor Gray
+Write-Host "  All file locks have been released." -ForegroundColor Cyan
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not $NoPause) {
-  pause
+  Read-Host "Press Enter to exit..."
 }

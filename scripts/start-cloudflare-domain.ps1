@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "cloudflared-common.ps1")
@@ -8,7 +8,7 @@ $configPath = Join-Path $root ".cloudflared\config.yml"
 
 if (-not (Test-Path -LiteralPath $configPath)) {
   Write-Host "Fixed domain tunnel is not configured yet. Run setup-cloudflare-domain.bat first."
-  pause
+  Read-Host "Press Enter to exit..."
   exit 1
 }
 
@@ -34,13 +34,13 @@ if ($existing) {
   if ($isReady) {
     Write-Host ""
     Write-Host "======================================================"
-    Write-Host "  [提示] Cloudflare 固定域名公网隧道已经在后台稳定运行中！"
-    Write-Host "  公网访问地址: $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://你的域名.com" })"
-    Write-Host "  后台进程 PID: $($existing.ProcessId) (健康状态: 正常 200)"
-    Write-Host "  无需重复启动，保持后台常驻即可。"
+    Write-Host "  [INFO] Cloudflare fixed-domain tunnel is already running in background!"
+    Write-Host "  Public Access URL : $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://your-domain.com" })"
+    Write-Host "  Background PID    : $($existing.ProcessId) (Health Status: OK 200)"
+    Write-Host "  No need to start a duplicate instance."
     Write-Host "======================================================"
     Write-Host ""
-    pause
+    Read-Host "Press Enter to exit..."
     exit 0
   }
 }
@@ -52,9 +52,9 @@ Ensure-Drive-Running -Root $root
 
 Write-Host ""
 Write-Host "======================================================"
-Write-Host "  正在启动 Cloudflare 固定域名公网隧道..."
-Write-Host "  公网访问地址: $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://你的域名.com" })"
-Write-Host "  请保持此窗口开启；关闭此窗口将断开公网访问。"
+Write-Host "  Starting Cloudflare fixed-domain tunnel..."
+Write-Host "  Public Access URL : $(if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://your-domain.com" })"
+Write-Host "  Keep this window open; closing it will stop public tunnel access."
 Write-Host "======================================================"
 Write-Host ""
 

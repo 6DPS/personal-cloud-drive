@@ -1,6 +1,7 @@
-# Ensure Windows batch and PowerShell scripts use CRLF
+# Ensure Windows batch, PowerShell, and VBScript files use CRLF
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+*.vbs text eol=crlf
 
 # Ensure macOS and Linux shell scripts use Unix LF
 *.sh text eol=lf

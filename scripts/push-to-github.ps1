@@ -1,5 +1,5 @@
-﻿# ==============================================================================
-# DPSir 个人网盘 - GitHub 推送向导
+# ==============================================================================
+# DPSir Personal Cloud Drive - GitHub Push Helper
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -11,51 +11,51 @@ Set-Location -LiteralPath $root
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "          DPSir 个人网盘 - GitHub 远程仓库一键推送助手          " -ForegroundColor Yellow
+Write-Host "      DPSir Personal Cloud Drive - GitHub Push Helper          " -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
 $remoteUrl = git remote get-url origin 2>$null
 if ($remoteUrl) {
-    Write-Host "当前已关联的远程仓库: $remoteUrl" -ForegroundColor Green
+    Write-Host "Connected remote repository: $remoteUrl" -ForegroundColor Green
     Write-Host ""
 } else {
     $remoteUrl = "https://github.com/6DPS/personal-cloud-drive.git"
     git remote add origin $remoteUrl
-    Write-Host "已关联远程仓库: $remoteUrl" -ForegroundColor Green
+    Write-Host "Added remote repository: $remoteUrl" -ForegroundColor Green
 }
 
 $changes = git status --porcelain
 if ($changes) {
-    Write-Host "[1/2] 检测到本地代码有改动，正在准备同步..." -ForegroundColor Yellow
+    Write-Host "[1/2] Local code changes detected. Preparing commit..." -ForegroundColor Yellow
     $nowStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Host "💡 提示: 您输入的文字将直接显示在 GitHub 文件列表右侧作为【功能描述】。" -ForegroundColor Cyan
-    $customMsg = Read-Host "请输入本次提交的功能描述 [直接回车使用默认: update: $nowStr 代码更新]"
+    Write-Host "[TIP] Your commit message will be shown in the GitHub repository history." -ForegroundColor Cyan
+    $customMsg = Read-Host "Enter commit description [Press Enter for default: update: $nowStr code update]"
     if (-not $customMsg.Trim()) {
-        $customMsg = "update: $nowStr 代码更新"
+        $customMsg = "update: $nowStr code update"
     }
     git add .
     git commit -m "$customMsg"
-    Write-Host "  ✓ 本地更新已记录: $customMsg" -ForegroundColor Green
+    Write-Host "  [OK] Committed local changes: $customMsg" -ForegroundColor Green
     Write-Host ""
 } else {
-    Write-Host "[1/2] 本地代码处于最新提交状态，无需重复打包。" -ForegroundColor Green
+    Write-Host "[1/2] Working tree is clean. No new local changes to commit." -ForegroundColor Green
     Write-Host ""
 }
 
-Write-Host "[2/2] 正在将代码推送到 GitHub 云端 (main 分支)..." -ForegroundColor Yellow
+Write-Host "[2/2] Pushing commits to GitHub remote (main branch)..." -ForegroundColor Yellow
 git branch -M main
 git push -u origin main
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host "         🎉 恭喜！网盘代码已成功上传到 GitHub 云端！             " -ForegroundColor Green
+    Write-Host "    [OK] Code pushed to GitHub remote repository successfully! " -ForegroundColor Green
     Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host "你可以刷新你的 GitHub 网页，最新代码已经同步更新！" -ForegroundColor Yellow
+    Write-Host "You can refresh your GitHub page to view the latest updates." -ForegroundColor Yellow
     Write-Host ""
 } else {
     Write-Host ""
-    Write-Host "[提示] 推送遇到网络波动，可稍后直接再次运行本脚本重试。" -ForegroundColor Yellow
+    Write-Host "[WARN] Push encountered a network issue. Please re-run this script later to retry." -ForegroundColor Yellow
     Write-Host ""
 }

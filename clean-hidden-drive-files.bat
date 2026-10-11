@@ -2,4 +2,6 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\clean-hidden-drive-files.ps1"
-pause
+echo.
+echo Press any key to exit...
+pause >nul

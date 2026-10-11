@@ -1,5 +1,5 @@
-﻿# ==============================================================================
-# DPSir 个人网盘 - 迁移准备与数据盘检查助手
+# ==============================================================================
+# DPSir Personal Cloud Drive - Migration & Storage Inspection Helper
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -10,11 +10,11 @@ Set-Location -LiteralPath $root
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
-Write-Host "         DPSir 个人网盘 - 换机迁移与数据打包助手               " -ForegroundColor Yellow
+Write-Host "     DPSir Personal Cloud Drive - Migration & Backup Helper    " -ForegroundColor Yellow
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. 探测当前数据目录
+# 1. Detect current data storage directory
 $storageDir = "D:\PersonalCloudDrive"
 $envFile = Join-Path $root ".env"
 if (Test-Path -LiteralPath $envFile) {
@@ -25,36 +25,36 @@ if (Test-Path -LiteralPath $envFile) {
     }
 }
 
-Write-Host "【1. 检查迁移数据源】" -ForegroundColor Green
-Write-Host "  程序代码目录: $root" -ForegroundColor Gray
-Write-Host "  数据存放目录: $storageDir" -ForegroundColor Gray
+Write-Host "[1. Checking Migration Data Sources]" -ForegroundColor Green
+Write-Host "  Application Directory : $root" -ForegroundColor Gray
+Write-Host "  Data Storage Directory: $storageDir" -ForegroundColor Gray
 
 if (Test-Path -LiteralPath $storageDir) {
-    Write-Host "  正在统计数据目录大小，请稍候..." -ForegroundColor Gray
+    Write-Host "  Calculating data storage size, please wait..." -ForegroundColor Gray
     $items = Get-ChildItem -LiteralPath $storageDir -Recurse -File -ErrorAction SilentlyContinue
     $totalBytes = ($items | Measure-Object -Property Length -Sum).Sum
     $totalGB = [math]::Round($totalBytes / 1GB, 2)
     $totalCount = $items.Count
-    Write-Host "  ✓ 数据根目录正常存在！" -ForegroundColor Green
-    Write-Host "    - 文件总数量: $totalCount 个" -ForegroundColor Cyan
-    Write-Host "    - 占用磁盘空间: $totalGB GB" -ForegroundColor Cyan
+    Write-Host "  [OK] Data root directory exists!" -ForegroundColor Green
+    Write-Host "    - Total Files: $totalCount" -ForegroundColor Cyan
+    Write-Host "    - Disk Usage : $totalGB GB" -ForegroundColor Cyan
 } else {
-    Write-Host "  [警告] 未在 $storageDir 找到数据目录，请检查路径是否正确。" -ForegroundColor Yellow
+    Write-Host "  [WARN] Data directory not found at $storageDir. Please verify the path." -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "【2. 换机迁移极简两步法】" -ForegroundColor Green
-Write-Host "  只需将以下两个文件夹拷贝到你的移动硬盘 / U 盘中：" -ForegroundColor Yellow
-Write-Host "  ① 代码文件夹: $root" -ForegroundColor White
-Write-Host "  ② 数据文件夹: $storageDir" -ForegroundColor White
+Write-Host "[2. Two-Step Host Migration Guide]" -ForegroundColor Green
+Write-Host "  Simply copy the following two folders to your external drive / USB drive:" -ForegroundColor Yellow
+Write-Host "  (1) Code Folder: $root" -ForegroundColor White
+Write-Host "  (2) Data Folder: $storageDir" -ForegroundColor White
 Write-Host ""
-Write-Host "  拷贝完成后：" -ForegroundColor Gray
-Write-Host "  在新主机/新电脑上插上移动硬盘：" -ForegroundColor Cyan
-Write-Host "  - 若新电脑是 Windows 系统：双击代码文件夹里的【一键部署新电脑(Windows).bat】" -ForegroundColor Cyan
-Write-Host "  - 若新电脑是 苹果 Mac 系统：双击代码文件夹里的【一键部署新电脑(Mac).command】" -ForegroundColor Cyan
+Write-Host "  After copying:" -ForegroundColor Gray
+Write-Host "  Plug the external drive into the new computer:" -ForegroundColor Cyan
+Write-Host "  - On Windows: Double-click setup-new-host.bat (or the Windows setup .bat script)" -ForegroundColor Cyan
+Write-Host "  - On macOS  : Double-click the Mac setup .command script (or run scripts/setup-mac.sh)" -ForegroundColor Cyan
 Write-Host ""
 
-$open = Read-Host "是否现在为你自动打开这两个文件夹所在的资源管理器窗口？(Y/N) [默认 Y]"
+$open = Read-Host "Open both folders in File Explorer now? (Y/N) [Default: Y]"
 if ($open -eq "" -or $open -eq "Y" -or $open -eq "y") {
     Start-Process "explorer.exe" -ArgumentList "`"$root`""
     if (Test-Path -LiteralPath $storageDir) {
@@ -63,5 +63,5 @@ if ($open -eq "" -or $open -eq "Y" -or $open -eq "y") {
 }
 
 Write-Host ""
-Write-Host "助手已就绪，随时可以开始拷贝迁移。" -ForegroundColor Green
+Write-Host "Migration helper finished. Ready to copy files." -ForegroundColor Green
 Write-Host ""

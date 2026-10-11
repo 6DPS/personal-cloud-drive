@@ -1,4 +1,4 @@
-﻿function Get-Cloudflared {
+function Get-Cloudflared {
   param([Parameter(Mandatory = $true)][string]$Root)
 
   $tools = Join-Path $Root "tools"
@@ -33,12 +33,12 @@ function Test-PortOpen {
 function Ensure-Drive-Running {
   param([Parameter(Mandatory = $true)][string]$Root)
 
-  # 优先检测：若网盘端口已正常监听，直接返回，保持完全静默，避免频繁唤醒进程与 CPU
+  # Fast check: if port 8081 is already open, return immediately to avoid spawning unnecessary processes
   if (Test-PortOpen -Port 8081) {
     return
   }
 
-  Write-Host "检测到网盘服务离线，正在拉起守护进程..."
+  Write-Host "Drive service is offline. Starting watchdog daemon..."
   $env:HOST = "0.0.0.0"
   $env:PORT = "8081"
 

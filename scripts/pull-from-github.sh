@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# DPSir 个人网盘 - macOS GitHub 云端同步与热更新向导
+# DPSir Personal Cloud Drive - macOS GitHub Cloud Sync & Hot-Reload Helper
 # ==============================================================================
 
 SOURCE="${BASH_SOURCE[0]}"
@@ -20,27 +20,27 @@ NC='\033[0m'
 
 echo ""
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${YELLOW}        DPSir 个人网盘 - GitHub 云端同步与热更新助手 (Mac)      ${NC}"
+echo -e "${YELLOW}  DPSir Personal Cloud Drive - GitHub Cloud Sync (macOS)       ${NC}"
 echo -e "${CYAN}===============================================================${NC}"
 echo ""
 
-echo -e "${YELLOW}[1/3] 正在从 GitHub 云端拉取最新代码更新 (git pull)...${NC}"
+echo -e "${YELLOW}[1/3] Pulling latest updates from GitHub (git pull)...${NC}"
 git pull
 if [ $? -ne 0 ]; then
     echo ""
-    echo -e "${RED}[错误] 拉取代码遇到异常，请检查网络或 GitHub 连接。${NC}"
+    echo -e "${RED}[ERROR] Failed to pull updates from GitHub. Please check your network connection.${NC}"
     echo ""
     exit 1
 fi
 
 echo ""
-echo -e "${YELLOW}[2/3] 正在检查依赖完整性 (npm install --omit=dev)...${NC}"
+echo -e "${YELLOW}[2/3] Verifying dependencies (npm install --omit=dev)...${NC}"
 npm install --omit=dev
 
 echo ""
-echo -e "${YELLOW}[3/3] 正在平滑重启网盘守护服务...${NC}"
+echo -e "${YELLOW}[3/3] Restarting cloud drive background service...${NC}"
 
-# 重启 launchd 或后台进程
+# Restart launchd agent or background node process
 PLIST_FILE="$HOME/Library/LaunchAgents/com.dpsir.clouddrive.plist"
 if [ -f "$PLIST_FILE" ]; then
     launchctl kickstart -k "gui/$(id -u)/com.dpsir.clouddrive" 2>/dev/null || {
@@ -61,6 +61,6 @@ sleep 2
 
 echo ""
 echo -e "${CYAN}===============================================================${NC}"
-echo -e "${GREEN}       🎉 恭喜！网盘已成功同步至 GitHub 最新版本并已完成重启！    ${NC}"
+echo -e "${GREEN}   [OK] Cloud drive updated to latest GitHub version & restarted!${NC}"
 echo -e "${CYAN}===============================================================${NC}"
 echo ""

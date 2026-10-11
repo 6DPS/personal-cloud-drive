@@ -1,5 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\uninstall-lan-autostart.ps1"
-pause
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\uninstall-lan-autostart.ps1" -NoPause
+echo.
+echo Press any key to exit...
+pause >nul
