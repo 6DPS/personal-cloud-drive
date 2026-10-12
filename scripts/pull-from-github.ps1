@@ -1,5 +1,6 @@
 # ==============================================================================
 # DPSir Personal Cloud Drive - GitHub Pull & Hot-Reload Helper
+# Built-in Domestic Mirror Acceleration (No VPN / Foreign Network Required)
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -15,36 +16,91 @@ Write-Host "    DPSir Personal Cloud Drive - GitHub Cloud Sync & Update    " -Fo
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
 
+$repoPath = "6DPS/personal-cloud-drive"
+$officialRepoUrl = "https://github.com/$repoPath.git"
+$gitMirrors = @(
+    "https://ghfast.top/https://github.com/$repoPath.git",
+    "https://gh-proxy.com/https://github.com/$repoPath.git",
+    $officialRepoUrl
+)
+$zipMirrors = @(
+    "https://ghfast.top/https://github.com/$repoPath/archive/refs/heads/main.zip",
+    "https://gh-proxy.com/https://github.com/$repoPath/archive/refs/heads/main.zip",
+    "https://codeload.github.com/$repoPath/zip/refs/heads/main"
+)
+
+$syncSuccess = $false
 $hasGit = [bool](Get-Command git -ErrorAction SilentlyContinue)
 $hasGitDir = Test-Path -LiteralPath (Join-Path $root ".git")
 
 if ($hasGit) {
     if (-not $hasGitDir) {
-        Write-Host "[AUTO-INIT] Git detected. Automatically binding current folder to GitHub repository..." -ForegroundColor Cyan
-        git init
-        git remote add origin https://github.com/6DPS/personal-cloud-drive.git
-        git fetch origin
-        git reset --hard origin/main
-        git branch -M main
-        git branch --set-upstream-to=origin/main main
-        Write-Host "[OK] Repository bound to GitHub remote successfully!" -ForegroundColor Green
-    } else {
-        Write-Host "[1/3] Pulling latest updates from GitHub (git pull)..." -ForegroundColor Yellow
-        git pull
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[WARN] Standard git pull encountered an issue. Resetting to origin/main..." -ForegroundColor Yellow
-            git fetch origin
-            git reset --hard origin/main
+        Write-Host "[AUTO-INIT] Initializing local Git repository..." -ForegroundColor Cyan
+        git init | Out-Null
+    }
+
+    $currentRemote = git remote get-url origin 2>$null
+    if (-not $currentRemote) {
+        git remote add origin $officialRepoUrl 2>$null
+    }
+
+    Write-Host "[1/3] Pulling latest updates from GitHub (via domestic mirror acceleration)..." -ForegroundColor Yellow
+    foreach ($endpoint in $gitMirrors) {
+        Write-Host "  -> Trying endpoint: $endpoint" -ForegroundColor Gray
+        git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch $endpoint main
+        if ($LASTEXITCODE -eq 0) {
+            git checkout -f -B main FETCH_HEAD
+            git reset --hard FETCH_HEAD
+            git update-ref refs/remotes/origin/main FETCH_HEAD 2>$null
+            git branch --set-upstream-to=origin/main main 2>$null | Out-Null
+            Write-Host "  [OK] Synchronized latest code from: $endpoint" -ForegroundColor Green
+            $syncSuccess = $true
+            break
+        } else {
+            Write-Host "  [WARN] Endpoint timed out or unreachable, switching to next mirror..." -ForegroundColor Yellow
         }
     }
 } else {
-    Write-Host "[WARN] Git CLI is not installed on this computer." -ForegroundColor Yellow
-    Write-Host "       Install Git (https://git-scm.com/download/win) to enable one-click GitHub sync." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host "[INFO] Git CLI not detected. Using direct HTTP archive sync via domestic mirror..." -ForegroundColor Cyan
+}
+
+if (-not $syncSuccess) {
+    Write-Host "[FALLBACK] Downloading latest release archive via HTTP mirror (No Git/VPN required)..." -ForegroundColor Yellow
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $tmpZip = Join-Path $env:TEMP "dpsir-cloud-drive-main.zip"
+    $tmpExtract = Join-Path $env:TEMP "dpsir-cloud-drive-extract"
+
+    foreach ($zipUrl in $zipMirrors) {
+        try {
+            Write-Host "  -> Downloading archive: $zipUrl" -ForegroundColor Gray
+            if (Test-Path -LiteralPath $tmpZip) { Remove-Item -LiteralPath $tmpZip -Force -ErrorAction SilentlyContinue }
+            Invoke-WebRequest -Uri $zipUrl -OutFile $tmpZip -TimeoutSec 30 -UseBasicParsing
+            if ((Test-Path -LiteralPath $tmpZip) -and (Get-Item -LiteralPath $tmpZip).Length -gt 50KB) {
+                if (Test-Path -LiteralPath $tmpExtract) { Remove-Item -LiteralPath $tmpExtract -Recurse -Force -ErrorAction SilentlyContinue }
+                Expand-Archive -LiteralPath $tmpZip -DestinationPath $tmpExtract -Force
+                $extractedSubDir = Get-ChildItem -LiteralPath $tmpExtract -Directory | Select-Object -First 1
+                if ($extractedSubDir) {
+                    Get-ChildItem -LiteralPath $extractedSubDir.FullName -Force | ForEach-Object {
+                        if ($_.Name -ne ".env" -and $_.Name -ne ".git") {
+                            Copy-Item -LiteralPath $_.FullName -Destination $root -Recurse -Force
+                        }
+                    }
+                    Write-Host "  [OK] Archive extracted and updated successfully!" -ForegroundColor Green
+                    $syncSuccess = $true
+                }
+                Remove-Item -LiteralPath $tmpZip -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $tmpExtract -Recurse -Force -ErrorAction SilentlyContinue
+                if ($syncSuccess) { break }
+            }
+        } catch {
+            Write-Host "  [WARN] Archive mirror failed, trying next mirror..." -ForegroundColor Yellow
+        }
+    }
 }
 
 Write-Host ""
-Write-Host "[2/3] Verifying dependencies (npm install --omit=dev)..." -ForegroundColor Yellow
+Write-Host "[2/3] Verifying dependencies via domestic mirror (registry.npmmirror.com)..." -ForegroundColor Yellow
+& npm config set registry https://registry.npmmirror.com 2>$null
 npm install --omit=dev
 
 Write-Host ""

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # DPSir Personal Cloud Drive - macOS GitHub Push Helper
+# Built-in Domestic Mirror & Unborn Branch Auto-Repair
 # ==============================================================================
 
 SOURCE="${BASH_SOURCE[0]}"
@@ -16,6 +17,7 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+GRAY='\033[0;90m'
 NC='\033[0m'
 
 echo ""
@@ -24,14 +26,39 @@ echo -e "${YELLOW}    DPSir Personal Cloud Drive - GitHub Push Helper (macOS)   
 echo -e "${CYAN}===============================================================${NC}"
 echo ""
 
+REPO_PATH="6DPS/personal-cloud-drive"
+OFFICIAL_URL="https://github.com/${REPO_PATH}.git"
+GIT_MIRRORS=(
+    "https://ghfast.top/https://github.com/${REPO_PATH}.git"
+    "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
+    "${OFFICIAL_URL}"
+)
+
+if [ ! -d "$ROOT_DIR/.git" ]; then
+    git init >/dev/null 2>&1
+fi
+
 REMOTE_URL=$(git remote get-url origin 2>/dev/null)
 if [ -n "$REMOTE_URL" ]; then
     echo -e "${GREEN}Connected remote repository: ${REMOTE_URL}${NC}"
     echo ""
 else
-    REMOTE_URL="https://github.com/6DPS/personal-cloud-drive.git"
+    REMOTE_URL="$OFFICIAL_URL"
     git remote add origin "$REMOTE_URL"
     echo -e "${GREEN}Added remote repository: ${REMOTE_URL}${NC}"
+    echo ""
+fi
+
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+    echo -e "${CYAN}[AUTO-REPAIR] Synchronizing commit history from GitHub mirror...${NC}"
+    for ENDPOINT in "${GIT_MIRRORS[@]}"; do
+        if git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch "$ENDPOINT" main 2>/dev/null; then
+            git checkout -B main FETCH_HEAD >/dev/null 2>&1
+            git reset --mixed FETCH_HEAD >/dev/null 2>&1
+            git update-ref refs/remotes/origin/main FETCH_HEAD 2>/dev/null
+            break
+        fi
+    done
 fi
 
 CHANGES=$(git status --porcelain)
@@ -52,14 +79,47 @@ else
     echo ""
 fi
 
-echo -e "${YELLOW}[2/2] Pushing commits to GitHub remote (main branch)...${NC}"
-git branch -M main
-git push -u origin main
+CUR_BRANCH=$(git branch --show-current 2>/dev/null)
+if [ -n "$CUR_BRANCH" ] && [ "$CUR_BRANCH" != "main" ]; then
+    git branch -M main 2>/dev/null
+fi
 
-if [ $? -eq 0 ]; then
+echo -e "${YELLOW}[2/2] Checking & pushing commits to GitHub remote (main branch)...${NC}"
+
+LOCAL_HEAD=$(git rev-parse HEAD 2>/dev/null)
+REMOTE_HEAD=""
+for ENDPOINT in "${GIT_MIRRORS[@]}"; do
+    LS_OUT=$(git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 ls-remote "$ENDPOINT" refs/heads/main 2>/dev/null | awk '{print $1}')
+    if [ -n "$LS_OUT" ]; then
+        REMOTE_HEAD="$LS_OUT"
+        break
+    fi
+done
+
+PUSH_OK=false
+if [ -n "$LOCAL_HEAD" ] && [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+    echo -e "${GREEN}  [OK] Local repository is already 100% in sync with GitHub remote.${NC}"
+    PUSH_OK=true
+else
+    PUSH_ENDPOINTS=(
+        "${OFFICIAL_URL}"
+        "https://ghfast.top/https://github.com/${REPO_PATH}.git"
+        "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
+    )
+    for ENDPOINT in "${PUSH_ENDPOINTS[@]}"; do
+        echo -e "${GRAY}  -> Pushing to: ${ENDPOINT}${NC}"
+        if git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 push "$ENDPOINT" main; then
+            git update-ref refs/remotes/origin/main HEAD 2>/dev/null
+            PUSH_OK=true
+            break
+        fi
+    done
+fi
+
+if [ "$PUSH_OK" = true ]; then
     echo ""
     echo -e "${CYAN}===============================================================${NC}"
-    echo -e "${GREEN}    [OK] Code pushed to GitHub remote repository successfully! ${NC}"
+    echo -e "${GREEN}    [OK] Code synchronized with GitHub repository successfully!${NC}"
     echo -e "${CYAN}===============================================================${NC}"
     echo -e "${YELLOW}You can refresh your GitHub page to view the latest updates.${NC}"
     echo ""

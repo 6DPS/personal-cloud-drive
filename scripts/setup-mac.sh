@@ -136,10 +136,9 @@ echo -e "${GREEN}  [OK] Storage path configured: ${CURRENT_STORAGE}${NC}"
 # 3. Check dependencies (node_modules)
 echo ""
 echo -e "${GREEN}[3/5] Checking application dependencies...${NC}"
+npm config set registry https://registry.npmmirror.com >/dev/null 2>&1
 if [ ! -d "$ROOT_DIR/node_modules" ]; then
-    echo -e "${CYAN}  Setting npm registry mirror (npmmirror.com)...${NC}"
-    npm config set registry https://registry.npmmirror.com >/dev/null 2>&1
-    echo -e "${YELLOW}  Installing dependencies (npm install --omit=dev)...${NC}"
+    echo -e "${YELLOW}  Installing dependencies via domestic mirror (npm install --omit=dev)...${NC}"
     npm install --omit=dev
 fi
 echo -e "${GREEN}  [OK] Application dependencies are ready.${NC}"

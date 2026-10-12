@@ -189,12 +189,11 @@ Write-Host "  [OK] Storage path locked: $currentStorage" -ForegroundColor Green
 # 3. Check application dependencies (node_modules)
 Write-Host ""
 Write-Host "[3/5] Checking application dependencies..." -ForegroundColor Green
+& npm config set registry https://registry.npmmirror.com 2>$null
 $modulesPath = Join-Path $root "node_modules"
 if (-not (Test-Path -LiteralPath $modulesPath)) {
-    Write-Host "  Configuring npm registry mirror (npmmirror.com)..." -ForegroundColor Cyan
-    & npm config set registry https://registry.npmmirror.com
-    Write-Host "  Installing required packages (npm install)..." -ForegroundColor Yellow
-    npm install
+    Write-Host "  Installing required packages via domestic mirror (npmmirror.com)..." -ForegroundColor Yellow
+    npm install --omit=dev
 }
 Write-Host "  [OK] Application dependencies are ready." -ForegroundColor Green
 

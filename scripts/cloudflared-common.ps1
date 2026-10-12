@@ -3,12 +3,31 @@ function Get-Cloudflared {
 
   $tools = Join-Path $Root "tools"
   $cloudflared = Join-Path $tools "cloudflared.exe"
-  $url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+  $officialUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+  $mirrors = @(
+    "https://ghfast.top/$officialUrl",
+    "https://gh-proxy.com/$officialUrl",
+    $officialUrl
+  )
 
   New-Item -ItemType Directory -Force -Path $tools | Out-Null
   if (-not (Test-Path -LiteralPath $cloudflared)) {
-    Write-Host "Downloading Cloudflare Tunnel tool for first-time use..."
-    Invoke-WebRequest -Uri $url -OutFile $cloudflared
+    Write-Host "Downloading Cloudflare Tunnel tool via domestic mirror..."
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    foreach ($url in $mirrors) {
+      try {
+        Write-Host "  -> Trying mirror: $url"
+        Invoke-WebRequest -Uri $url -OutFile $cloudflared -TimeoutSec 60 -UseBasicParsing
+        if ((Test-Path -LiteralPath $cloudflared) -and (Get-Item -LiteralPath $cloudflared).Length -gt 10MB) {
+          Write-Host "  [OK] Downloaded cloudflared.exe successfully."
+          break
+        }
+      } catch {
+        if (Test-Path -LiteralPath $cloudflared) {
+          Remove-Item -LiteralPath $cloudflared -Force -ErrorAction SilentlyContinue
+        }
+      }
+    }
   }
   return $cloudflared
 }
