@@ -3189,13 +3189,18 @@ async function api(url, options = {}) {
     data = rawText ? JSON.parse(rawText) : null;
   } catch {}
   if (!response.ok) {
-    if (
+    const isSessionExpired401 =
       response.status === 401 &&
+      (!data || !data.error || data.error === "请先登录") &&
       !url.includes("/api/login") &&
       !url.includes("/api/password-reset") &&
       !url.includes("/api/register") &&
-      !url.includes("/api/me")
-    ) {
+      !url.includes("/api/me") &&
+      !url.includes("/api/folder-unlock") &&
+      !url.includes("/api/folder-password") &&
+      !url.includes("/api/password-change") &&
+      !url.includes("/api/account/deregister");
+    if (isSessionExpired401) {
       if (state.currentUser) {
         clearUserSessionAndNavigateToLogin(
           state.currentUser.username,
