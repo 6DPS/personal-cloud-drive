@@ -24,6 +24,13 @@ foreach ($dir in $commonNodeDirs) {
 
 $env:HOST = "0.0.0.0"
 $env:PORT = [string]$port
+foreach ($keyName in @("YUNPAN_DEEPSEEK_KEY", "DEEPSEEK_API_KEY")) {
+  if (-not [Environment]::GetEnvironmentVariable($keyName, "Process")) {
+    $val = [Environment]::GetEnvironmentVariable($keyName, "User")
+    if (-not $val) { $val = [Environment]::GetEnvironmentVariable($keyName, "Machine") }
+    if ($val) { [Environment]::SetEnvironmentVariable($keyName, $val, "Process") }
+  }
+}
 $passwordPath = Join-Path $root ".cloudflared\cloud-drive-password.txt"
 if (Test-Path -LiteralPath $passwordPath) {
   $env:CLOUD_DRIVE_PASSWORD = (Get-Content -LiteralPath $passwordPath -Raw).Trim()
