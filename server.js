@@ -1917,8 +1917,15 @@ function friendlySystemError(error, fallback = "操作失败") {
   if (error.code === "ENOSPC") return "存储空间不足，请清理空间后再试";
   if (error.code === "EBUSY") return "文件或文件夹正被占用，请稍后再试";
   if (error.code === "ENOTEMPTY") return "文件夹不为空，无法直接执行此操作";
+  if (error.code === "ENOTDIR") return "目标路径不是有效的文件夹，请刷新页面后再试";
+  if (error.code === "EISDIR") return "目标路径是一个文件夹，无法按文件方式操作";
+  if (error.code === "EXDEV") return "不支持跨磁盘分区直接移动，请先复制后再删除原项目";
   if (error.code === "ENAMETOOLONG" || error.code === "EINVAL") return "文件或文件夹名称格式不合法，请换一个名称";
-  return error.message || fallback;
+  const rawMsg = String(error.message || "");
+  if (error.syscall || /^[A-Z0-9_]+:\s+.*,\s+[a-z0-9_]+/i.test(rawMsg)) {
+    return fallback && fallback !== rawMsg ? fallback : "文件操作未能完成，请刷新页面后重试";
+  }
+  return rawMsg || fallback;
 }
 
 function isInside(parentPath, childPath) {
@@ -6928,7 +6935,7 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
 
 app.use((error, req, res, next) => {
   const status = error.status || error.statusCode || 500;
-  let message = status === 500 ? friendlySystemError(error, "服务器出错了") : error.message;
+  let message = friendlySystemError(error, status === 500 ? "服务器出错了" : "操作失败");
   if (error.code === "LIMIT_FILE_SIZE") message = `单个文件不能超过 ${MAX_UPLOAD_MB} MB`;
   if (error.code === "LIMIT_FILE_COUNT") message = `一次最多上传 ${MAX_UPLOAD_FILES} 个文件`;
   if (status === 500) console.error(error);

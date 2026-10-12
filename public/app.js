@@ -3165,11 +3165,17 @@ function friendlyErrorMessage(error, fallback = "操作失败") {
   if (code === "EEXIST" || /^EEXIST:/i.test(message)) {
     return message && !/^EEXIST:/i.test(message) ? message : "当前目录下已存在同名文件或文件夹，请换一个名称。";
   }
-  if (code === "ENOSPC") return "磁盘空间不足，请释放空间后再试。";
-  if (code === "EACCES" || code === "EPERM") return "没有权限访问这个文件或文件夹，请检查存储目录权限。";
-  if (code === "ENOENT") return "文件或文件夹不存在，请刷新后再试。";
+  if (code === "ENOSPC" || /^ENOSPC:/i.test(message)) return "存储空间不足，请释放空间后再试。";
+  if (code === "EACCES" || code === "EPERM" || /^(EACCES|EPERM):/i.test(message)) return "没有权限访问这个文件或文件夹，请检查存储目录权限。";
+  if (code === "ENOENT" || /^ENOENT:/i.test(message)) return "文件或文件夹不存在，请刷新后再试。";
+  if (code === "EBUSY" || /^EBUSY:/i.test(message)) return "文件或文件夹正被占用，请稍后再试。";
+  if (code === "ENOTEMPTY" || /^ENOTEMPTY:/i.test(message)) return "文件夹不为空，无法直接执行此操作。";
+  if (code === "ENOTDIR" || /^ENOTDIR:/i.test(message)) return "目标路径不是有效的文件夹，请刷新页面后再试。";
+  if (code === "EISDIR" || /^EISDIR:/i.test(message)) return "目标路径是一个文件夹，无法按文件方式操作。";
+  if (code === "ENAMETOOLONG" || code === "EINVAL" || /^(ENAMETOOLONG|EINVAL):/i.test(message)) return "文件或文件夹名称格式不合法，请换一个名称。";
   if (code === "LIMIT_FILE_SIZE") return message || "单个文件超过上传限制。";
   if (code === "LIMIT_FILE_COUNT") return message || "一次上传文件数量超过限制。";
+  if (/^[A-Z0-9_]+:\s+.*,\s+[a-z0-9_]+\s+'/i.test(message)) return "文件操作未能完成，请刷新页面后重试。";
   if (/fetch failed|Failed to fetch|NetworkError|Load failed/i.test(message)) return "网络连接中断，请检查当前网络或稍后重试。";
   if (/服务器出错|server error|internal server/i.test(message)) return "服务器处理失败，请稍后重试；如果持续出现，请检查服务状态。";
   return message;
@@ -3201,8 +3207,11 @@ async function api(url, options = {}) {
       !url.includes("/api/me") &&
       !url.includes("/api/folder-unlock") &&
       !url.includes("/api/folder-password") &&
+      !url.includes("/api/user/change-password") &&
+      !url.includes("/api/user/deregister") &&
       !url.includes("/api/password-change") &&
-      !url.includes("/api/account/deregister");
+      !url.includes("/api/account/deregister") &&
+      !url.includes("/api/public-share");
     if (isSessionExpired401) {
       if (state.currentUser) {
         clearUserSessionAndNavigateToLogin(
@@ -5178,18 +5187,29 @@ function updateSearchVisibleItems(options = {}) {
 }
 
 async function renameItem(item) {
+  const currentDisplay = itemName(item);
   const result = await openDialog({
     eyebrow: "重命名",
     title: "重命名项目",
-    description: `请输入“${itemName(item)}”的新名称。`,
-    input: { label: "新名称", value: itemName(item) },
+    description: `请输入“${currentDisplay}”的新名称。`,
+    input: { label: "新名称", value: currentDisplay },
     validate(value) {
-      if (!value.trim()) return "请输入新的名称";
+      const trimmed = (value || "").trim();
+      if (!trimmed) return "请输入新的名称";
+      if (/[<>:"/\\|?*]/.test(trimmed)) return "名称不能包含特殊字符 \\ / : * ? \" < > |";
+      if (trimmed !== item.name && trimmed !== currentDisplay) {
+        const exists = Array.isArray(state.items) && state.items.some((other) => {
+          if (other.path === item.path) return false;
+          const existingName = String(other.displayName || other.name || "").trim();
+          return existingName.toLowerCase() === trimmed.toLowerCase();
+        });
+        if (exists) return `当前目录下已存在“${trimmed}”，请换一个名称`;
+      }
       return "";
     },
   });
   const name = result?.value?.trim();
-  if (!name || name === item.name || name === itemName(item)) return;
+  if (!name || name === item.name || name === currentDisplay) return;
   await runAction(() => api("/api/rename", {
     method: "POST",
     body: JSON.stringify({ path: item.path, name }),
@@ -8824,26 +8844,28 @@ folderInput.addEventListener("change", () => handleFileInputChange(folderInput))
 $("#newFolderBtn").addEventListener("click", async () => {
   const trimmedName = await askForFolderName();
   if (!trimmedName) return;
+  const targetPath = joinPath(state.path, trimmedName);
   const payload = await openFolderPasswordDialog({
     mode: "create",
-    folderPath: joinPath(state.path, trimmedName),
+    folderPath: targetPath,
     folderName: trimmedName,
     locked: false,
+    async submit(formPayload) {
+      await api("/api/folder", {
+        method: "POST",
+        body: JSON.stringify({
+          path: state.path,
+          name: trimmedName,
+          password: formPayload.password,
+          adminPassword: formPayload.adminPassword,
+        }),
+      });
+      return formPayload;
+    },
   });
   if (!payload) return;
-  const targetPath = joinPath(state.path, trimmedName);
   try {
     state.busy = true;
-    setStatus("正在创建文件夹...");
-    await api("/api/folder", {
-      method: "POST",
-      body: JSON.stringify({
-        path: state.path,
-        name: trimmedName,
-        password: payload.password,
-        adminPassword: payload.adminPassword,
-      }),
-    });
     if (payload.password.trim()) markFolderUnlockedEverywhere(targetPath);
     clearFolderCaches();
     suppressNextRealtimeRefresh();
