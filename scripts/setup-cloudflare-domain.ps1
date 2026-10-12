@@ -1,10 +1,16 @@
-$ErrorActionPreference = "Stop"
+# ==============================================================================
+# DPSir Personal Cloud Drive - One-Click Cloudflare Public Domain Setup Wizard
+# ==============================================================================
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$ErrorActionPreference = "Continue"
 
 $root = Split-Path -Parent $PSScriptRoot
+Set-Location -LiteralPath $root
 . (Join-Path $PSScriptRoot "cloudflared-common.ps1")
 
 $cloudflared = Get-Cloudflared -Root $root
-$tunnelName = "dpsir-cloud-drive"
 $configDir = Join-Path $root ".cloudflared"
 $configPath = Join-Path $configDir "config.yml"
 $hostnamePath = Join-Path $configDir "hostname.txt"
@@ -12,38 +18,53 @@ $hostnamePath = Join-Path $configDir "hostname.txt"
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 
 Write-Host ""
-Write-Host "Fixed domain access requires:"
-Write-Host "1. You own a domain."
-Write-Host "2. The domain is managed by Cloudflare."
-Write-Host "3. A browser will open for Cloudflare login."
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host "   DPSir Personal Cloud Drive - Public Domain Setup Wizard     " -ForegroundColor Yellow
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Prerequisites:" -ForegroundColor Green
+Write-Host "  1. You have a domain hosted on Cloudflare." -ForegroundColor Gray
+Write-Host "  2. A browser window will open to authorize your domain." -ForegroundColor Gray
 Write-Host ""
 
-$hostname = Read-Host "Enter the domain to bind, for example pan.example.com"
+$hostname = (Read-Host "Step 1: Enter the full domain you want to use (e.g. pan.yourdomain.com)").Trim()
+$hostname = $hostname -replace "^https?://", "" -replace "/.*$", ""
 if (-not $hostname -or $hostname -notmatch "\.") {
-  Write-Host "Invalid domain."
+  Write-Host "[ERROR] Invalid domain format." -ForegroundColor Red
   Read-Host "Press Enter to exit..."
   exit 1
 }
 
-$secure = Read-Host "Set a cloud drive password for fixed domain access" -AsSecureString
-$plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringUni(
-  [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-)
-if (-not $plainPassword -or $plainPassword.Length -lt 8) {
-  Write-Host "Password must be at least 8 characters."
-  Read-Host "Press Enter to exit..."
-  exit 1
-}
-[Environment]::SetEnvironmentVariable("CLOUD_DRIVE_PASSWORD", $plainPassword, "User")
-$env:CLOUD_DRIVE_PASSWORD = $plainPassword
+$safeSuffix = ($hostname -replace "[^a-zA-Z0-9-]", "-").ToLower()
+$tunnelName = "dpsir-drive-$safeSuffix"
 
+Write-Host ""
+Write-Host "Step 2: Opening browser for Cloudflare authorization..." -ForegroundColor Yellow
+Write-Host "        Please select your domain in the browser and click [Authorize]." -ForegroundColor Cyan
 & $cloudflared tunnel login
-& $cloudflared tunnel create $tunnelName
 
-$json = & $cloudflared tunnel info $tunnelName --output json | ConvertFrom-Json
-$tunnelId = $json.id
+Write-Host ""
+Write-Host "Step 3: Creating dedicated encrypted tunnel ($tunnelName)..." -ForegroundColor Yellow
+& $cloudflared tunnel create $tunnelName 2>$null
+
+$infoRaw = & $cloudflared tunnel info $tunnelName --output json 2>$null
+$tunnelId = ""
+try {
+  $json = $infoRaw | ConvertFrom-Json
+  $tunnelId = $json.id
+} catch {}
+
 if (-not $tunnelId) {
-  Write-Host "Could not get Tunnel ID. Check whether cloudflared login succeeded."
+  $listRaw = & $cloudflared tunnel list --output json 2>$null
+  try {
+    $listJson = $listRaw | ConvertFrom-Json
+    $matched = $listJson | Where-Object { $_.name -eq $tunnelName } | Select-Object -First 1
+    if ($matched) { $tunnelId = $matched.id }
+  } catch {}
+}
+
+if (-not $tunnelId) {
+  Write-Host "[ERROR] Could not obtain Tunnel ID. Please verify Cloudflare authorization succeeded." -ForegroundColor Red
   Read-Host "Press Enter to exit..."
   exit 1
 }
@@ -61,6 +82,7 @@ ingress:
 "@ | Set-Content -LiteralPath $configPath -Encoding UTF8
 Set-Content -LiteralPath $hostnamePath -Value $hostname -Encoding UTF8
 
+# Automatically write PUBLIC_ACCESS_URL into .env
 $envFile = Join-Path $root ".env"
 if (Test-Path -LiteralPath $envFile) {
   $envRaw = Get-Content -LiteralPath $envFile -Raw -Encoding UTF8
@@ -70,15 +92,25 @@ if (Test-Path -LiteralPath $envFile) {
     $envRaw = $envRaw.TrimEnd() + "`r`nPUBLIC_ACCESS_URL=https://$hostname`r`n"
   }
   Set-Content -LiteralPath $envFile -Value $envRaw -Encoding UTF8
+} else {
+  Set-Content -LiteralPath $envFile -Value "PUBLIC_ACCESS_URL=https://$hostname`r`n" -Encoding UTF8
 }
+Write-Host "  [OK] Updated .env with PUBLIC_ACCESS_URL=https://$hostname" -ForegroundColor Green
 
-& $cloudflared tunnel route dns $tunnelName $hostname
+Write-Host ""
+Write-Host "Step 4: Binding DNS route ($hostname) and installing background auto-start..." -ForegroundColor Yellow
+& $cloudflared tunnel route dns -f $tunnelName $hostname
 
 & (Join-Path $PSScriptRoot "install-lan-autostart.ps1")
 & (Join-Path $PSScriptRoot "install-cloudflare-autostart.ps1")
 
+$restartScript = Join-Path $PSScriptRoot "restart-all-services.ps1"
+if (Test-Path -LiteralPath $restartScript) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $restartScript
+}
+
 Write-Host ""
-Write-Host "Cloudflare fixed domain tunnel configured."
-Write-Host "Auto-start tasks are installed. Your fixed address is:"
-Write-Host "https://$hostname"
+Write-Host "===============================================================" -ForegroundColor Cyan
+Write-Host "  [OK] Public domain bound and started: https://$hostname" -ForegroundColor Green
+Write-Host "===============================================================" -ForegroundColor Cyan
 Read-Host "Press Enter to exit..."
