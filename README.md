@@ -1,6 +1,16 @@
 # DPSir 个人私有智云盘 (Personal Cloud Drive)
 
-> 🚀 简洁、轻量、高性能的私有化个人云盘系统。支持局域网千兆传输、外网远程访问、大文件分片秒传、Office/PDF 原生高清预览、AI 全局检索与 Windows 小主机一键部署。
+<p align="left">
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D18.x%20LTS-339933?logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express.js-4.19-000000?logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/AI%20Engine-DeepSeek%20RAG-00B4D8?logo=openai&logoColor=white" alt="DeepSeek AI" />
+  <img src="https://img.shields.io/badge/OCR-Tesseract%20LSTM-4285F4?logo=google&logoColor=white" alt="Tesseract OCR" />
+  <img src="https://img.shields.io/badge/Security-Scrypt%20%2B%20HMAC--SHA256-FF6B6B" alt="Security" />
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D6" alt="Platform" />
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
+</p>
+
+> 🚀 **简洁、轻量、高性能的 AI 赋能私有化个人云盘系统**。集成了局域网千兆流式传输、Cloudflare 零信任公网穿透、大文件分片断点续传、多租户物理沙箱隔离、Office/PDF/LaTeX 原生高清预览、Tesseract 神经网络 OCR 以及 DeepSeek RAG 全库智能问答，支持 Windows / macOS 一键静默部署与换机无损迁移。
 
 ---
 
@@ -26,6 +36,64 @@
 
 ---
 
+## 🏛️ 系统架构与核心算法框架 (Architecture & Core Algorithms)
+
+### 1. 全栈拓扑架构图
+
+```mermaid
+flowchart TB
+    subgraph Client["💻 多端浏览器工作台 (Desktop / Mobile SPA)"]
+        UI["Glassmorphism 响应式界面\n(星标视图 / 密保目录 / 回收站 / 外链分享)"]
+        Preview["多模态在线预览引擎\n(PDF / Office / Markdown / KaTeX / HTTP 206 流媒体)"]
+        AIChat["伴随式 AI 知识库抽屉\n(SSE 流式打字机 / 思维链实时解析)"]
+    end
+
+    subgraph Edge["🌐 网络接入与进程守护层"]
+        LAN["局域网千兆直连 (TCP 8081)"]
+        CF["Cloudflare Zero Trust 加密公网隧道"]
+        Watchdog["server-watchdog.js 守护进程\n(PID 互斥锁 + 15s 探针 + 指数退避自愈)"]
+    end
+
+    subgraph Core["⚙️ Node.js 非阻塞流式核心网关 (server.js)"]
+        Auth["安全认证与频控中间件\n(Scrypt KDF + HMAC-SHA256 + Timing-Safe 比对)"]
+        Context["AsyncLocalStorage 异步上下文追踪\n(多租户请求级身份与配额自动绑定)"]
+        Stream["分片续传与背压流管道\n(2MB Chunk 合并 / Range 切片 / 流式 ZIP)"]
+        SearchAI["多模态全文检索与 RAG 引擎\n(二级 LRU 内存+磁盘旁路缓存 / 关键词加权打分)"]
+    end
+
+    subgraph Parsers["🔍 异构文档解析与 AI 模型层"]
+        DocParse["文档解析矩阵\n(Mammoth Word / PDF-Parse / SheetJS / Fast-XML)"]
+        OCR["Tesseract.js LSTM 神经网络 OCR\n(chi_sim + eng 中英双语图像文字提取)"]
+        DeepSeek["DeepSeek 大模型双引擎\n(deepseek-v4-pro 深度推理 + deepseek-flash 极速摘要)"]
+    end
+
+    subgraph Storage["💾 免数据库原生文件存储层 (PersonalCloudDrive)"]
+        Sandbox["多用户物理隔离沙箱\n(users/<uid>/files & .trash)"]
+        IndexCache["二级非侵入式缓存池\n(.preview-cache & .text-index SHA-1 指纹缓存)"]
+        Meta["原子级 JSON 持久化与双备份\n(accounts.json / shares.json + .bak 自动容灾)"]
+    end
+
+    Client <--> LAN & CF
+    LAN & CF <--> Core
+    Watchdog -.->|"健康监测与零唤醒静默守护"| Core
+    Core --> Auth & Context & Stream & SearchAI
+    SearchAI --> DocParse & OCR & DeepSeek
+    Stream & SearchAI <--> Sandbox & IndexCache & Meta
+```
+
+### 2. 核心算法与工程技术矩阵
+
+| 技术维度 | 核心算法 / 框架机制 | 工程实现与独特价值 |
+| :--- | :--- | :--- |
+| **密码学与安全隔离** | **Scrypt 内存硬哈希 + HMAC-SHA256 + `timingSafeEqual`** | 登录密码、私密文件夹挂锁及恢复密钥均采用随机盐值 `scryptSync` 派生，结合恒定时间字节比对算法防御时序侧信道攻击（Timing Attack）与暴力穷举。 |
+| **多租户并发上下文** | **`AsyncLocalStorage` (`node:async_hooks`) + 路径沙箱算法** | 在异步 I/O 调用链中无感追踪当前租户身份，配合 `path.resolve` 前缀锁定算法，实现用户间物理文件、回收站、配额的 100% 严密隔离。 |
+| **大文件传输与流媒体** | **2MB 分片流式管道 + HTTP 206 Range 切片 + 流式 DEFLATE** | 超大文件分片并发上传与背压控制合并（零内存溢出）；音视频支持 RFC 7233 字节范围请求任意拖拽点播；多文件批量下载边读边压直推浏览器。 |
+| **全文检索与二级缓存** | **SHA-1 文件指纹 (`path+size+mtime`) + 内存/磁盘二级 LRU 缓存** | 首次提取 PDF/Word/PPT/Excel/OCR 文本后自动写入内存 LRU 与 `.preview-cache/.text-index` 旁路磁盘缓存；文件未改动时二次检索与 AI 读取耗时 **< 1ms**，修改后毫秒级自动失效更新。 |
+| **多模态 AI 知识库** | **本地 RAG 检索增强 + Tesseract LSTM OCR + SSE 流式推送** | 结合深度优先遍历（DFS）、词频相关性加权打分与双语神经网络图像文字识别，将本地异构文档转化为 DeepSeek 模型的精准上下文。 |
+| **高可用与跨平台运维** | **指数退避自愈算法 (Exponential Backoff) + 100% 纯 ASCII 脚本内核** | 守护进程异常崩溃后按 $3\text{s} \to 6\text{s} \to 12\text{s} \dots \le 60\text{s}$ 退避拉起，日常待机 0% CPU 静默运行；全套 Windows/macOS 运维脚本采用纯 7-bit ASCII 编码，彻底免疫跨系统代码页乱码。 |
+
+---
+
 ## ✨ 核心特性
 
 - **⚡ 高速传输与断点续传**
@@ -44,24 +112,25 @@
   - **访问与存储原生收纳折叠**：一体化整合「存储位置」与「网络访问」，支持原生平滑手风琴收纳；收起时仅占 36px 极简单行，动态呈现呼吸状态微胶囊（本机科技蓝、局域网翡翠绿、公网暖金橙三色精准映射），大幅释放侧边栏垂直视野，展开/收起偏好本地持久记忆。
 
 - **📑 强大的文档与多媒体原生预览 & 极简纯图标设计**
-  - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与排版预览；
-  - **PDF 与文本**：支持 PDF 在线分页阅读、Markdown、代码、TXT 原生语法高亮与排版；
+  - **Office 系列**：支持 Word (`.docx`)、PowerPoint (`.pptx`)、Excel (`.xlsx`/`.csv`) 原生表格与高保真排版预览；
+  - **PDF 与科研文本**：支持 PDF 在线分页阅读、Markdown、代码语法高亮及 **KaTeX ($\LaTeX$) 数学公式** 原生排版；
   - **多媒体与图片**：图片高清灯箱浏览、音视频在线流畅播放与流式拖拽；
   - **纯图标全局统一操作栏**：预览弹窗与压缩包弹窗统一无文字纯图标设计，AI 一键总结采用 DeepSeek 专属水青色微光质感，尺寸与下载、关闭按钮完美统一 38px 规格对齐。
 
-- **🔍 AI 智能辅助与全文搜索 (DeepSeek 驱动)**
-  - 支持毫秒级文件名检索与文本/文档全文关键词搜索；
-  - 侧边 AI 智能抽屉面板，与个人知识库全库深度问答、文档一键极速提炼总结。
+- **🔍 AI 智能辅助与全文搜索 (DeepSeek 驱动 + 二级旁路缓存加速)**
+  - 支持毫秒级文件名检索与 PDF / Office / 代码 / 图片 OCR 全文关键词搜索；
+  - 内置非侵入式二级文本索引缓存（Memory LRU + Disk Sidecar），已解析文档二次检索与 AI 问答秒级响应；
+  - 侧边 AI 智能抽屉面板，支持与个人知识库全库深度问答、单文档一键极速提炼总结。
 
-- **🔒 安全权限与回收站机制**
-  - 单用户/多用户 JWT 安全鉴权，防爆破安全频控；
-  - **多状态加密文件夹挂锁**：直观区分普通目录与已加锁机密目录，支持独立安全密码；
-  - 完善的回收站防误删机制，支持随时还原或彻底粉碎。
+- **🔒 安全权限、外链分享与回收站机制**
+  - 单用户/多用户安全鉴权，防爆破滑动窗口安全频控；
+  - **多状态加密文件夹挂锁**：直观区分普通目录与已加锁机密目录，支持独立安全密码与子目录权限继承；
+  - **安全外链分享与回收站防误删**：支持生成带有效期与提取码的分享链接；删除文件自动进入个人 `.trash` 回收站，支持随时一键还原或彻底粉碎。
 
-- **🛠️ 专为家庭服务器 / Windows 小主机优化**
-  - **程序与数据完全解耦**：代码与数据盘（`PersonalCloudDrive`）物理隔离，随时随地任意换机或扩展硬盘；
-  - **一键部署**：自带环境自检、防火墙放行、开机静默守护任务安装；
-  - **云端热更新**：双击一键从 GitHub 拉取代码并 3 秒平滑重启。
+- **🛠️ 专为家庭服务器 / Windows 小主机 / Mac 电脑优化**
+  - **程序与数据完全解耦**：代码与数据盘（`PersonalCloudDrive`）物理隔离，真正的原生目录结构，随时随地任意换机或扩展硬盘；
+  - **一键部署**：自带环境自检、防火墙全网络放行、开机静默守护任务安装；
+  - **云端热更新**：双击一键从 GitHub 拉取代码并平滑重启。
 
 ---
 
@@ -125,7 +194,7 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 
 ### 3. 一键初始化与启动
 
-* **🪟 Windows 电脑 / 小主机**：直接双击运行根目录下的 👉 **`一键部署新电脑(Windows).bat`**（自动唤起 UAC 提权一键确认，自动全网络放行防火墙，开箱即用）
+* **🪟 Windows 电脑 / 小主机**：直接双击运行根目录下的 👉 **`一键部署新电脑(Windows).bat`**（或 `setup-new-host.bat`，自动唤起 UAC 提权一键确认，自动全网络放行防火墙，开箱即用）
 * **🍎 苹果 Mac 电脑 (Apple Silicon M系列 / Intel)**：直接双击运行根目录下的 👉 **`一键部署新电脑(Mac).command`**
 
 向导会自动完成以下工作：
@@ -206,8 +275,8 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 ### 3. 电脑只有 C 盘（没有 D 盘），能一键部署吗？
 * **完美支持！** 一键部署向导内置智能磁盘探测机制，会自动优先探测 `D:\`、`E:\` 等大容量数据盘；若电脑只有一个 C 盘，会自动无感适配为 `C:\PersonalCloudDrive`，100% 避免因无 D 盘导致的崩溃。
 
-### 4. Windows PowerShell 中文编码说明
-* 本项目全套 20 个 PowerShell 自动化运维脚本均已规范注入 **UTF-8 BOM 签名**，并在批处理头部统一启用 `chcp 65001`，完美兼容中文版 Windows 10/11 系统的 PowerShell 5.1，杜绝 GBK 代码页解析中文字符导致的任何语法报错。
+### 4. 跨平台终端与脚本字符编码兼容性说明
+* 本项目全部 `.bat`、`.command`、`.ps1`、`.sh`、`.vbs` 自动化运维脚本内部输出与注释均已统一规范为 **100% 纯 7-bit ASCII 英文内核**（同时保留直观的中文快捷脚本文件名），并通过 `.gitattributes` 锁定 Windows `CRLF` 与 Unix `LF` 换行符。无论在简体/繁体/英文版 Windows 10/11、PowerShell 5.1/7 还是 macOS 终端下运行，均 **100% 零编码报错、零乱码闪退**。
 
 ### 5. 如果以后不小心把管理员密码彻底忘了，怎么重置找回？（物理兜底恢复法）
 * **原理**：外网用户只能看网页，绝不可能碰你电脑的物理硬盘；系统将本地 `.env` 文件视为最高特权物理钥匙。
@@ -216,6 +285,7 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
      ```env
      CLOUD_DRIVE_PASSWORD=你的新密码
      ```
+
 ### 6. 为什么手机在局域网输入 IP 无法打开，而电脑本机可以打开？
 * **原因 1：手机浏览器自带“HTTPS 强制升级”**
   现在的手机浏览器（如 Safari、Chrome）默认开启了“强制 HTTPS”，若在地址栏只输入了 `192.168.x.x:8081`，手机会自动偷换成 `https://` 导致协议握手失败。
@@ -231,4 +301,3 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 
 ## 📄 License
 本项目遵循 [MIT License](LICENSE) 开源协议，欢迎自由部署、修改与贡献！
-

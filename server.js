@@ -3104,6 +3104,10 @@ async function extractPdfText(filePath) {
 
 const imageOcrCache = new Map();
 const IMAGE_OCR_CACHE_MAX_ENTRIES = 120;
+const extractedTextMemoryCache = new Map();
+const EXTRACTED_TEXT_MEMORY_MAX_ENTRIES = 250;
+const TEXT_INDEX_DISK_MAX_FILES = 300;
+let textIndexWriteCount = 0;
 
 function getCachedOcrText(cacheKey) {
   const item = imageOcrCache.get(cacheKey);
@@ -3121,17 +3125,105 @@ function setCachedOcrText(cacheKey, text) {
   imageOcrCache.set(cacheKey, text);
 }
 
+function buildContentCacheHash(filePath, stat) {
+  return crypto
+    .createHash("sha1")
+    .update(`${filePath}|${stat.size}|${Math.round(stat.mtimeMs || 0)}`)
+    .digest("hex");
+}
+
+function getMemoryCachedText(hash) {
+  if (!extractedTextMemoryCache.has(hash)) return null;
+  const val = extractedTextMemoryCache.get(hash);
+  extractedTextMemoryCache.delete(hash);
+  extractedTextMemoryCache.set(hash, val);
+  return val;
+}
+
+function setMemoryCachedText(hash, text) {
+  if (extractedTextMemoryCache.size >= EXTRACTED_TEXT_MEMORY_MAX_ENTRIES) {
+    const oldestKey = extractedTextMemoryCache.keys().next().value;
+    if (oldestKey) extractedTextMemoryCache.delete(oldestKey);
+  }
+  extractedTextMemoryCache.set(hash, text);
+}
+
+async function readCachedExtractedText(filePath, stat) {
+  try {
+    const hash = buildContentCacheHash(filePath, stat);
+    const memHit = getMemoryCachedText(hash);
+    if (memHit !== null && memHit !== undefined) return memHit;
+    const indexDir = path.join(currentPreviewRoot(), ".text-index");
+    const cacheFile = path.join(indexDir, `${hash}.txt`);
+    if (!fs.existsSync(cacheFile)) return null;
+    const diskText = await fsp.readFile(cacheFile, "utf8");
+    setMemoryCachedText(hash, diskText);
+    return diskText;
+  } catch {
+    return null;
+  }
+}
+
+async function pruneTextIndexCacheDir(indexDir) {
+  try {
+    const entries = await fsp.readdir(indexDir, { withFileTypes: true });
+    const files = entries.filter((e) => e.isFile() && e.name.endsWith(".txt"));
+    if (files.length <= TEXT_INDEX_DISK_MAX_FILES) return;
+    const stats = await Promise.all(
+      files.map(async (f) => {
+        const full = path.join(indexDir, f.name);
+        try {
+          const st = await fsp.stat(full);
+          return { full, mtimeMs: st.mtimeMs || 0 };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const valid = stats.filter(Boolean).sort((a, b) => a.mtimeMs - b.mtimeMs);
+    const toRemove = valid.slice(0, Math.max(0, valid.length - TEXT_INDEX_DISK_MAX_FILES));
+    await Promise.all(toRemove.map((item) => fsp.rm(item.full, { force: true }).catch(() => {})));
+  } catch {}
+}
+
+function writeCachedExtractedText(filePath, stat, text) {
+  try {
+    if (typeof text !== "string") return;
+    const capped = text.length > SEARCH_TEXT_MAX_BYTES ? text.slice(0, SEARCH_TEXT_MAX_BYTES) : text;
+    const hash = buildContentCacheHash(filePath, stat);
+    setMemoryCachedText(hash, capped);
+    const indexDir = path.join(currentPreviewRoot(), ".text-index");
+    const cacheFile = path.join(indexDir, `${hash}.txt`);
+    fsp
+      .mkdir(indexDir, { recursive: true })
+      .then(() => fsp.writeFile(cacheFile, capped, "utf8"))
+      .then(() => {
+        textIndexWriteCount += 1;
+        if (textIndexWriteCount % 25 === 0) {
+          return pruneTextIndexCacheDir(indexDir);
+        }
+      })
+      .catch(() => {});
+  } catch {}
+}
+
 async function extractImageOcrText(filePath, stat) {
   if (stat.size > SEARCH_IMAGE_OCR_MAX_BYTES) return "";
   const cacheKey = `${filePath}:${stat.size}:${Math.round(stat.mtimeMs || 0)}`;
   const cached = getCachedOcrText(cacheKey);
   if (cached !== null && cached !== undefined) return cached;
+  const sidecarCached = await readCachedExtractedText(filePath, stat);
+  if (sidecarCached !== null && sidecarCached !== undefined) {
+    setCachedOcrText(cacheKey, sidecarCached);
+    return sidecarCached;
+  }
   try {
     const result = await recognizeImageText(filePath, AI_OCR_LANGS, {
       logger: () => {},
     });
     const text = result?.data?.text || "";
     setCachedOcrText(cacheKey, text);
+    writeCachedExtractedText(filePath, stat, text);
     return text;
   } catch (error) {
     console.warn("图片 OCR 提取失败：", filePath, error.message);
@@ -3166,37 +3258,39 @@ async function extractSearchableContent(filePath, stat, options = {}) {
     if (isTextSearchFile(filePath)) {
       return await readTextFileHead(filePath, SEARCH_TEXT_MAX_BYTES);
     }
+    const cachedText = await readCachedExtractedText(filePath, stat);
+    if (cachedText !== null && cachedText !== undefined) {
+      return cachedText;
+    }
     if (fastOnly) return "";
     if (stat.size > SEARCH_OFFICE_MAX_BYTES) return "";
+    let extracted = null;
     if (ext === ".pdf") {
-      return await extractPdfText(filePath);
-    }
-    if (ext === ".docx") {
+      extracted = await extractPdfText(filePath);
+    } else if (ext === ".docx") {
       const result = await mammoth.extractRawText({ path: filePath });
-      return result.value || "";
-    }
-    if (isLegacyOfficeTextFile(filePath)) {
-      return await extractOfficeTextViaPdf(filePath, stat);
-    }
-    if (ext === ".pptx") {
+      extracted = result.value || "";
+    } else if (isLegacyOfficeTextFile(filePath)) {
+      extracted = await extractOfficeTextViaPdf(filePath, stat);
+    } else if (ext === ".pptx") {
       const preview = await presentationPreview(filePath);
-      return preview.slides.map((slide) => slide.texts.join(" ")).join("\n");
-    }
-    if ([".xlsx", ".xls"].includes(ext)) {
+      extracted = preview.slides.map((slide) => slide.texts.join(" ")).join("\n");
+    } else if ([".xlsx", ".xls"].includes(ext)) {
       const preview = spreadsheetPreview(filePath);
-      return preview.sheets
+      extracted = preview.sheets
         .map((sheet) => `${sheet.name}\n${sheet.rows.map((row) => row.join(" ")).join("\n")}`)
         .join("\n");
-    }
-    if (isImageOcrFile(filePath)) {
+    } else if (isImageOcrFile(filePath)) {
       return await extractImageOcrText(filePath, stat);
-    }
-    if (isZipListingFile(filePath)) {
-      return await extractZipListing(filePath);
-    }
-    if (stat.size <= SEARCH_UNKNOWN_TEXT_MAX_BYTES) {
+    } else if (isZipListingFile(filePath)) {
+      extracted = await extractZipListing(filePath);
+    } else if (stat.size <= SEARCH_UNKNOWN_TEXT_MAX_BYTES) {
       const buffer = await fsp.readFile(filePath);
       if (isMostlyReadableText(buffer)) return buffer.toString("utf8");
+    }
+    if (extracted !== null) {
+      writeCachedExtractedText(filePath, stat, extracted);
+      return extracted;
     }
   } catch (error) {
     console.warn("搜索内容提取失败：", filePath, error.message);
