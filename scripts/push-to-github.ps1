@@ -19,8 +19,8 @@ Write-Host ""
 $repoPath = "6DPS/personal-cloud-drive"
 $officialRepoUrl = "https://github.com/$repoPath.git"
 $gitMirrors = @(
-    "https://ghfast.top/https://github.com/$repoPath.git",
     "https://gh-proxy.com/https://github.com/$repoPath.git",
+    "https://ghfast.top/https://github.com/$repoPath.git",
     $officialRepoUrl
 )
 

@@ -29,8 +29,8 @@ echo ""
 REPO_PATH="6DPS/personal-cloud-drive"
 OFFICIAL_URL="https://github.com/${REPO_PATH}.git"
 GIT_MIRRORS=(
-    "https://ghfast.top/https://github.com/${REPO_PATH}.git"
     "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
+    "https://ghfast.top/https://github.com/${REPO_PATH}.git"
     "${OFFICIAL_URL}"
 )
 
@@ -47,7 +47,7 @@ echo -e "${YELLOW}[1/3] Pulling latest updates from GitHub (via domestic mirror 
 SYNC_OK=false
 for ENDPOINT in "${GIT_MIRRORS[@]}"; do
     echo -e "${GRAY}  -> Trying endpoint: ${ENDPOINT}${NC}"
-    if git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch "$ENDPOINT" main; then
+    if git -c http.sslVerify=false -c http.connectTimeout=5 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --progress "$ENDPOINT" main; then
         git checkout -f -B main FETCH_HEAD
         git reset --hard FETCH_HEAD
         git update-ref refs/remotes/origin/main FETCH_HEAD 2>/dev/null

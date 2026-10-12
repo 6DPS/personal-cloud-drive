@@ -29,8 +29,8 @@ echo ""
 REPO_PATH="6DPS/personal-cloud-drive"
 OFFICIAL_URL="https://github.com/${REPO_PATH}.git"
 GIT_MIRRORS=(
-    "https://ghfast.top/https://github.com/${REPO_PATH}.git"
     "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
+    "https://ghfast.top/https://github.com/${REPO_PATH}.git"
     "${OFFICIAL_URL}"
 )
 

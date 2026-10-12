@@ -19,13 +19,13 @@ Write-Host ""
 $repoPath = "6DPS/personal-cloud-drive"
 $officialRepoUrl = "https://github.com/$repoPath.git"
 $gitMirrors = @(
-    "https://ghfast.top/https://github.com/$repoPath.git",
     "https://gh-proxy.com/https://github.com/$repoPath.git",
+    "https://ghfast.top/https://github.com/$repoPath.git",
     $officialRepoUrl
 )
 $zipMirrors = @(
-    "https://ghfast.top/https://github.com/$repoPath/archive/refs/heads/main.zip",
     "https://gh-proxy.com/https://github.com/$repoPath/archive/refs/heads/main.zip",
+    "https://ghfast.top/https://github.com/$repoPath/archive/refs/heads/main.zip",
     "https://codeload.github.com/$repoPath/zip/refs/heads/main"
 )
 
@@ -51,9 +51,9 @@ if ($hasGit) {
         Write-Host "  -> Trying endpoint: $endpoint" -ForegroundColor Gray
         if ($isFirstSync) {
             Write-Host "  [INFO] First-time repository sync (~55MB including cloudflared). Downloading with live progress:" -ForegroundColor Cyan
-            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 fetch --depth=1 --progress $endpoint main
+            git -c http.sslVerify=false -c http.connectTimeout=5 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --depth=1 --progress $endpoint main
         } else {
-            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch --progress $endpoint main
+            git -c http.sslVerify=false -c http.connectTimeout=5 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=8 fetch --progress $endpoint main
         }
         if ($LASTEXITCODE -eq 0) {
             git checkout -f -B main FETCH_HEAD
