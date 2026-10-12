@@ -61,6 +61,17 @@ ingress:
 "@ | Set-Content -LiteralPath $configPath -Encoding UTF8
 Set-Content -LiteralPath $hostnamePath -Value $hostname -Encoding UTF8
 
+$envFile = Join-Path $root ".env"
+if (Test-Path -LiteralPath $envFile) {
+  $envRaw = Get-Content -LiteralPath $envFile -Raw -Encoding UTF8
+  if ($envRaw -match "(?m)^\s*#?\s*PUBLIC_ACCESS_URL\s*=.*$") {
+    $envRaw = $envRaw -replace "(?m)^\s*#?\s*PUBLIC_ACCESS_URL\s*=.*$", "PUBLIC_ACCESS_URL=https://$hostname"
+  } else {
+    $envRaw = $envRaw.TrimEnd() + "`r`nPUBLIC_ACCESS_URL=https://$hostname`r`n"
+  }
+  Set-Content -LiteralPath $envFile -Value $envRaw -Encoding UTF8
+}
+
 & $cloudflared tunnel route dns $tunnelName $hostname
 
 & (Join-Path $PSScriptRoot "install-lan-autostart.ps1")
