@@ -76,7 +76,10 @@ DPSir 个人网盘在底层严格遵循 **“程序代码与真实数据完全�
 
 如果朋友想要一套自己的独立网盘，或者在新电脑从零开始：
 
-1. **获取代码**：从 GitHub 下载 ZIP 解压或执行 `git clone https://github.com/6DPS/personal-cloud-drive.git`；
+1. **获取代码（免外网直连）**：
+   * 方式一（免安装 Git，浏览器直接下载 ZIP 解压）：`https://ghfast.top/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`
+   * 方式二（国内免外网极速 `git clone`）：`git clone https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git`
+   * 方式三（直接从老电脑用 U 盘把 `personal-cloud-drive` 文件夹拷过来）
 2. **一键双击**：进入文件夹，双击运行 👉 **`一键部署新电脑(Windows).bat`**，弹窗点**【是】**；
 3. **向导全自动运行**：
    * 自动配齐 Node.js 与依赖；

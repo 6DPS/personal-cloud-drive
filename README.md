@@ -155,12 +155,16 @@ npm start
 
 如果你在另一台新电脑（如 Windows 小主机、家庭服务器或闲置电脑）上全新部署本项目：
 
-### 1. 克隆或下载代码
+### 1. 克隆或下载代码（内置国内免外网极速通道）
 ```bash
-git clone https://github.com/6DPS/personal-cloud-drive.git
+# 国内网络免外网极速克隆（推荐，无需开启 VPN/梯子）：
+git clone https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git
 cd personal-cloud-drive
+
+# 或使用 GitHub 官方源克隆：
+git clone https://github.com/6DPS/personal-cloud-drive.git
 ```
-*(或者点击 GitHub 绿色按钮 Code ➔ Download ZIP 解压)*
+*(若新电脑未安装 Git，也可直接在浏览器打开国内加速直链下载压缩包解压：`https://ghfast.top/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`)*
 
 ---
 
