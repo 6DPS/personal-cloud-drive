@@ -10,21 +10,23 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
 
-function Test-EndpointFast {
-    param([string]$Url, [int]$TimeoutMs = 2500)
+function Get-EndpointLatencyMs {
+    param([string]$Url, [int]$TimeoutMs = 2000)
     try {
         $uri = [System.Uri]$Url
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
         $client = [System.Net.Sockets.TcpClient]::new()
         $async = $client.BeginConnect($uri.Host, 443, $null, $null)
         if (-not $async.AsyncWaitHandle.WaitOne($TimeoutMs)) {
             $client.Close()
-            return $false
+            return 99999
         }
         $client.EndConnect($async)
+        $sw.Stop()
         $client.Close()
-        return $true
+        return [int]$sw.ElapsedMilliseconds
     } catch {
-        return $false
+        return 99999
     }
 }
 
@@ -62,17 +64,36 @@ if ($hasGit) {
         git remote add origin $officialRepoUrl 2>$null
     }
 
-    # Prioritize previously remembered fastest mirror on this computer
+    # Auto-adapt to remembered fastest mirror or benchmark domestic mirrors by latency (ms)
     $savedFastMirror = (git config --local dpsir.fastMirror 2>$null)
     $gitMirrors = @()
     if ($savedFastMirror -and $savedFastMirror.Trim()) {
         $savedFastMirror = $savedFastMirror.Trim()
-        $gitMirrors += $savedFastMirror
-        Write-Host "[SMART-MIRROR] Using remembered fastest mirror on this PC: $savedFastMirror" -ForegroundColor Cyan
+        $savedLatency = Get-EndpointLatencyMs -Url $savedFastMirror -TimeoutMs 2000
+        if ($savedLatency -lt 2000) {
+            $gitMirrors += $savedFastMirror
+            Write-Host "[SMART-MIRROR] Locked onto remembered fastest mirror ($($savedLatency)ms): $savedFastMirror" -ForegroundColor Cyan
+        }
     }
-    foreach ($m in $defaultMirrors) {
-        if ($gitMirrors -notcontains $m) {
-            $gitMirrors += $m
+    if ($gitMirrors.Count -eq 0) {
+        Write-Host "[SMART-MIRROR] Benchmarking domestic mirrors to select the fastest route..." -ForegroundColor Cyan
+        $ranked = foreach ($m in $defaultMirrors) {
+            $ms = Get-EndpointLatencyMs -Url $m -TimeoutMs 2000
+            if ($ms -lt 2000) {
+                Write-Host "  -> Speed test: $m ($($ms)ms)" -ForegroundColor Gray
+                [PSCustomObject]@{ Url = $m; Ms = $ms }
+            } else {
+                Write-Host "  -> Speed test: $m (timeout)" -ForegroundColor DarkGray
+            }
+        }
+        foreach ($item in ($ranked | Sort-Object Ms)) {
+            $gitMirrors += $item.Url
+        }
+    } else {
+        foreach ($m in $defaultMirrors) {
+            if ($gitMirrors -notcontains $m) {
+                $gitMirrors += $m
+            }
         }
     }
 
@@ -81,9 +102,9 @@ if ($hasGit) {
     $isFirstSync = ($LASTEXITCODE -ne 0)
 
     foreach ($endpoint in $gitMirrors) {
-        Write-Host "  -> Checking endpoint: $endpoint" -ForegroundColor Gray
-        if (-not (Test-EndpointFast -Url $endpoint -TimeoutMs 2500)) {
-            Write-Host "  [SKIP] Endpoint unreachable (2.5s fast check), switching to next mirror..." -ForegroundColor Yellow
+        Write-Host "  -> Connecting to endpoint: $endpoint" -ForegroundColor Gray
+        if ((Get-EndpointLatencyMs -Url $endpoint -TimeoutMs 2500) -ge 2500) {
+            Write-Host "  [SKIP] Endpoint unreachable, switching to next mirror..." -ForegroundColor Yellow
             continue
         }
         if ($isFirstSync) {
@@ -117,7 +138,7 @@ if (-not $syncSuccess) {
 
     foreach ($zipUrl in $zipMirrors) {
         try {
-            if (-not (Test-EndpointFast -Url $zipUrl -TimeoutMs 2500)) { continue }
+            if ((Get-EndpointLatencyMs -Url $zipUrl -TimeoutMs 2500) -ge 2500) { continue }
             Write-Host "  -> Downloading archive: $zipUrl" -ForegroundColor Gray
             if (Test-Path -LiteralPath $tmpZip) { Remove-Item -LiteralPath $tmpZip -Force -ErrorAction SilentlyContinue }
             Invoke-WebRequest -Uri $zipUrl -OutFile $tmpZip -TimeoutSec 30 -UseBasicParsing
