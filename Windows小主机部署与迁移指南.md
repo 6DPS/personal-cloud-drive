@@ -74,19 +74,29 @@ DPSir 个人网盘在底层严格遵循 **“程序代码与真实数据完全�
 
 ### 2.2 场景 B：【全新部署 / 分享给朋友】（新电脑从零开始一键使用）
 
-如果朋友想要一套自己的独立网盘，或者在新电脑从零开始：
+如果朋友想要一套自己的独立网盘，或者在新电脑从零开始（与老电脑账号、密钥、数据 100% 独立解耦）：
 
-1. **获取代码（免外网直连）**：
-   * 方式一（免安装 Git，浏览器直接下载 ZIP 解压）：`https://ghfast.top/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`
-   * 方式二（国内免外网极速 `git clone`）：`git clone https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git`
-   * 方式三（直接从老电脑用 U 盘把 `personal-cloud-drive` 文件夹拷过来）
-2. **一键双击**：进入文件夹，双击运行 👉 **`一键部署新电脑(Windows).bat`**，弹窗点**【是】**；
-3. **向导全自动运行**：
-   * 自动配齐 Node.js 与依赖；
-   * 自动在新电脑容量最大的磁盘创建 `PersonalCloudDrive` 数据根目录；
-   * 自动全网络放行防火墙，自动注册开机自启动；
-   * 自动在浏览器弹出登录页；
+1. **获取代码（内置国内免外网极速通道）**：
+   * 方式一（免安装 Git，浏览器直接下载 ZIP 解压）：`https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`
+   * 方式二（国内免外网极速 `git clone`）：`git clone https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive.git`（备用源：`ghfast.top`、`ghproxy.net`）
+   * 方式三（直接从老电脑用 U 盘把 `personal-cloud-drive` 文件夹拷过来，勿拷 `.env` 与 `.cloudflared`）
+2. **一键双击部署**：进入文件夹，双击运行 👉 **`一键部署新电脑(Windows).bat`**，弹窗点**【是】**；
+3. **向导全自动运行（全程国内源，零外网依赖）**：
+   * 自动从华为云/阿里云镜像配齐 Node.js LTS 与国内 NPM 依赖；
+   * 自动在新电脑容量最大的磁盘创建 `PersonalCloudDrive` 数据根目录并生成独立 `.env`；
+   * 自动全网络放行防火墙（公用+专用+域），自动注册开机后台静默自启动；
+   * 自动在浏览器弹出登录页（默认启动纯净局域网模式，登录状态支持 30 天滑动自动续期）；
 4. **直接登录**：初始超级管理员账号为 `admin`，初始密码为 `admin123456`，手机直接输入局域网地址秒进！
+5. **按需接入「大模型 AI」与「公网域名」（可选进阶）**：
+   * **🤖 接入 DeepSeek 大模型 AI（二选一，网盘自动读取）**：
+     * **方式 A（改 `.env`）**：在根目录 `.env` 中填入 `DEEPSEEK_API_KEY=sk-你的密钥`；
+     * **方式 B（加系统环境变量，免改 `.env`）**：在电脑 Windows 系统环境变量中添加变量名 `YUNPAN_DEEPSEEK_KEY`（或 `DEEPSEEK_API_KEY`），填入密钥；
+     * 完成后双击 `一键重启与自动修复.bat` 即可生效。
+   * **🌐 接入公网远程访问（一步直达，无需手动改 `.env` 填域名）**：
+     * **有个人域名（长期固定公网）**：直接双击 `setup-cloudflare-domain.bat` ➔ 输入你的域名 ➔ 在自动弹出的浏览器页面点击一次 **【Authorize（授权）】**。脚本会自动创建隧道、绑定 DNS、**自动把 `PUBLIC_ACCESS_URL=https://你的域名` 写进 `.env`** 并配置开机自启！
+     * **无个人域名（临时免费公网）**：直接双击 `start-public-drive.bat`，几秒内自动生成 `https://xxxx.trycloudflare.com` 临时公网网址。
+6. **日常一键免外网更新**：
+   * 后续只需双击 **`一键从GitHub拉取更新.bat`**（或 `一键云端同步更新(Windows).bat`），脚本会自动对国内 4 大镜像节点进行毫秒级测速并记忆最快通道，秒级拉取最新功能且**绝不覆盖新电脑自己的 `.env` 与本地数据**。
 
 ---
 

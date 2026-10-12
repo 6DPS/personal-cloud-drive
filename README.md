@@ -153,65 +153,72 @@ npm start
 
 ## 🖥️ 新主机 / 新用户 极速部署指南 (Quick Deployment)
 
-如果你在另一台新电脑（如 Windows 小主机、家庭服务器或闲置电脑）上全新部署本项目：
+无论是在全新的 Windows 小主机、家庭服务器、闲置电脑还是 Mac 上部署，每台新电脑默认都是一套**100% 独立、纯净的局域网私有云盘**（自带全部核心网盘功能、独立账号库、独立数据盘及独立随机生成的 32 字节安全会话密钥，支持 30 天滑动免登录自动续期），与开发机或其他电脑完全解耦、互不干扰。
 
-### 1. 克隆或下载代码（内置国内免外网极速通道）
+### 1. 获取代码（内置国内 4 节点免外网极速通道）
 ```bash
-# 国内网络免外网极速克隆（推荐，无需开启 VPN/梯子）：
-git clone https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git
+# 国内网络免外网极速克隆（推荐，全程无需开启 VPN/梯子）：
+git clone https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive.git
 cd personal-cloud-drive
+
+# 备用国内加速源（任选其一）：
+# git clone https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git
+# git clone https://ghproxy.net/https://github.com/6DPS/personal-cloud-drive.git
 
 # 或使用 GitHub 官方源克隆：
 git clone https://github.com/6DPS/personal-cloud-drive.git
 ```
-*(若新电脑未安装 Git，也可直接在浏览器打开国内加速直链下载压缩包解压：`https://ghfast.top/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`)*
+*(💡 若新电脑未安装 Git，也可直接在浏览器打开国内加速直链下载 ZIP 压缩包解压即用：`https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive/archive/refs/heads/main.zip`)*
 
 ---
 
-### 2. 个性化环境配置 (`.env`)
-在项目根目录下复制一份 `.env.example`，命名为 **`.env`**：
+### 2. 一键全自动初始化与启动（国内源零外网依赖）
 
-```env
-# 1. 真实数据存储盘符（支持任意硬盘或移动硬盘，首次启动会自动初始化）
-STORAGE_BASE_ROOT=D:\PersonalCloudDrive
-
-# 2. 超级管理员初始账号与密码（首次部署的超级管理员凭据）
-CLOUD_DRIVE_USER=admin
-CLOUD_DRIVE_PASSWORD=admin123456
-
-# 3. DeepSeek AI 引擎 API Key（启用 AI 全库问答与文档一键极速总结）
-# 可在 DeepSeek 开放平台 (https://platform.deepseek.com/) 申请
-# 填好保存后，网盘全自动调用，网页前端零配置！
-DEEPSEEK_API_KEY=sk-your_deepseek_api_key_here
-
-# 4. 服务监听端口与地址（默认无需修改）
-PORT=8081
-HOST=0.0.0.0
-
-# 5. 公网域名（选填，若配置了 Cloudflare 等公网加密隧道）
-PUBLIC_ACCESS_URL=https://pan.yourdomain.com
-```
-
-> 💡 **提示**：若未手动创建 `.env`，直接启动系统也会自动采用开箱即用默认值（超级管理员账号 `admin` / 初始密码 `admin123456`，存储路径 `D:\PersonalCloudDrive`）。
-
----
-
-### 3. 一键初始化与启动
-
-* **🪟 Windows 电脑 / 小主机**：直接双击运行根目录下的 👉 **`一键部署新电脑(Windows).bat`**（或 `setup-new-host.bat`，自动唤起 UAC 提权一键确认，自动全网络放行防火墙，开箱即用）
+* **🪟 Windows 电脑 / 小主机**：直接双击运行根目录下的 👉 **`一键部署新电脑(Windows).bat`**（或 `setup-new-host.bat`）
 * **🍎 苹果 Mac 电脑 (Apple Silicon M系列 / Intel)**：直接双击运行根目录下的 👉 **`一键部署新电脑(Mac).command`**
 
-向导会自动完成以下工作：
-* ✓ 自动检测并安装 Node.js LTS 运行环境（若电脑未安装，会自动静默安装/引导）；
-* ✓ 自动安装项目运行依赖包（`npm install`）；
-* ✓ 智能绑定数据盘路径（Windows 推荐 `D:\PersonalCloudDrive`，Mac 推荐 `~/PersonalCloudDrive`）并初始化/接管历史数据库；
-* ✓ **全网络防火墙自动放行（公用网络+专用网络+域）**：彻底解决 Windows 插网线与连 Wi-Fi 时的网络权限切换冲突，确保全家设备 100% 互联；
-* ✓ 自动安装开机后台静默自启守护任务（Windows 任务计划 / macOS launchd 守护进程）。
+向导会在后台全自动完成以下全部工作（全程走国内镜像源，无需翻墙）：
+* ✓ **Node.js 环境自动就绪**：若电脑未安装 Node.js，自动从华为云 / 阿里云国内高速镜像下载并静默安装 LTS 版本；
+* ✓ **依赖包国内极速装载**：自动使用国内 NPM 镜像（`registry.npmmirror.com`）完成 `npm install`；
+* ✓ **智能绑定大容量数据盘**：自动探测大容量硬盘（如 `D:\PersonalCloudDrive`，仅单 C 盘电脑自动适配 `C:\PersonalCloudDrive`）并自动生成专属 `.env` 配置文件；
+* ✓ **全网络防火墙自动放行（公用+专用+域）**：自动唤起管理员提权放行 8081 端口，彻底解决插网线与连 Wi-Fi 切换时的防火墙拦截；
+* ✓ **开机后台静默自启守护**：自动注册 Windows 任务计划（或 macOS `launchd` 守护进程），并自动记忆国内最快 GitHub 更新通道。
 
-部署完成后，在浏览器中打开：
-* **本机访问**：`http://127.0.0.1:8081`
+部署完成后，网盘即刻以**纯净局域网模式**启动，在浏览器中打开：
+* **本机极速访问**：`http://127.0.0.1:8081`
 * **局域网设备（手机/平板/电脑）**：`http://你的电脑IP:8081`（如 `http://192.168.1.xxx:8081`，**手机端请务必完整输入开头的 `http://`**）
-* **公网远程访问（若配置了穿透）**：直接打开域名（如 `https://dpsirperson.085410.xyz`）
+* **初始超级管理员账号**：账号 `admin` / 初始密码 `admin123456`（登录后可在安全中心随时修改）
+
+---
+
+### 3. 按需接入「大模型 AI」与「公网远程访问」（可选进阶）
+
+新部署的电脑默认无需任何外部密钥即可完整使用全部网盘存储、预览与加密分享功能。若新电脑使用者希望开启 **AI 知识库问答/总结** 或 **出门在外公网访问**，可按以下极简方式随时接入：
+
+#### 🤖 (A) 接入大模型 AI（DeepSeek API —— 二选一，网盘自动读取）
+先在 [DeepSeek 开放平台](https://platform.deepseek.com/) 申请属于自己的 API Key（`sk-...`），随后**任选以下一种方式**配置即可（无需改代码，前端零配置）：
+1. **方式一：在 `.env` 文件中配置（最直观）**  
+   用记事本打开项目根目录下的 `.env` 文件，填入：
+   ```env
+   DEEPSEEK_API_KEY=sk-你的DeepSeek密钥
+   ```
+2. **方式二：在电脑系统环境变量中添加（免改 `.env`，更安全隐蔽）**  
+   不用修改 `.env` 文件，直接在 Windows「系统属性 ➔ 环境变量」中添加用户变量或系统变量：
+   * 变量名：**`YUNPAN_DEEPSEEK_KEY`**（或 `DEEPSEEK_API_KEY`）
+   * 变量值：**`sk-你的DeepSeek密钥`**
+
+> 配置完成后，双击根目录下的 👉 **`一键重启与自动修复.bat`**，网盘会自动读取密钥并激活 AI 全库对话与单文档极速总结！
+
+#### 🌐 (B) 接入公网远程访问（一步直达，无需手动在 `.env` 填域名）
+> ⚠️ **注意**：单纯在 `.env` 里手写一个域名并不能让外网连进你的电脑（必须建立公网穿透隧道）。本项目已将隧道创建、DNS 绑定与 `.env` 写入全流程封装为一键脚本：
+
+* **方案 1：已有个人域名 —— 长期固定公网域名（推荐）**
+  1. 将你的域名托管在 Cloudflare（免费），然后直接双击根目录下的 👉 **`setup-cloudflare-domain.bat`**；
+  2. 在黑框提示中输入你想绑定的完整域名（例如 `pan.yourdomain.com`）；
+  3. 脚本会自动下载穿透组件并**自动弹出浏览器登录页**，你在网页上点击一次 **【Authorize（授权）】**；
+  4. **全自动收尾**：脚本会自动创建专属加密隧道、自动在 Cloudflare 添加 DNS 解析记录、**自动把 `PUBLIC_ACCESS_URL=https://你的域名` 写入 `.env` 文件**（无需你手动编辑 `.env`！），并自动配置开机后台静默自启与重启网盘。完成后全球任意手机/电脑输入该域名即可秒开！
+* **方案 2：没有个人域名 —— 免注册临时公网地址（即开即用）**
+  * 直接双击根目录下的 👉 **`start-public-drive.bat`**，无需购买域名、无需登录账号，脚本会在几秒内自动生成一个免费的 `https://xxxx.trycloudflare.com` 临时公网加密网址，复制发给手机或朋友即可直接外网访问。
 
 详细两台电脑无缝换机、数据迁移与协同开发教程请参阅：
 * 👉 **[Windows小主机部署与迁移指南.md](./Windows小主机部署与迁移指南.md)**
@@ -230,7 +237,7 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
   * 管理员进入【注册密钥管理】，可一键生成 15 分钟临时有效的一次性注册密钥，并发放给家人或朋友；
   * 家人/朋友凭借密钥即可注册独立的云盘账户，数据物理隔离，互不干扰。
 * **全自动 AI 深度赋能**：
-  * 只要在 `.env`（或 Windows 系统用户环境变量）中配置了 `DEEPSEEK_API_KEY`，网盘所有用户即可随时使用 **AI 知识库全库对话** 与 **文档一键深度提炼总结**，全自动流式打字输出，无需任何前端二次设置。
+  * 只要在 `.env` 或电脑系统环境变量中配置了 `DEEPSEEK_API_KEY` / `YUNPAN_DEEPSEEK_KEY`，网盘所有用户即可随时使用 **AI 知识库全库对话** 与 **文档一键深度提炼总结**，全自动流式打字输出，无需任何前端二次设置。
 * **全新升级「用户账号管理」与配额调控（管理员专属特权）**：
   * **权限绝对隔离**：管理员（`admin`）拥有全盘最高控制权，存储空间永久无限制；普通子账号无权查看或调用账号管理接口；
   * **自适应单行排版与动态调控**：管理员侧边栏独占显示【👥 用户账号管理】按钮，实时呈现所有用户（含已注册老用户）真实占用硬盘空间，支持随时在线调整配额（10GB、20GB、50GB、100GB、无限制或自定义大小）；
@@ -245,18 +252,21 @@ PUBLIC_ACCESS_URL=https://pan.yourdomain.com
 
 ---
 
-## 🔄 GitHub 云端同步与日常迭代
+## 🔄 GitHub 云端同步与日常免外网极速迭代
 
 详细协同逻辑与沙盒调试请参阅：👉 **[个人网盘后续开发与版本迭代指南.md](./个人网盘后续开发与版本迭代指南.md)**
 
 ```text
-【本地开发】修改代码 ──(双击 上传到GitHub(Windows).bat 或 (Mac).command)──> 【GitHub】 ──(双击 一键云端同步更新(Windows).bat 或 (Mac).command)──> 【服务器】3秒热更新
+【开发电脑】修改代码 ──(双击 一键上传更新到GitHub.bat)──> 【GitHub 云端】 ──(双击 一键从GitHub拉取更新.bat)──> 【各部署电脑】免外网秒级热更新
 ```
 
-1. **在本地修改代码后**：
-   双击运行 `上传到GitHub(Windows).bat`（Mac 电脑双击 `上传到GitHub(Mac).command`），自动暂存所有修改并安全推送到 GitHub 远程仓库（自动过滤 130MB 大体积 EXE 与个人隐私数据）。
-2. **在服务器 / 小主机上升效**：
-   双击运行 `一键云端同步更新(Windows).bat`（Mac 电脑双击 `一键云端同步更新(Mac).command`），自动拉取最新更新并热重启，数据零影响。
+1. **在开发机修改代码后（一键推送）**：
+   双击运行 **`一键上传更新到GitHub.bat`**（或 `上传到GitHub(Windows).bat` / Mac 版 `.command`），自动暂存代码修改并推送到 GitHub 远程仓库。`.gitignore` 会严格保护你的本地 `.env`、公网隧道凭证（`.cloudflared/`）与私人网盘数据，绝不外泄。
+2. **在其他任意已部署电脑上同步新功能（国内免外网智能测速拉取）**：
+   双击运行 **`一键从GitHub拉取更新.bat`**（或 `一键云端同步更新(Windows).bat` / Mac 版 `.command`）：
+   * **内置 4 大国内加速镜像池 + 毫秒级智能测速**：脚本内置 `gh-proxy.com`、`ghfast.top`、`ghproxy.net`、`gh.llkk.cc` 四大国内镜像源。首次运行会自动进行毫秒级 TCP 探活测速，挑出当前宽带下最快的国内节点完成拉取，并将最快节点自动记入本机 `.git/config`（`dpsir.fastMirror`），后续每次双击直接秒连最快节点，**全程无需开启 VPN/梯子**！
+   * **无 Git 环境自动兜底**：若目标电脑是通过 ZIP 解压部署（未安装 Git），拉取脚本会自动切换为国内镜像 HTTP ZIP 流式下载覆盖更新；
+   * **本地配置与数据 100% 零冲突破坏**：拉取更新仅升级网盘前端界面与后端核心代码，自动保留每台电脑各自的 `.env`（如各自的 API Key、各自的公网域名与数据盘路径），拉取后自动平滑热重启服务。
 
 ---
 
