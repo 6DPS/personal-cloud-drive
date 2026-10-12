@@ -31,6 +31,8 @@ OFFICIAL_URL="https://github.com/${REPO_PATH}.git"
 DEFAULT_MIRRORS=(
     "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
     "https://ghfast.top/https://github.com/${REPO_PATH}.git"
+    "https://ghproxy.net/https://github.com/${REPO_PATH}.git"
+    "https://gh.llkk.cc/https://github.com/${REPO_PATH}.git"
     "${OFFICIAL_URL}"
 )
 

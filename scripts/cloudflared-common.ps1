@@ -5,8 +5,10 @@ function Get-Cloudflared {
   $cloudflared = Join-Path $tools "cloudflared.exe"
   $officialUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
   $mirrors = @(
-    "https://ghfast.top/$officialUrl",
     "https://gh-proxy.com/$officialUrl",
+    "https://ghfast.top/$officialUrl",
+    "https://ghproxy.net/$officialUrl",
+    "https://gh.llkk.cc/$officialUrl",
     $officialUrl
   )
 

@@ -39,6 +39,8 @@ $officialRepoUrl = "https://github.com/$repoPath.git"
 $defaultMirrors = @(
     "https://gh-proxy.com/https://github.com/$repoPath.git",
     "https://ghfast.top/https://github.com/$repoPath.git",
+    "https://ghproxy.net/https://github.com/$repoPath.git",
+    "https://gh.llkk.cc/https://github.com/$repoPath.git",
     $officialRepoUrl
 )
 

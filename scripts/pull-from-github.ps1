@@ -41,11 +41,15 @@ $officialRepoUrl = "https://github.com/$repoPath.git"
 $defaultMirrors = @(
     "https://gh-proxy.com/https://github.com/$repoPath.git",
     "https://ghfast.top/https://github.com/$repoPath.git",
+    "https://ghproxy.net/https://github.com/$repoPath.git",
+    "https://gh.llkk.cc/https://github.com/$repoPath.git",
     $officialRepoUrl
 )
 $zipMirrors = @(
     "https://gh-proxy.com/https://github.com/$repoPath/archive/refs/heads/main.zip",
     "https://ghfast.top/https://github.com/$repoPath/archive/refs/heads/main.zip",
+    "https://ghproxy.net/https://github.com/$repoPath/archive/refs/heads/main.zip",
+    "https://gh.llkk.cc/https://github.com/$repoPath/archive/refs/heads/main.zip",
     "https://codeload.github.com/$repoPath/zip/refs/heads/main"
 )
 
