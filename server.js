@@ -1911,10 +1911,13 @@ async function ensureUserStorageQuota(userOrId, incomingBytes = 0) {
 
 function friendlySystemError(error, fallback = "操作失败") {
   if (!error) return fallback;
-  if (error.code === "ENOENT") return "路径不存在，请检查存储目录是否还在";
-  if (error.code === "EACCES" || error.code === "EPERM") return "没有权限访问这个路径，请检查文件夹权限";
-  if (error.code === "ENOSPC") return "磁盘空间不足，请释放空间后再试";
-  if (error.code === "EBUSY") return "文件正被其他程序占用，请稍后再试";
+  if (error.code === "EEXIST") return "当前目录下已存在同名文件或文件夹，请换一个名称";
+  if (error.code === "ENOENT") return "目标文件或文件夹不存在，请刷新页面后再试";
+  if (error.code === "EACCES" || error.code === "EPERM") return "没有权限执行此操作，请检查存储目录权限";
+  if (error.code === "ENOSPC") return "存储空间不足，请清理空间后再试";
+  if (error.code === "EBUSY") return "文件或文件夹正被占用，请稍后再试";
+  if (error.code === "ENOTEMPTY") return "文件夹不为空，无法直接执行此操作";
+  if (error.code === "ENAMETOOLONG" || error.code === "EINVAL") return "文件或文件夹名称格式不合法，请换一个名称";
   return error.message || fallback;
 }
 
@@ -4967,6 +4970,12 @@ app.post("/api/folder", requireAuth, async (req, res, next) => {
       return res.status(401).json({ error: "网盘登录密码错误" });
     }
     const target = path.join(parent, name);
+    if (fs.existsSync(target)) {
+      return res.status(409).json({
+        error: `当前目录下已存在同名文件夹“${name}”，请换一个名称`,
+        code: "EEXIST",
+      });
+    }
     await fsp.mkdir(target, { recursive: false });
     if (password.trim()) {
       const folderPath = webPath(parentRel, name);

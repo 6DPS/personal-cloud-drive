@@ -3162,6 +3162,9 @@ function friendlyErrorMessage(error, fallback = "操作失败") {
   if (code === "AI_OUTPUT_TRUNCATED") return "AI 联网思考内容过长，没能生成最终回答。请重新发送，或把问题拆短一点。";
   if (code === "AI_EMPTY_RESPONSE") return "AI 没有返回有效内容，请稍后重试，或换一种问法。";
   if (code === "FOLDER_LOCKED") return "这个文件位于未解锁的加密文件夹内，请先解锁文件夹后再访问。";
+  if (code === "EEXIST" || /^EEXIST:/i.test(message)) {
+    return message && !/^EEXIST:/i.test(message) ? message : "当前目录下已存在同名文件或文件夹，请换一个名称。";
+  }
   if (code === "ENOSPC") return "磁盘空间不足，请释放空间后再试。";
   if (code === "EACCES" || code === "EPERM") return "没有权限访问这个文件或文件夹，请检查存储目录权限。";
   if (code === "ENOENT") return "文件或文件夹不存在，请刷新后再试。";
@@ -3942,7 +3945,14 @@ async function askForFolderName() {
     description: "先输入文件夹名称，下一步可选择是否设置密码。",
     input: { label: "文件夹名称", value: "", placeholder: "请输入文件夹名称" },
     validate(value) {
-      if (!value.trim()) return "请输入文件夹名称";
+      const trimmed = (value || "").trim();
+      if (!trimmed) return "请输入文件夹名称";
+      if (/[<>:"/\\|?*]/.test(trimmed)) return "文件夹名称不能包含特殊字符 \\ / : * ? \" < > |";
+      const exists = Array.isArray(state.items) && state.items.some((item) => {
+        const existingName = String(item.displayName || item.name || "").trim();
+        return existingName.toLowerCase() === trimmed.toLowerCase();
+      });
+      if (exists) return `当前目录下已存在“${trimmed}”，请换一个名称`;
       return "";
     },
   });
