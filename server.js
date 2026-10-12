@@ -95,6 +95,10 @@ const requestContext = new AsyncLocalStorage();
 let accountsStore = { users: [] };
 let registrationKeyStore = { keys: [] };
 const folderPasswordStores = new Map();
+const DEFAULT_DETERMINISTIC_SECRET = crypto
+  .createHash("sha256")
+  .update(`dpsir-cloud-drive-session-v1:${SINGLE_USER_ID}`)
+  .digest("base64url");
 function readOrCreateSecret(filePath) {
   const envSecret = process.env.CLOUD_DRIVE_SESSION_SECRET;
   if (envSecret) return envSecret;
@@ -104,15 +108,15 @@ function readOrCreateSecret(filePath) {
       if (value) return value;
     }
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const value = crypto.randomBytes(32).toString("base64url");
-    fs.writeFileSync(filePath, `${value}\n`, { mode: 0o600 });
-    return value;
+    fs.writeFileSync(filePath, `${DEFAULT_DETERMINISTIC_SECRET}\n`, { mode: 0o600 });
+    return DEFAULT_DETERMINISTIC_SECRET;
   } catch (error) {
-    console.warn("Session secret file unavailable, using temporary in-memory secret:", error.message);
-    return crypto.randomBytes(32).toString("base64url");
+    return DEFAULT_DETERMINISTIC_SECRET;
   }
 }
 const SESSION_SECRET = readOrCreateSecret(SESSION_SECRET_FILE);
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_RENEW_THRESHOLD_MS = 25 * 24 * 60 * 60 * 1000;
 const UNLOCK_COOKIE_NAME = "pcd_unlock";
 const FOLDER_UNLOCK_TTL_MS = Number(process.env.FOLDER_UNLOCK_HOURS || 24 * 7) * 60 * 60 * 1000;
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 2048);
@@ -1060,16 +1064,29 @@ async function runAsUser(user, fn) {
   return requestContext.run({ user }, fn);
 }
 
+function signWithKey(value, secretKey) {
+  return crypto.createHmac("sha256", secretKey).update(value).digest("base64url");
+}
+
+function isValidSignature(value, signature) {
+  if (!value || !signature) return false;
+  if (safeCompare(sign(value), signature)) return true;
+  if (SESSION_SECRET !== DEFAULT_DETERMINISTIC_SECRET) {
+    return safeCompare(signWithKey(value, DEFAULT_DETERMINISTIC_SECRET), signature);
+  }
+  return false;
+}
+
 function createSessionToken(user) {
   const payload = JSON.stringify({
     userId: user.id,
     user: user.username,
     tokenVersion: Number(user.tokenVersion) || 0,
-    exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    exp: Date.now() + SESSION_TTL_MS,
     nonce: crypto.randomBytes(12).toString("base64url"),
   });
   const body = Buffer.from(payload).toString("base64url");
-  return `${body}.${sign(body)}`;
+  return `${body}.${signWithKey(body, DEFAULT_DETERMINISTIC_SECRET)}`;
 }
 
 function verifySessionToken(token) {
@@ -1084,10 +1101,10 @@ function safeCompare(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-function sessionUser(token) {
-  if (!token || !token.includes(".")) return false;
+function parseSessionToken(token) {
+  if (!token || !token.includes(".")) return null;
   const [body, signature] = token.split(".");
-  if (!body || !signature || !safeCompare(sign(body), signature)) return false;
+  if (!body || !signature || !isValidSignature(body, signature)) return null;
 
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
@@ -1103,10 +1120,15 @@ function sessionUser(token) {
     if (payloadTokenVer !== userTokenVer) {
       return null; // 会话已因密码重置而失效，要求使用最新密码重新鉴权
     }
-    return user;
+    return { user, payload };
   } catch {
     return null;
   }
+}
+
+function sessionUser(token) {
+  const parsed = parseSessionToken(token);
+  return parsed ? parsed.user : null;
 }
 
 function createDownloadToken(filePath, userId = currentUserId()) {
@@ -1185,9 +1207,13 @@ function requestSessionToken(req) {
 }
 
 async function requireAuth(req, res, next) {
-  const user = sessionUser(requestSessionToken(req));
-  if (user) {
+  const parsed = parseSessionToken(requestSessionToken(req));
+  if (parsed?.user) {
+    const { user, payload } = parsed;
     req.user = user;
+    if (payload.exp - Date.now() < SESSION_RENEW_THRESHOLD_MS) {
+      setSessionCookie(res, createSessionToken(user));
+    }
     try {
       await ensureUserStorage(user);
       await loadFolderPasswordStore(user.id);
@@ -1214,9 +1240,10 @@ function appendSetCookie(res, cookieValue) {
 
 function setSessionCookie(res, token) {
   const secure = false;
+  const maxAgeSec = Math.floor(SESSION_TTL_MS / 1000);
   appendSetCookie(
     res,
-    `pcd_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${
+    `pcd_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSec}${
       secure ? "; Secure" : ""
     }`
   );
