@@ -1,6 +1,6 @@
 # ==============================================================================
 # DPSir Personal Cloud Drive - GitHub Pull & Hot-Reload Helper
-# Built-in Domestic Mirror Acceleration (No VPN / Foreign Network Required)
+# Smart Domestic Mirror Acceleration with Fastest-Mirror Memory
 # ==============================================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -10,6 +10,24 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
 
+function Test-EndpointFast {
+    param([string]$Url, [int]$TimeoutMs = 2500)
+    try {
+        $uri = [System.Uri]$Url
+        $client = [System.Net.Sockets.TcpClient]::new()
+        $async = $client.BeginConnect($uri.Host, 443, $null, $null)
+        if (-not $async.AsyncWaitHandle.WaitOne($TimeoutMs)) {
+            $client.Close()
+            return $false
+        }
+        $client.EndConnect($async)
+        $client.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host "    DPSir Personal Cloud Drive - GitHub Cloud Sync & Update    " -ForegroundColor Yellow
@@ -18,7 +36,7 @@ Write-Host ""
 
 $repoPath = "6DPS/personal-cloud-drive"
 $officialRepoUrl = "https://github.com/$repoPath.git"
-$gitMirrors = @(
+$defaultMirrors = @(
     "https://gh-proxy.com/https://github.com/$repoPath.git",
     "https://ghfast.top/https://github.com/$repoPath.git",
     $officialRepoUrl
@@ -44,11 +62,30 @@ if ($hasGit) {
         git remote add origin $officialRepoUrl 2>$null
     }
 
+    # Prioritize previously remembered fastest mirror on this computer
+    $savedFastMirror = (git config --local dpsir.fastMirror 2>$null)
+    $gitMirrors = @()
+    if ($savedFastMirror -and $savedFastMirror.Trim()) {
+        $savedFastMirror = $savedFastMirror.Trim()
+        $gitMirrors += $savedFastMirror
+        Write-Host "[SMART-MIRROR] Using remembered fastest mirror on this PC: $savedFastMirror" -ForegroundColor Cyan
+    }
+    foreach ($m in $defaultMirrors) {
+        if ($gitMirrors -notcontains $m) {
+            $gitMirrors += $m
+        }
+    }
+
     Write-Host "[1/3] Pulling latest updates from GitHub (via domestic mirror acceleration)..." -ForegroundColor Yellow
     git rev-parse --verify HEAD 2>$null | Out-Null
     $isFirstSync = ($LASTEXITCODE -ne 0)
+
     foreach ($endpoint in $gitMirrors) {
-        Write-Host "  -> Trying endpoint: $endpoint" -ForegroundColor Gray
+        Write-Host "  -> Checking endpoint: $endpoint" -ForegroundColor Gray
+        if (-not (Test-EndpointFast -Url $endpoint -TimeoutMs 2500)) {
+            Write-Host "  [SKIP] Endpoint unreachable (2.5s fast check), switching to next mirror..." -ForegroundColor Yellow
+            continue
+        }
         if ($isFirstSync) {
             Write-Host "  [INFO] First-time repository sync (~55MB including cloudflared). Downloading with live progress:" -ForegroundColor Cyan
             git -c http.sslVerify=false -c http.connectTimeout=5 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --depth=1 --progress $endpoint main
@@ -60,11 +97,12 @@ if ($hasGit) {
             git reset --hard FETCH_HEAD
             git update-ref refs/remotes/origin/main FETCH_HEAD 2>$null
             git branch --set-upstream-to=origin/main main 2>$null | Out-Null
-            Write-Host "  [OK] Synchronized latest code from: $endpoint" -ForegroundColor Green
+            git config --local dpsir.fastMirror "$endpoint" 2>$null
+            Write-Host "  [OK] Synchronized latest code & locked fastest mirror: $endpoint" -ForegroundColor Green
             $syncSuccess = $true
             break
         } else {
-            Write-Host "  [WARN] Endpoint timed out or unreachable, switching to next mirror..." -ForegroundColor Yellow
+            Write-Host "  [WARN] Endpoint timed out or interrupted, switching to next mirror..." -ForegroundColor Yellow
         }
     }
 } else {
@@ -79,6 +117,7 @@ if (-not $syncSuccess) {
 
     foreach ($zipUrl in $zipMirrors) {
         try {
+            if (-not (Test-EndpointFast -Url $zipUrl -TimeoutMs 2500)) { continue }
             Write-Host "  -> Downloading archive: $zipUrl" -ForegroundColor Gray
             if (Test-Path -LiteralPath $tmpZip) { Remove-Item -LiteralPath $tmpZip -Force -ErrorAction SilentlyContinue }
             Invoke-WebRequest -Uri $zipUrl -OutFile $tmpZip -TimeoutSec 30 -UseBasicParsing

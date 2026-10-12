@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # DPSir Personal Cloud Drive - macOS GitHub Cloud Sync & Hot-Reload Helper
-# Built-in Domestic Mirror Acceleration (No VPN / Foreign Network Required)
+# Smart Domestic Mirror Acceleration with Fastest-Mirror Memory
 # ==============================================================================
 
 SOURCE="${BASH_SOURCE[0]}"
@@ -28,7 +28,7 @@ echo ""
 
 REPO_PATH="6DPS/personal-cloud-drive"
 OFFICIAL_URL="https://github.com/${REPO_PATH}.git"
-GIT_MIRRORS=(
+DEFAULT_MIRRORS=(
     "https://gh-proxy.com/https://github.com/${REPO_PATH}.git"
     "https://ghfast.top/https://github.com/${REPO_PATH}.git"
     "${OFFICIAL_URL}"
@@ -43,16 +43,33 @@ if ! git remote get-url origin >/dev/null 2>&1; then
     git remote add origin "$OFFICIAL_URL" 2>/dev/null
 fi
 
+SAVED_MIRROR=$(git config --local dpsir.fastMirror 2>/dev/null)
+GIT_MIRRORS=()
+if [ -n "$SAVED_MIRROR" ]; then
+    GIT_MIRRORS+=("$SAVED_MIRROR")
+    echo -e "${CYAN}[SMART-MIRROR] Using remembered fastest mirror on this Mac: ${SAVED_MIRROR}${NC}"
+fi
+for M in "${DEFAULT_MIRRORS[@]}"; do
+    if [[ ! " ${GIT_MIRRORS[*]} " =~ " ${M} " ]]; then
+        GIT_MIRRORS+=("$M")
+    fi
+done
+
 echo -e "${YELLOW}[1/3] Pulling latest updates from GitHub (via domestic mirror acceleration)...${NC}"
 SYNC_OK=false
 for ENDPOINT in "${GIT_MIRRORS[@]}"; do
-    echo -e "${GRAY}  -> Trying endpoint: ${ENDPOINT}${NC}"
+    echo -e "${GRAY}  -> Checking endpoint: ${ENDPOINT}${NC}"
+    if ! curl -sI -m 3 "$ENDPOINT" >/dev/null 2>&1; then
+        echo -e "${YELLOW}  [SKIP] Endpoint unreachable (3s fast check), switching to next mirror...${NC}"
+        continue
+    fi
     if git -c http.sslVerify=false -c http.connectTimeout=5 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --progress "$ENDPOINT" main; then
         git checkout -f -B main FETCH_HEAD
         git reset --hard FETCH_HEAD
         git update-ref refs/remotes/origin/main FETCH_HEAD 2>/dev/null
         git branch --set-upstream-to=origin/main main >/dev/null 2>&1
-        echo -e "${GREEN}  [OK] Synchronized latest code from: ${ENDPOINT}${NC}"
+        git config --local dpsir.fastMirror "$ENDPOINT" 2>/dev/null
+        echo -e "${GREEN}  [OK] Synchronized latest code & locked fastest mirror: ${ENDPOINT}${NC}"
         SYNC_OK=true
         break
     else

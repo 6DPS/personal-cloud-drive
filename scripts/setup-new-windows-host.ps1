@@ -207,6 +207,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
                 git reset --hard FETCH_HEAD 2>$null | Out-Null
                 git update-ref refs/remotes/origin/main FETCH_HEAD 2>$null
                 git branch --set-upstream-to=origin/main main 2>$null | Out-Null
+                git config --local dpsir.fastMirror "$ep" 2>$null
                 break
             }
         }
