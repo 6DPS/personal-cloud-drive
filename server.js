@@ -48,7 +48,8 @@ loadDotEnv();
 const RUNTIME_LOG_DIR = path.join(__dirname, "logs");
 const PORT = Number(process.env.PORT || 8081);
 const HOST = process.env.HOST || "0.0.0.0";
-const PUBLIC_ACCESS_URL = process.env.PUBLIC_ACCESS_URL || "";
+const RAW_PUBLIC_ACCESS_URL = (process.env.PUBLIC_ACCESS_URL || "").trim();
+const PUBLIC_ACCESS_URL = /^https?:\/\/pan\.yourdomain\.com\/?$/i.test(RAW_PUBLIC_ACCESS_URL) ? "" : RAW_PUBLIC_ACCESS_URL;
 const PUBLIC_ROOT = path.join(__dirname, "public");
 const ADMIN_USER = process.env.CLOUD_DRIVE_USER || "admin";
 const defaultStorageFallback = () => {
@@ -1993,6 +1994,16 @@ function auditStorageIsolation() {
 }
 
 async function checkPublicAccess() {
+  if (!PUBLIC_ACCESS_URL) {
+    return {
+      ok: true,
+      configured: false,
+      status: 0,
+      latencyMs: 0,
+      url: "",
+      message: "局域网模式（未配置公网域名）",
+    };
+  }
   const now = Date.now();
   if (publicHealthCache.data && now - publicHealthCache.at < PUBLIC_HEALTH_CACHE_MS) {
     return publicHealthCache.data;

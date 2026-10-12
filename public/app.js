@@ -2715,9 +2715,15 @@ function renderAccessInfo(data) {
     const minutes = Number.isFinite(Number(active.windowMinutes)) ? Number(active.windowMinutes) : 10;
     activeClientCount.textContent = `近 ${minutes} 分钟访问 IP：${count}`;
   }
-  if (publicAccessLink && data.publicUrl) {
-    publicAccessLink.href = withAuthParam(data.publicUrl);
-    publicAccessLink.textContent = `公网备用：${data.publicUrl}`;
+  if (publicAccessLink) {
+    if (data.publicUrl) {
+      publicAccessLink.classList.remove("hidden");
+      publicAccessLink.href = withAuthParam(data.publicUrl);
+      publicAccessLink.textContent = `公网备用：${data.publicUrl}`;
+    } else {
+      publicAccessLink.classList.add("hidden");
+      publicAccessLink.removeAttribute("href");
+    }
   }
   if (!lanAccessLinks) return;
   lanAccessLinks.innerHTML = "";
@@ -2856,23 +2862,25 @@ async function autoSwitchToLan(data) {
 }
 
 function publicFallbackUrl() {
-  const href = publicAccessLink?.getAttribute("href") || publicAccessLink?.href || "";
+  const href = publicAccessLink?.getAttribute("href") || "";
+  if (!href || href === "#") return "";
   try {
-    const url = new URL(href || window.location.origin, window.location.origin);
+    const url = new URL(href, window.location.origin);
     url.pathname = "/";
     url.search = "";
     return url.toString();
   } catch {
-    return window.location.origin + "/";
+    return "";
   }
 }
 
 function switchToPublicIfLanFailed() {
-  if (!sessionToken() || !isLanHost(window.location.hostname)) return;
+  const fallback = publicFallbackUrl();
+  if (!fallback || !sessionToken() || !isLanHost(window.location.hostname)) return;
   const lastSwitch = Number(sessionStorage.getItem(LAN_AUTO_SWITCH_KEY) || 0);
   if (Date.now() - lastSwitch < 10000) return;
   sessionStorage.setItem(LAN_AUTO_SWITCH_KEY, String(Date.now()));
-  window.location.replace(withAuthParam(publicFallbackUrl()));
+  window.location.replace(withAuthParam(fallback));
 }
 
 async function fetchAccessInfo() {
