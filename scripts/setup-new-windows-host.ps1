@@ -186,9 +186,32 @@ if (Test-Path -LiteralPath $envFilePath) {
 }
 Write-Host "  [OK] Storage path locked: $currentStorage" -ForegroundColor Green
 
-# 3. Check application dependencies (node_modules)
+# 3. Check application dependencies (node_modules) & Git domestic mirror binding
 Write-Host ""
-Write-Host "[3/5] Checking application dependencies..." -ForegroundColor Green
+Write-Host "[3/5] Checking application dependencies & cloud sync channel..." -ForegroundColor Green
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    if (-not (Test-Path -LiteralPath (Join-Path $root ".git"))) {
+        git init 2>$null | Out-Null
+    }
+    $originUrl = git remote get-url origin 2>$null
+    if (-not $originUrl) {
+        git remote add origin "https://github.com/6DPS/personal-cloud-drive.git" 2>$null
+    }
+    git rev-parse --verify HEAD 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  Binding GitHub domestic mirror channel for future one-click updates..." -ForegroundColor Cyan
+        foreach ($ep in @("https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git", "https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive.git")) {
+            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch $ep main 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                git checkout -f -B main FETCH_HEAD 2>$null | Out-Null
+                git reset --hard FETCH_HEAD 2>$null | Out-Null
+                git update-ref refs/remotes/origin/main FETCH_HEAD 2>$null
+                git branch --set-upstream-to=origin/main main 2>$null | Out-Null
+                break
+            }
+        }
+    }
+}
 & npm config set registry https://registry.npmmirror.com 2>$null
 $modulesPath = Join-Path $root "node_modules"
 if (-not (Test-Path -LiteralPath $modulesPath)) {
