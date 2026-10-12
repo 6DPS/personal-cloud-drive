@@ -58,11 +58,19 @@ if ($lanTask) {
     }
 }
 
+$cfConfig = Join-Path $root ".cloudflared\config.yml"
 $cfTask = Get-ScheduledTask -TaskName "DPSir Personal Cloud Drive Cloudflare Tunnel" -ErrorAction SilentlyContinue
-if ($cfTask) {
-    Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive Cloudflare Tunnel" -ErrorAction SilentlyContinue
+if (Test-Path -LiteralPath $cfConfig) {
+    if ($cfTask) {
+        Start-ScheduledTask -TaskName "DPSir Personal Cloud Drive Cloudflare Tunnel" -ErrorAction SilentlyContinue
+    } else {
+        $cfVbs = Join-Path $PSScriptRoot "run-cloudflare-domain-silent.vbs"
+        if (Test-Path -LiteralPath $cfVbs) {
+            Start-Process "wscript.exe" -ArgumentList "`"$cfVbs`"" -WorkingDirectory $root
+        }
+    }
 } else {
-    Write-Host "  [INFO] Public Cloudflare tunnel auto-start is disabled on this PC (local/LAN mode)." -ForegroundColor Cyan
+    Write-Host "  [INFO] No Cloudflare tunnel config (.cloudflared\config.yml) on this host. Running in LAN mode." -ForegroundColor Cyan
 }
 
 Write-Host "  [OK] Startup commands issued. Waiting for network readiness (approx. 4 seconds)..." -ForegroundColor Green

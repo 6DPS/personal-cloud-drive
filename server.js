@@ -95,10 +95,6 @@ const requestContext = new AsyncLocalStorage();
 let accountsStore = { users: [] };
 let registrationKeyStore = { keys: [] };
 const folderPasswordStores = new Map();
-const DEFAULT_DETERMINISTIC_SECRET = crypto
-  .createHash("sha256")
-  .update(`dpsir-cloud-drive-session-v1:${SINGLE_USER_ID}`)
-  .digest("base64url");
 function readOrCreateSecret(filePath) {
   const envSecret = process.env.CLOUD_DRIVE_SESSION_SECRET;
   if (envSecret) return envSecret;
@@ -108,10 +104,12 @@ function readOrCreateSecret(filePath) {
       if (value) return value;
     }
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, `${DEFAULT_DETERMINISTIC_SECRET}\n`, { mode: 0o600 });
-    return DEFAULT_DETERMINISTIC_SECRET;
+    const value = crypto.randomBytes(32).toString("base64url");
+    fs.writeFileSync(filePath, `${value}\n`, { mode: 0o600 });
+    return value;
   } catch (error) {
-    return DEFAULT_DETERMINISTIC_SECRET;
+    console.warn("Session secret file unavailable, using temporary in-memory secret:", error.message);
+    return crypto.randomBytes(32).toString("base64url");
   }
 }
 const SESSION_SECRET = readOrCreateSecret(SESSION_SECRET_FILE);
@@ -1064,19 +1062,6 @@ async function runAsUser(user, fn) {
   return requestContext.run({ user }, fn);
 }
 
-function signWithKey(value, secretKey) {
-  return crypto.createHmac("sha256", secretKey).update(value).digest("base64url");
-}
-
-function isValidSignature(value, signature) {
-  if (!value || !signature) return false;
-  if (safeCompare(sign(value), signature)) return true;
-  if (SESSION_SECRET !== DEFAULT_DETERMINISTIC_SECRET) {
-    return safeCompare(signWithKey(value, DEFAULT_DETERMINISTIC_SECRET), signature);
-  }
-  return false;
-}
-
 function createSessionToken(user) {
   const payload = JSON.stringify({
     userId: user.id,
@@ -1086,7 +1071,7 @@ function createSessionToken(user) {
     nonce: crypto.randomBytes(12).toString("base64url"),
   });
   const body = Buffer.from(payload).toString("base64url");
-  return `${body}.${signWithKey(body, DEFAULT_DETERMINISTIC_SECRET)}`;
+  return `${body}.${sign(body)}`;
 }
 
 function verifySessionToken(token) {
@@ -1104,7 +1089,7 @@ function safeCompare(a, b) {
 function parseSessionToken(token) {
   if (!token || !token.includes(".")) return null;
   const [body, signature] = token.split(".");
-  if (!body || !signature || !isValidSignature(body, signature)) return null;
+  if (!body || !signature || !safeCompare(sign(body), signature)) return null;
 
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
@@ -4600,8 +4585,16 @@ app.post("/api/folder-unlock-session/reset", requireAuth, (req, res) => {
 
 app.get("/api/me", (req, res) => {
   const token = requestSessionToken(req);
-  const user = sessionUser(token);
-  res.json({ authenticated: Boolean(user), user: publicUser(user), token: user ? token : "" });
+  const parsed = parseSessionToken(token);
+  const user = parsed?.user || null;
+  let activeToken = user ? token : "";
+  if (user) {
+    if (!getCookie(req, "pcd_session") || (parsed.payload.exp - Date.now() < SESSION_RENEW_THRESHOLD_MS)) {
+      activeToken = createSessionToken(user);
+      setSessionCookie(res, activeToken);
+    }
+  }
+  res.json({ authenticated: Boolean(user), user: publicUser(user), token: activeToken });
 });
 
 app.get("/api/user/avatar", (req, res) => {

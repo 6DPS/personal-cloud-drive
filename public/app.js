@@ -3117,13 +3117,18 @@ function startAccessInfoRefresh() {
 }
 
 function sessionToken() {
-  return sessionStorage.getItem(SESSION_TOKEN_KEY) || state.token || "";
+  return sessionStorage.getItem(SESSION_TOKEN_KEY) || localStorage.getItem(SESSION_TOKEN_KEY) || state.token || "";
 }
 
 function setSessionToken(token) {
   state.token = token || "";
-  if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-  else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  if (token) {
+    sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  }
 }
 
 function restoreSessionTokenFromUrl() {
