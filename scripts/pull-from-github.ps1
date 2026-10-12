@@ -45,9 +45,16 @@ if ($hasGit) {
     }
 
     Write-Host "[1/3] Pulling latest updates from GitHub (via domestic mirror acceleration)..." -ForegroundColor Yellow
+    git rev-parse --verify HEAD 2>$null | Out-Null
+    $isFirstSync = ($LASTEXITCODE -ne 0)
     foreach ($endpoint in $gitMirrors) {
         Write-Host "  -> Trying endpoint: $endpoint" -ForegroundColor Gray
-        git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch $endpoint main
+        if ($isFirstSync) {
+            Write-Host "  [INFO] First-time repository sync (~55MB including cloudflared). Downloading with live progress:" -ForegroundColor Cyan
+            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 fetch --depth=1 --progress $endpoint main
+        } else {
+            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch --progress $endpoint main
+        }
         if ($LASTEXITCODE -eq 0) {
             git checkout -f -B main FETCH_HEAD
             git reset --hard FETCH_HEAD

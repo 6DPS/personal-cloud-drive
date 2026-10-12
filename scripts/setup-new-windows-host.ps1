@@ -201,7 +201,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  Binding GitHub domestic mirror channel for future one-click updates..." -ForegroundColor Cyan
         foreach ($ep in @("https://ghfast.top/https://github.com/6DPS/personal-cloud-drive.git", "https://gh-proxy.com/https://github.com/6DPS/personal-cloud-drive.git")) {
-            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=15 fetch $ep main 2>$null
+            git -c http.sslVerify=false -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 fetch --depth=1 --progress $ep main
             if ($LASTEXITCODE -eq 0) {
                 git checkout -f -B main FETCH_HEAD 2>$null | Out-Null
                 git reset --hard FETCH_HEAD 2>$null | Out-Null
