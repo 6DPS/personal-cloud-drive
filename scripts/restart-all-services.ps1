@@ -73,31 +73,44 @@ if (Test-Path -LiteralPath $cfConfig) {
     Write-Host "  [INFO] No Cloudflare tunnel config (.cloudflared\config.yml) on this host. Running in LAN mode." -ForegroundColor Cyan
 }
 
-Write-Host "  [OK] Startup commands issued. Waiting for network readiness (approx. 4 seconds)..." -ForegroundColor Green
-Start-Sleep -Seconds 4
+Write-Host "  [OK] Startup commands issued. Verifying service readiness..." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "[3/3] Running health checks on local and public endpoints..." -ForegroundColor Yellow
 
 $localOk = $false
-try {
-    $resp1 = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/me" -UseBasicParsing -TimeoutSec 4 -ErrorAction Stop
-    if ($resp1.StatusCode -eq 200) { $localOk = $true }
-} catch {}
+for ($i = 0; $i -lt 8; $i++) {
+    try {
+        $resp1 = Invoke-WebRequest -Uri "http://127.0.0.1:8081/api/me" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+        if ($resp1.StatusCode -eq 200) { $localOk = $true; break }
+    } catch {}
+    Start-Sleep -Milliseconds 800
+}
 
 $publicOk = $false
-try {
-    $publicTarget = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "https://pan.yourdomain.com" }
-    if ($env:PUBLIC_ACCESS_URL) {
-        $resp2 = Invoke-WebRequest -Uri "$publicTarget/api/me" -UseBasicParsing -TimeoutSec 6 -ErrorAction SilentlyContinue
-        if ($resp2.StatusCode -eq 200) { $publicOk = $true }
+$publicTarget = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL.Trim() } else { "" }
+if ($publicTarget -and $publicTarget -ne "https://pan.yourdomain.com") {
+    Write-Host -NoNewline "  Checking public tunnel ($publicTarget)" -ForegroundColor Cyan
+    for ($i = 0; $i -lt 8; $i++) {
+        try {
+            $resp2 = Invoke-WebRequest -Uri "$publicTarget/api/me" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            if ($resp2.StatusCode -eq 200) {
+                $publicOk = $true
+                break
+            }
+        } catch {}
+        Write-Host -NoNewline "." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
     }
-} catch {}
+    Write-Host ""
+}
 
 Write-Host ""
 Write-Host "===============================================================" -ForegroundColor Cyan
 if ($localOk -and $publicOk) {
     Write-Host "   [OK] All cloud drive services restarted and 100% online!    " -ForegroundColor Green
+} elseif ($localOk -and -not $publicTarget) {
+    Write-Host "   [OK] Local LAN cloud drive service is 100% online!          " -ForegroundColor Green
 } elseif ($localOk) {
     Write-Host "   [OK] Local service is online; public tunnel is connecting..." -ForegroundColor Yellow
 } else {
@@ -105,11 +118,11 @@ if ($localOk -and $publicOk) {
 }
 Write-Host "===============================================================" -ForegroundColor Cyan
 Write-Host ""
-$domainStr = if ($env:PUBLIC_ACCESS_URL) { $env:PUBLIC_ACCESS_URL } else { "Not configured" }
+$domainStr = if ($publicTarget) { $publicTarget } else { "Not configured (LAN mode)" }
 $localStatus = if ($localOk) { "ONLINE [OK]" } else { "STARTING..." }
-$publicStatus = if ($publicOk) { "ONLINE [OK]" } else { "CONNECTING..." }
+$publicStatus = if ($publicOk) { "ONLINE [OK]" } elseif ($publicTarget) { "CONNECTING..." } else { "DISABLED" }
 Write-Host "  1. Local LAN URL : http://127.0.0.1:8081  --> $localStatus" -ForegroundColor $(if ($localOk) { "Green" } else { "Yellow" })
-Write-Host "  2. Public Domain : $domainStr  --> $publicStatus" -ForegroundColor $(if ($publicOk) { "Green" } else { "Yellow" })
+Write-Host "  2. Public Domain : $domainStr  --> $publicStatus" -ForegroundColor $(if ($publicOk) { "Green" } elseif ($publicTarget) { "Yellow" } else { "Gray" })
 Write-Host ""
 Write-Host "You can now return to your browser and press [F5] to refresh." -ForegroundColor Cyan
 Write-Host ""
