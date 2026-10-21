@@ -172,7 +172,47 @@ process.on("uncaughtException", (error) => {
   exitAfterFatal("uncaughtException", error);
 });
 
+const NON_FATAL_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "EPIPE",
+  "ERR_STREAM_PREMATURE_CLOSE",
+  "ECANCELED",
+  "ECONNABORTED",
+  "ETIMEDOUT",
+]);
+
+function isNonFatalNetworkOrClientError(error) {
+  if (!error) return false;
+  const code = error.code || error.cause?.code;
+  if (code && NON_FATAL_ERROR_CODES.has(code)) return true;
+  const name = error.name || error.cause?.name;
+  if (name === "AbortError") return true;
+  const msg = String(error.message || error || "").toLowerCase();
+  if (
+    msg.includes("premature close") ||
+    msg.includes("client closed") ||
+    msg.includes("socket hang up") ||
+    msg.includes("aborted") ||
+    msg.includes("request ended abruptly") ||
+    msg.includes("stream canceled by remote")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 process.on("unhandledRejection", (reason) => {
+  if (isNonFatalNetworkOrClientError(reason)) {
+    const detail = reason?.stack || reason?.message || String(reason);
+    console.warn(`[Safe Guard] 忽略非致命客户端网络中断/流关闭：${detail.split("\n")[0]}`);
+    try {
+      appendRuntimeLogSync(
+        path.join(RUNTIME_LOG_DIR, "server-warnings.log"),
+        `[${new Date().toISOString()}] Ignored non-fatal unhandledRejection: ${detail}\n\n`
+      );
+    } catch {}
+    return;
+  }
   exitAfterFatal("unhandledRejection", reason);
 });
 const SEARCH_MAX_ENTRIES = Number(process.env.SEARCH_MAX_ENTRIES || 5000);
@@ -546,16 +586,72 @@ function publicRegistrationKey(record) {
   };
 }
 
-async function saveRegistrationKeyStore() {
-  await fsp.mkdir(path.dirname(REGISTRATION_KEYS_FILE), { recursive: true });
-  const tmpPath = `${REGISTRATION_KEYS_FILE}.tmp`;
-  await fsp.writeFile(tmpPath, JSON.stringify(registrationKeyStore, null, 2), "utf8");
-  await fsp.rename(tmpPath, REGISTRATION_KEYS_FILE);
+const fileWriteQueues = new Map();
+
+async function safeAtomicWriteJson(filePath, data, options = {}) {
+  const previousPromise = fileWriteQueues.get(filePath) || Promise.resolve();
+  let currentResolve;
+  const currentPromise = new Promise((resolve) => {
+    currentResolve = resolve;
+  });
+  fileWriteQueues.set(filePath, previousPromise.then(() => currentPromise, () => currentPromise));
+
   try {
-    await fsp.copyFile(REGISTRATION_KEYS_FILE, `${REGISTRATION_KEYS_FILE}.bak`);
-  } catch (err) {
-    console.warn("保存注册密钥备份镜像失败：", err.message);
+    await previousPromise.catch(() => {});
+    await fsp.mkdir(path.dirname(filePath), { recursive: true });
+    const content = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    const randSuffix = Math.random().toString(36).slice(2, 8);
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.${randSuffix}.tmp`;
+
+    await fsp.writeFile(tmpPath, content, "utf8");
+
+    // Windows rename retry with backoff for EBUSY/EPERM
+    let renamed = false;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await fsp.rename(tmpPath, filePath);
+        renamed = true;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (err.code === "EBUSY" || err.code === "EPERM") {
+          await new Promise((r) => setTimeout(r, attempt * 40));
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!renamed) {
+      try {
+        await fsp.copyFile(tmpPath, filePath);
+        await fsp.unlink(tmpPath).catch(() => {});
+        renamed = true;
+      } catch (copyErr) {
+        await fsp.unlink(tmpPath).catch(() => {});
+        throw lastErr || copyErr;
+      }
+    }
+
+    if (options.backup !== false) {
+      try {
+        await fsp.copyFile(filePath, `${filePath}.bak`);
+      } catch (err) {
+        if (options.warnBackup !== false) {
+          console.warn(`[Safe Guard] 保存备份镜像失败 (${path.basename(filePath)}): ${err.message}`);
+        }
+      }
+    }
+  } finally {
+    currentResolve();
+    if (fileWriteQueues.get(filePath) === currentPromise) {
+      fileWriteQueues.delete(filePath);
+    }
   }
+}
+
+async function saveRegistrationKeyStore() {
+  await safeAtomicWriteJson(REGISTRATION_KEYS_FILE, registrationKeyStore);
 }
 
 async function loadRegistrationKeyStore() {
@@ -744,13 +840,7 @@ async function readTrashMeta(userId) {
 
 async function writeTrashMeta(userId, items) {
   const metaFile = userTrashMetaFile(userId);
-  await fsp.mkdir(path.dirname(metaFile), { recursive: true });
-  const tmp = `${metaFile}.tmp`;
-  await fsp.writeFile(tmp, JSON.stringify(items, null, 2), "utf8");
-  await fsp.rename(tmp, metaFile);
-  try {
-    await fsp.copyFile(metaFile, `${metaFile}.bak`);
-  } catch {}
+  await safeAtomicWriteJson(metaFile, items);
 }
 
 async function moveToTrash(userId, relPath, sourceFullPath, stat) {
@@ -898,6 +988,12 @@ setInterval(() => {
   performSystemBackup().catch(() => {});
 }, 24 * 60 * 60 * 1000).unref();
 
+// 启动 12 小时定期自洁守护（自动清理超 30 天回收站、孤儿分片会话、预览缓存）
+setInterval(() => {
+  cleanupExpiredUploadSessionsForAllUsers().catch(() => {});
+  cleanupPreviewCacheForAllUsers().catch(() => {});
+}, 12 * 60 * 60 * 1000).unref();
+
 async function readShares() {
   try {
     if (!fs.existsSync(SHARES_FILE)) return [];
@@ -921,15 +1017,7 @@ async function readShares() {
 }
 
 async function writeShares(items) {
-  await fsp.mkdir(path.dirname(SHARES_FILE), { recursive: true });
-  const tmp = `${SHARES_FILE}.tmp`;
-  await fsp.writeFile(tmp, JSON.stringify(items, null, 2), "utf8");
-  await fsp.rename(tmp, SHARES_FILE);
-  try {
-    await fsp.copyFile(SHARES_FILE, `${SHARES_FILE}.bak`);
-  } catch (err) {
-    console.warn("保存分享备份镜像失败：", err.message);
-  }
+  await safeAtomicWriteJson(SHARES_FILE, items);
 }
 
 function publicUser(user) {
@@ -946,15 +1034,7 @@ function publicUser(user) {
 }
 
 async function saveAccountsStore() {
-  await fsp.mkdir(path.dirname(ACCOUNTS_FILE), { recursive: true });
-  const tmpPath = `${ACCOUNTS_FILE}.tmp`;
-  await fsp.writeFile(tmpPath, JSON.stringify(accountsStore, null, 2), "utf8");
-  await fsp.rename(tmpPath, ACCOUNTS_FILE);
-  try {
-    await fsp.copyFile(ACCOUNTS_FILE, `${ACCOUNTS_FILE}.bak`);
-  } catch (err) {
-    console.warn("保存账号备份镜像失败：", err.message);
-  }
+  await safeAtomicWriteJson(ACCOUNTS_FILE, accountsStore);
 }
 
 async function purgeUserData(userId) {
@@ -1415,10 +1495,7 @@ async function loadFolderPasswordStore(userId = currentUserId()) {
 
 async function saveFolderPasswordStore() {
   const filePath = currentFolderPasswordFile();
-  await fsp.mkdir(path.dirname(filePath), { recursive: true });
-  const tmpPath = `${filePath}.tmp`;
-  await fsp.writeFile(tmpPath, JSON.stringify(getFolderPasswordStore(), null, 2), "utf8");
-  await fsp.rename(tmpPath, filePath);
+  await safeAtomicWriteJson(filePath, getFolderPasswordStore(), { backup: false });
 }
 
 function getFolderPasswordStore() {
@@ -1897,7 +1974,26 @@ function formatQuotaSize(bytes) {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
+const MIN_HOST_DISK_RESERVE_BYTES = Number(process.env.MIN_HOST_DISK_RESERVE_MB || 2048) * 1024 * 1024;
+
+async function ensurePhysicalDiskSpace(incomingBytes = 0) {
+  const vol = await storageVolumeBytes(STORAGE_BASE_ROOT);
+  if (!vol || !Number.isFinite(vol.availableBytes)) return;
+  const needed = Number(incomingBytes || 0);
+  if (vol.availableBytes - needed < MIN_HOST_DISK_RESERVE_BYTES) {
+    const availableText = formatQuotaSize(vol.availableBytes);
+    const reserveText = formatQuotaSize(MIN_HOST_DISK_RESERVE_BYTES);
+    const error = new Error(
+      `宿主机物理存储空间告急（仅剩 ${availableText}，低于安全保护水位 ${reserveText}），系统已自动暂停写入以保护服务器安全，请及时清理服务器磁盘。`
+    );
+    error.status = 507;
+    error.code = "PHYSICAL_DISK_FULL";
+    throw error;
+  }
+}
+
 async function ensureUserStorageQuota(userOrId, incomingBytes = 0) {
+  await ensurePhysicalDiskSpace(incomingBytes);
   const user =
     typeof userOrId === "object" && userOrId !== null
       ? userOrId
@@ -1924,6 +2020,7 @@ async function ensureUserStorageQuota(userOrId, incomingBytes = 0) {
 
 function friendlySystemError(error, fallback = "操作失败") {
   if (!error) return fallback;
+  if (error.code === "PHYSICAL_DISK_FULL") return error.message;
   if (error.code === "EEXIST") return "当前目录下已存在同名文件或文件夹，请换一个名称";
   if (error.code === "ENOENT") return "目标文件或文件夹不存在，请刷新页面后再试";
   if (error.code === "EACCES" || error.code === "EPERM") return "没有权限执行此操作，请检查存储目录权限";
@@ -3129,9 +3226,30 @@ async function readTextFileHead(filePath, maxBytes = SEARCH_TEXT_MAX_BYTES) {
   }
 }
 
+function createConcurrencySemaphore(maxConcurrent = 2) {
+  let current = 0;
+  const queue = [];
+  return async function run(fn) {
+    if (current >= maxConcurrent) {
+      await new Promise((resolve) => queue.push(resolve));
+    }
+    current++;
+    try {
+      return await fn();
+    } finally {
+      current--;
+      if (queue.length > 0) {
+        const next = queue.shift();
+        next();
+      }
+    }
+  };
+}
+const heavyTaskSemaphore = createConcurrencySemaphore(Number(process.env.MAX_HEAVY_CONCURRENCY || 2));
+
 async function extractPdfText(filePath) {
   const buffer = await fsp.readFile(filePath);
-  const result = await pdfParse(buffer);
+  const result = await heavyTaskSemaphore(() => pdfParse(buffer));
   return result.text || "";
 }
 
@@ -3251,9 +3369,11 @@ async function extractImageOcrText(filePath, stat) {
     return sidecarCached;
   }
   try {
-    const result = await recognizeImageText(filePath, AI_OCR_LANGS, {
-      logger: () => {},
-    });
+    const result = await heavyTaskSemaphore(() =>
+      recognizeImageText(filePath, AI_OCR_LANGS, {
+        logger: () => {},
+      })
+    );
     const text = result?.data?.text || "";
     setCachedOcrText(cacheKey, text);
     writeCachedExtractedText(filePath, stat, text);

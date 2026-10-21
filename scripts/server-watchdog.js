@@ -156,7 +156,9 @@ function startServer() {
   nextHealthAt = Date.now() + STARTUP_GRACE_MS;
   const env = { ...process.env, HOST, PORT: String(PORT) };
   log(`starting server.js on ${HOST}:${PORT}`);
-  child = spawn(process.execPath, ["server.js"], {
+  const nodeMaxMemMb = Number(process.env.NODE_MAX_MEM_MB || 2048);
+  const nodeArgs = [`--max-old-space-size=${nodeMaxMemMb}`, "server.js"];
+  child = spawn(process.execPath, nodeArgs, {
     cwd: ROOT,
     env,
     stdio: ["ignore", "pipe", "pipe"],
