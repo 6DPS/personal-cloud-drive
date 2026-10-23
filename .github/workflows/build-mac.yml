@@ -1,0 +1,57 @@
+name: Build macOS Release Package (.dmg / .zip)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install --omit=dev
+
+      - name: Setup Python & Pillow
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python Pillow
+        run: pip install Pillow
+
+      - name: Build macOS .app and .zip package
+        run: |
+          python packaging/build_mac_package.py
+
+      - name: Create DMG using create-dmg
+        run: |
+          brew install create-dmg || true
+          mkdir -p dist
+          create-dmg \
+            --volname "DPSir 智云盘" \
+            --volicon "packaging/AppIcon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "DPSir 智云盘.app" 175 120 \
+            --hide-extension "DPSir 智云盘.app" \
+            --app-drop-link 425 120 \
+            "dist/DPSir-ZhiYunPan-macOS-v1.0.4.dmg" \
+            "packaging/mac-build/DPSir 智云盘.app" || true
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DPSir-ZhiYunPan-macOS
+          path: dist/*
