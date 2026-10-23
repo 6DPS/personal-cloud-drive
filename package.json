@@ -1,10 +1,10 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "changelog": [
-    "测试在线更新：存储空间卡片新增五角星标记 ⭐",
-    "全面验证 GitHub 仓库与国内高速节点直连迭代",
-    "全自动弹窗提醒与无缝热重载机制"
+    "视觉优化：修复左下角身份栏字符显示异常",
+    "正式版发布：清理测试标记，恢复干净清爽界面",
+    "全面提升客户端渲染稳定性与视觉质感"
   ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
