@@ -1,4 +1,4 @@
-﻿const state = {
+const state = {
   path: "",
   items: [],
   uploadTargetPath: "",
@@ -10667,13 +10667,13 @@ confirmApplyUpdateBtn?.addEventListener("click", handleApplyUpdate);
 // ==============================================================================
 // 全局新版本自动检测与弹窗提醒 (Silent Auto-Check & Automatic Reminder)
 // ==============================================================================
-const autoUpdateNotificationBar = #autoUpdateNotificationBar;
-const autoUpdateTitle = #autoUpdateTitle;
-const autoUpdateDesc = #autoUpdateDesc;
-const autoUpdateConfirmBtn = #autoUpdateConfirmBtn;
-const autoUpdateDismissBtn = #autoUpdateDismissBtn;
-const sidebarUpdateDot = #sidebarUpdateDot;
-const updateBadgeTag = #updateBadgeTag;
+const autoUpdateNotificationBar = document.getElementById("autoUpdateNotificationBar");
+const autoUpdateTitle = document.getElementById("autoUpdateTitle");
+const autoUpdateDesc = document.getElementById("autoUpdateDesc");
+const autoUpdateConfirmBtn = document.getElementById("autoUpdateConfirmBtn");
+const autoUpdateDismissBtn = document.getElementById("autoUpdateDismissBtn");
+const sidebarUpdateDot = document.getElementById("sidebarUpdateDot");
+const updateBadgeTag = document.getElementById("updateBadgeTag");
 let lastDetectedUpdateVer = "";
 
 async function silentCheckUpdate() {
@@ -10684,7 +10684,7 @@ async function silentCheckUpdate() {
     if (!data || !data.ok) return;
 
     if (popoverVersionLabel && data.currentVersion) {
-      popoverVersionLabel.textContent = 检查更新 (v);
+      popoverVersionLabel.textContent = `检查更新 (v${data.currentVersion})`;
     }
 
     if (data.hasUpdate && data.latestVersion) {
@@ -10696,7 +10696,7 @@ async function silentCheckUpdate() {
       // 检查当前会话是否已手动稍后提醒过该版本
       const dismissed = sessionStorage.getItem("dpsir_dismiss_update_" + data.latestVersion);
       if (!dismissed && autoUpdateNotificationBar) {
-        if (autoUpdateTitle) autoUpdateTitle.textContent = 发现全新版本 v 可用！;
+        if (autoUpdateTitle) autoUpdateTitle.textContent = `发现全新版本 v${data.latestVersion} 可用！`;
         if (autoUpdateDesc) autoUpdateDesc.textContent = "点击立即在线极速升级，享受最新功能与系统优化";
         autoUpdateNotificationBar.classList.remove("hidden");
       }
