@@ -8008,6 +8008,9 @@ async function enterDrive(user = state.currentUser) {
   await refreshHealthStatus();
   startAccessInfoRefresh();
   startRealtimeRefresh();
+  if (typeof silentCheckUpdate === "function") {
+    setTimeout(silentCheckUpdate, 800);
+  }
   // Idle pre-warm of AI drawer DOM & GPU pipeline so first click opens with zero hitch
   const prewarmAiDrawer = () => {
     state.aiDrawer.key = aiConversationKey("global", null, state.path);
@@ -10674,11 +10677,14 @@ const autoUpdateConfirmBtn = document.getElementById("autoUpdateConfirmBtn");
 const autoUpdateDismissBtn = document.getElementById("autoUpdateDismissBtn");
 const sidebarUpdateDot = document.getElementById("sidebarUpdateDot");
 const updateBadgeTag = document.getElementById("updateBadgeTag");
+const sidebarUpdateBadge = document.getElementById("sidebarUpdateBadge");
+const dockMenuDot = document.getElementById("dockMenuDot");
 let lastDetectedUpdateVer = "";
 
 async function silentCheckUpdate() {
   try {
-    const res = await fetch("/api/system/check-update");
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
+    const res = await fetch("/api/system/check-update", { headers, cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
     if (!data || !data.ok) return;
@@ -10689,26 +10695,36 @@ async function silentCheckUpdate() {
 
     if (data.hasUpdate && data.latestVersion) {
       lastDetectedUpdateVer = data.latestVersion;
-      // 唤醒左下角红点指示器与 NEW 徽标
+      // 唤醒所有红点、文字徽标与菜单指示器
       sidebarUpdateDot?.classList.remove("hidden");
       updateBadgeTag?.classList.remove("hidden");
+      dockMenuDot?.classList.remove("hidden");
+      if (sidebarUpdateBadge) {
+        sidebarUpdateBadge.textContent = `v${data.latestVersion} 可用`;
+        sidebarUpdateBadge.classList.remove("hidden");
+      }
 
-      // 检查当前会话是否已手动稍后提醒过该版本
+      // 顶部浮动弹窗提醒 (未点击过稍后提醒时展示)
       const dismissed = sessionStorage.getItem("dpsir_dismiss_update_" + data.latestVersion);
       if (!dismissed && autoUpdateNotificationBar) {
-        if (autoUpdateTitle) autoUpdateTitle.textContent = `发现全新版本 v${data.latestVersion} 可用！`;
+        if (autoUpdateTitle) autoUpdateTitle.textContent = `🚀 发现全新版本 v${data.latestVersion} 可用！`;
         if (autoUpdateDesc) autoUpdateDesc.textContent = "点击立即在线极速升级，享受最新功能与系统优化";
         autoUpdateNotificationBar.classList.remove("hidden");
       }
     } else {
       sidebarUpdateDot?.classList.add("hidden");
       updateBadgeTag?.classList.add("hidden");
+      dockMenuDot?.classList.add("hidden");
+      sidebarUpdateBadge?.classList.add("hidden");
       autoUpdateNotificationBar?.classList.add("hidden");
     }
   } catch (e) {
     // 静默检测失败不打扰用户
   }
 }
+
+sidebarUpdateBadge?.addEventListener("click", openSystemUpdateModal);
+dockMenuDot?.addEventListener("click", openSystemUpdateModal);
 
 autoUpdateConfirmBtn?.addEventListener("click", () => {
   autoUpdateNotificationBar?.classList.add("hidden");
@@ -10722,6 +10738,6 @@ autoUpdateDismissBtn?.addEventListener("click", () => {
   }
 });
 
-// 客户端加载 3.5 秒后静默触发首次检测，后续每 3 小时自动轮询一次
-setTimeout(silentCheckUpdate, 3500);
-setInterval(silentCheckUpdate, 3 * 60 * 60 * 1000);
+// 客户端加载 1.2 秒后首次检测，后续每 15 分钟后台高频静默轮询一次，保证新推送第一时间感知
+setTimeout(silentCheckUpdate, 1200);
+setInterval(silentCheckUpdate, 15 * 60 * 1000);

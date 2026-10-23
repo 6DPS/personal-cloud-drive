@@ -834,7 +834,7 @@
                     <span id="sidebarUpdateDot" class="sidebar-update-dot hidden" title="有新版本可用"></span>
                   </div>
                   <div class="user-dock-info">
-                    <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>
+                    <div style="display:flex;align-items:center;gap:6px;"><span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span><span id="sidebarUpdateBadge" class="sidebar-update-badge hidden" role="button" title="检测到新版本可用，点击立即更新">新版本</span></div>
                     <span id="sidebarUserRole" class="user-dock-role">超级管理员</span>
                   </div>
                 </div>
@@ -842,6 +842,7 @@
                   <svg class="dock-arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="18 15 12 9 6 15"/>
                   </svg>
+                  <span id="dockMenuDot" class="dock-menu-dot hidden" title="有新版本可用"></span>
                 </button>
                 <button id="logoutBtn" class="hidden" type="button" aria-hidden="true" style="display:none;"></button>
               </div>

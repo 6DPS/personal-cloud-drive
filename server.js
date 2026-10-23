@@ -4820,7 +4820,7 @@ app.get("/api/system/version", (req, res) => {
   });
 });
 
-app.get("/api/system/check-update", requireAuth, async (req, res) => {
+app.get("/api/system/check-update", async (req, res) => {
   try {
     const result = await systemUpdater.checkUpdate();
     res.json(result);
