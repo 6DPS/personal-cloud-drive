@@ -1,6 +1,12 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "changelog": [
+    "全新支持新版本自动检测与弹窗提醒功能",
+    "左下角身份栏新增红点呼吸灯与专属版本标识",
+    "优化高分屏矢量显示与中文字体抗锯齿清晰度",
+    "强化在线 OTA 热更新引擎与国内多节点加速"
+  ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
   "main": "server.js",

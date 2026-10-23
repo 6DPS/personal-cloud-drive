@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -33,6 +33,20 @@
     <link rel="stylesheet" href="/styles.css?v=20261005_silky_v3" />
   </head>
   <body>
+    <!-- 全局自动更新提醒浮动卡片 (后台静默检测到新版本时自动浮现) -->
+    <div id="autoUpdateNotificationBar" class="auto-update-notification hidden" aria-live="polite">
+      <div class="auto-update-content">
+        <div class="auto-update-icon">🚀</div>
+        <div class="auto-update-text">
+          <div class="auto-update-title" id="autoUpdateTitle">发现全新版本可用</div>
+          <div class="auto-update-desc" id="autoUpdateDesc">点击立即在线热升级，体验最新功能与优化</div>
+        </div>
+      </div>
+      <div class="auto-update-actions">
+        <button id="autoUpdateConfirmBtn" class="auto-update-btn-primary" type="button">立即在线更新</button>
+        <button id="autoUpdateDismissBtn" class="auto-update-btn-dismiss" type="button" title="稍后提醒">✕</button>
+      </div>
+    </div>
     <main id="app">
       <section id="loginView" class="login-shell hidden">
         <canvas id="loginFxCanvas" class="login-fx-canvas" aria-hidden="true"></canvas>
@@ -500,7 +514,87 @@
         </div>
       </section>
 
-      <!-- 注册成功专属恢复密钥通知模态框 -->
+            <!-- 系统在线热更新模态框 -->
+      <section id="systemUpdateModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-card small dialog-modal-card update-modal-card">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow" style="color: #3b82f6; font-weight: 700;">🔄 在线热更新服务</p>
+              <h2>DPSir 智云盘版本更新</h2>
+            </div>
+            <button id="closeSystemUpdateModalBtn" class="icon-button small-icon modal-close-btn" aria-label="关闭">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </header>
+
+          <!-- 检查中状态 -->
+          <div id="updateCheckingView" class="update-status-view">
+            <div class="update-spinner"></div>
+            <p class="update-status-text">正在通过高速镜像智能检索 GitHub 官方最新版本...</p>
+          </div>
+
+          <!-- 已是最新版本状态 -->
+          <div id="updateLatestView" class="update-status-view hidden">
+            <div class="update-badge-icon success-badge">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
+            <h3 style="margin: 8px 0 4px; font-size: 16px;">当前已是最新版本</h3>
+            <p class="update-version-tag">版本号：<span id="updateCurrentVersionText">v1.0.0</span></p>
+            <p class="modal-description" style="margin-top: 10px;">
+              您的智云盘核心引擎与所有组件均处于最新最稳状态，无需任何操作。
+            </p>
+            <div class="modal-actions" style="margin-top: 18px;">
+              <button id="closeUpdateLatestBtn" class="primary" type="button">我知道了</button>
+            </div>
+          </div>
+
+          <!-- 发现新版本状态 -->
+          <div id="updateAvailableView" class="update-status-view hidden">
+            <div class="update-badge-icon update-badge">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+            </div>
+            <h3 style="margin: 8px 0 4px; font-size: 16px;">发现可用新版本！</h3>
+            <p class="update-version-tag">
+              <span id="updateAvailCurrentVer">v1.0.0</span> ➔ <strong id="updateAvailLatestVer" style="color: #2563eb;">v1.0.1</strong>
+            </p>
+            
+            <div class="update-changelog-box">
+              <div class="changelog-title">📋 本次更新内容：</div>
+              <ul id="updateChangelogList" class="changelog-list"></ul>
+            </div>
+
+            <p class="modal-hint" style="margin-top: 10px;">
+              💡 <strong>无感升级说明：</strong>在线升级仅热替换核心脚本，<strong>您的所有个人文件、照片及账号密码 100% 独立保留不受任何影响</strong>。升级完成后服务将自动平滑热重启（约 2 秒）。
+            </p>
+
+            <div class="modal-actions" style="margin-top: 16px;">
+              <button id="cancelUpdateBtn" class="ghost" type="button">暂不更新</button>
+              <button id="confirmApplyUpdateBtn" class="primary" type="button">🚀 立即一键在线升级</button>
+            </div>
+          </div>
+
+          <!-- 正在升级状态 -->
+          <div id="updateApplyingView" class="update-status-view hidden">
+            <div class="update-spinner"></div>
+            <h3 id="updateApplyingTitle" style="margin: 10px 0 6px; font-size: 15px;">正在极速下载并覆盖更新...</h3>
+            <p id="updateApplyingDesc" class="modal-description" style="font-size: 13px; color: #64748b;">
+              请勿关闭窗口，完成后客户端将自动热重启生效。
+            </p>
+            <div class="update-progress-bar">
+              <div id="updateProgressFill" class="update-progress-fill"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+<!-- 注册成功专属恢复密钥通知模态框 -->
       <section id="registerSuccessModal" class="modal hidden" aria-hidden="true">
         <div class="modal-card small dialog-modal-card">
           <header class="modal-header">
@@ -693,6 +787,13 @@
                     </svg>
                     <span>更换自定义头像</span>
                   </button>
+                  <button id="popoverCheckUpdateBtn" class="popover-menu-item" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                    <span id="popoverVersionLabel">检查更新 (v1.0.0)</span>
+                    <span id="updateBadgeTag" class="update-badge-tag hidden">NEW</span>
+                  </button>
                   <button id="popoverSecurityBtn" class="popover-menu-item" type="button">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="7.5" cy="15.5" r="4.5"/>
@@ -729,7 +830,7 @@
                       <img id="sidebarUserAvatarImg" class="user-avatar-image hidden" alt="头像" />
                       <span id="sidebarUserInitial" class="user-avatar-initial">A</span>
                     </div>
-                    <span class="user-online-dot" aria-hidden="true" title="在线"></span>
+                    <span class="user-online-dot" aria-hidden="true" title="在线"></span>`r`n                    <span id="sidebarUpdateDot" class="sidebar-update-dot hidden" title="有新版本可用"></span>
                   </div>
                   <div class="user-dock-info">
                     <span id="sidebarUsername" class="user-dock-name" title="当前登录账号">admin</span>

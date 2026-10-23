@@ -4807,6 +4807,37 @@ app.get("/api/access-info", requireAuth, (req, res) => {
   });
 });
 
+// ==============================================================================
+// 系统在线热更新 (OTA Update) 路由 - 基于 GitHub 官方仓库与国内加速镜像
+// ==============================================================================
+const systemUpdater = require("./scripts/system-updater");
+
+app.get("/api/system/version", (req, res) => {
+  res.json({
+    ok: true,
+    name: "DPSir 智云盘",
+    version: systemUpdater.getLocalVersion(),
+  });
+});
+
+app.get("/api/system/check-update", requireAuth, async (req, res) => {
+  try {
+    const result = await systemUpdater.checkUpdate();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/system/apply-update", requireAuth, ensureAdminUser, async (req, res) => {
+  try {
+    const result = await systemUpdater.applyUpdate();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
   try {
     const bytes = await getUserStorageUsage(req.user.id);

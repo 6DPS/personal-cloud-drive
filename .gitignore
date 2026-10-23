@@ -4,6 +4,7 @@
 
 # 运行时依赖与日志
 node_modules/
+runtime/
 logs/
 tmp/
 

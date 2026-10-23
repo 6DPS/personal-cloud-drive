@@ -1,4 +1,4 @@
-const state = {
+﻿const state = {
   path: "",
   items: [],
   uploadTargetPath: "",
@@ -10547,3 +10547,181 @@ api("/api/me")
   });
 
 setAuthMode("login");
+
+
+// ==============================================================================
+// 客户端在线热更新管理模块 (In-App OTA System Updater)
+// ==============================================================================
+const popoverCheckUpdateBtn = $("#popoverCheckUpdateBtn");
+const popoverVersionLabel = $("#popoverVersionLabel");
+const systemUpdateModal = $("#systemUpdateModal");
+const closeSystemUpdateModalBtn = $("#closeSystemUpdateModalBtn");
+const updateCheckingView = $("#updateCheckingView");
+const updateLatestView = $("#updateLatestView");
+const updateAvailableView = $("#updateAvailableView");
+const updateApplyingView = $("#updateApplyingView");
+const updateCurrentVersionText = $("#updateCurrentVersionText");
+const updateAvailCurrentVer = $("#updateAvailCurrentVer");
+const updateAvailLatestVer = $("#updateAvailLatestVer");
+const updateChangelogList = $("#updateChangelogList");
+const confirmApplyUpdateBtn = $("#confirmApplyUpdateBtn");
+const cancelUpdateBtn = $("#cancelUpdateBtn");
+const closeUpdateLatestBtn = $("#closeUpdateLatestBtn");
+const updateApplyingTitle = $("#updateApplyingTitle");
+const updateApplyingDesc = $("#updateApplyingDesc");
+
+function openSystemUpdateModal() {
+  closeUserAccountPopover();
+  systemUpdateModal?.classList.remove("hidden");
+  systemUpdateModal?.setAttribute("aria-hidden", "false");
+  triggerCheckUpdate();
+}
+
+function closeSystemUpdateModal() {
+  systemUpdateModal?.classList.add("hidden");
+  systemUpdateModal?.setAttribute("aria-hidden", "true");
+}
+
+function showUpdateView(viewName) {
+  [updateCheckingView, updateLatestView, updateAvailableView, updateApplyingView].forEach((v) => v?.classList.add("hidden"));
+  if (viewName === "checking") updateCheckingView?.classList.remove("hidden");
+  if (viewName === "latest") updateLatestView?.classList.remove("hidden");
+  if (viewName === "available") updateAvailableView?.classList.remove("hidden");
+  if (viewName === "applying") updateApplyingView?.classList.remove("hidden");
+}
+
+async function triggerCheckUpdate() {
+  showUpdateView("checking");
+  try {
+    const res = await fetch("/api/system/check-update");
+    const data = await res.json();
+    if (!data.ok) {
+      if (typeof showToast === "function") showToast(data.error || "检查更新失败", "error");
+      closeSystemUpdateModal();
+      return;
+    }
+
+    if (popoverVersionLabel) {
+      popoverVersionLabel.textContent = `检查更新 (v${data.currentVersion})`;
+    }
+
+    if (data.hasUpdate) {
+      if (updateAvailCurrentVer) updateAvailCurrentVer.textContent = `v${data.currentVersion}`;
+      if (updateAvailLatestVer) updateAvailLatestVer.textContent = `v${data.latestVersion}`;
+      if (updateChangelogList) {
+        updateChangelogList.innerHTML = (data.changelog || [])
+          .map((item) => `<li>${escapeHtml ? escapeHtml(item) : item}</li>`)
+          .join("");
+      }
+      showUpdateView("available");
+    } else {
+      if (updateCurrentVersionText) updateCurrentVersionText.textContent = `v${data.currentVersion}`;
+      showUpdateView("latest");
+    }
+  } catch (err) {
+    if (typeof showToast === "function") showToast("检查更新超时，请检查网络连接后重试", "error");
+    closeSystemUpdateModal();
+  }
+}
+
+async function handleApplyUpdate() {
+  showUpdateView("applying");
+  if (updateApplyingTitle) updateApplyingTitle.textContent = "正在极速下载更新补丁包...";
+  if (updateApplyingDesc) updateApplyingDesc.textContent = "通过高速镜像下载最新代码并解压覆盖，请勿关闭窗口...";
+
+  try {
+    const res = await fetch("/api/system/apply-update", { method: "POST" });
+    const data = await res.json();
+    if (!data.ok) {
+      if (typeof showToast === "function") showToast(data.error || "在线升级失败", "error");
+      showUpdateView("available");
+      return;
+    }
+
+    if (updateApplyingTitle) updateApplyingTitle.textContent = "升级成功！系统正在平滑热重启...";
+    if (updateApplyingDesc) updateApplyingDesc.textContent = "约 3 秒后客户端将自动刷新生效，请稍候...";
+
+    let countdown = 3;
+    const interval = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(interval);
+        window.location.reload();
+      }
+    }, 1000);
+  } catch (err) {
+    // 平滑重启过程中连接断开属于正常现象
+    if (updateApplyingTitle) updateApplyingTitle.textContent = "服务正在重启，即将刷新页面...";
+    setTimeout(() => {
+      window.location.reload();
+    }, 2500);
+  }
+}
+
+popoverCheckUpdateBtn?.addEventListener("click", openSystemUpdateModal);
+closeSystemUpdateModalBtn?.addEventListener("click", closeSystemUpdateModal);
+cancelUpdateBtn?.addEventListener("click", closeSystemUpdateModal);
+closeUpdateLatestBtn?.addEventListener("click", closeSystemUpdateModal);
+confirmApplyUpdateBtn?.addEventListener("click", handleApplyUpdate);
+
+// ==============================================================================
+// 全局新版本自动检测与弹窗提醒 (Silent Auto-Check & Automatic Reminder)
+// ==============================================================================
+const autoUpdateNotificationBar = #autoUpdateNotificationBar;
+const autoUpdateTitle = #autoUpdateTitle;
+const autoUpdateDesc = #autoUpdateDesc;
+const autoUpdateConfirmBtn = #autoUpdateConfirmBtn;
+const autoUpdateDismissBtn = #autoUpdateDismissBtn;
+const sidebarUpdateDot = #sidebarUpdateDot;
+const updateBadgeTag = #updateBadgeTag;
+let lastDetectedUpdateVer = "";
+
+async function silentCheckUpdate() {
+  try {
+    const res = await fetch("/api/system/check-update");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !data.ok) return;
+
+    if (popoverVersionLabel && data.currentVersion) {
+      popoverVersionLabel.textContent = 检查更新 (v);
+    }
+
+    if (data.hasUpdate && data.latestVersion) {
+      lastDetectedUpdateVer = data.latestVersion;
+      // 唤醒左下角红点指示器与 NEW 徽标
+      sidebarUpdateDot?.classList.remove("hidden");
+      updateBadgeTag?.classList.remove("hidden");
+
+      // 检查当前会话是否已手动稍后提醒过该版本
+      const dismissed = sessionStorage.getItem("dpsir_dismiss_update_" + data.latestVersion);
+      if (!dismissed && autoUpdateNotificationBar) {
+        if (autoUpdateTitle) autoUpdateTitle.textContent = 发现全新版本 v 可用！;
+        if (autoUpdateDesc) autoUpdateDesc.textContent = "点击立即在线极速升级，享受最新功能与系统优化";
+        autoUpdateNotificationBar.classList.remove("hidden");
+      }
+    } else {
+      sidebarUpdateDot?.classList.add("hidden");
+      updateBadgeTag?.classList.add("hidden");
+      autoUpdateNotificationBar?.classList.add("hidden");
+    }
+  } catch (e) {
+    // 静默检测失败不打扰用户
+  }
+}
+
+autoUpdateConfirmBtn?.addEventListener("click", () => {
+  autoUpdateNotificationBar?.classList.add("hidden");
+  openSystemUpdateModal();
+});
+
+autoUpdateDismissBtn?.addEventListener("click", () => {
+  autoUpdateNotificationBar?.classList.add("hidden");
+  if (lastDetectedUpdateVer) {
+    sessionStorage.setItem("dpsir_dismiss_update_" + lastDetectedUpdateVer, "true");
+  }
+});
+
+// 客户端加载 3.5 秒后静默触发首次检测，后续每 3 小时自动轮询一次
+setTimeout(silentCheckUpdate, 3500);
+setInterval(silentCheckUpdate, 3 * 60 * 60 * 1000);
