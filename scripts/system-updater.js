@@ -101,7 +101,8 @@ async function checkUpdate() {
   let successfulMirror = "";
 
   for (const prefix of MIRROR_PREFIXES) {
-    const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json`;
+    // 动态添加时间戳参数穿透 GitHub CDN 缓存，确保秒级获取最新发布版本号
+    const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
     try {
       const buf = await fetchUrlBuffer(targetUrl, 5000);
       latestPkg = JSON.parse(buf.toString("utf8"));
