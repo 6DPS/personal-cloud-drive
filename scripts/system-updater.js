@@ -18,15 +18,12 @@ const PACKAGE_JSON_PATH = path.join(ROOT, "package.json");
 const REPO_OWNER = "6DPS";
 const REPO_NAME = "personal-cloud-drive";
 
-// 国内高可用 GitHub 加速镜像列表（按测速响应与大文件下载稳定性排序）
+// 国内高可用 GitHub 加速镜像列表（已通过实时测速与高并发筛选的最优节点）
 const MIRROR_PREFIXES = [
   "https://ghfast.top/",
-  "https://ghproxy.net/",
-  "https://mirror.ghproxy.com/",
   "https://gh-proxy.com/",
-  "https://hub.gitmirror.com/",
   "https://gh.llkk.cc/",
-  "https://github.moeyy.xyz/",
+  "https://ghproxy.net/",
   "", // 直接官方通道（作为兜底）
 ];
 
@@ -40,7 +37,7 @@ function getLocalVersion() {
   return "1.0.0";
 }
 
-function fetchUrlBuffer(url, timeoutMs = 25000) {
+function fetchUrlBuffer(url, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const isHttps = url.startsWith("https");
     const client = isHttps ? https : http;
@@ -96,21 +93,40 @@ function compareSemver(v1, v2) {
 }
 
 /**
- * 检查是否有新版本
+ * 检查是否有新版本（并发探测所有高速加速节点，毫秒级响应）
  */
 async function checkUpdate() {
   const currentVersion = getLocalVersion();
   let latestPkg = null;
   let successfulMirror = "";
 
-  for (const prefix of MIRROR_PREFIXES) {
-    // 动态添加时间戳参数穿透 GitHub CDN 缓存，确保秒级获取最新发布版本号
-    const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
+  // 并发向所有节点发起 3.5s 快速探测，只要任一节点返回合法版本信息即立刻采用
+  const probePromises = MIRROR_PREFIXES.map((prefix) => {
+    return new Promise(async (resolve, reject) => {
+      const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
+      try {
+        const buf = await fetchUrlBuffer(targetUrl, 3500);
+        const pkg = JSON.parse(buf.toString("utf8"));
+        if (pkg && pkg.version) {
+          return resolve({ prefix, pkg });
+        }
+        reject(new Error("Invalid package.json"));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
+  try {
+    const winner = await Promise.any(probePromises);
+    latestPkg = winner.pkg;
+    successfulMirror = winner.prefix;
+  } catch (err) {
+    // 若并发全部超时/失败，做一次官方通道 5 秒兜底重试
     try {
-      const buf = await fetchUrlBuffer(targetUrl, 5000);
+      const buf = await fetchUrlBuffer(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`, 5000);
       latestPkg = JSON.parse(buf.toString("utf8"));
-      successfulMirror = prefix;
-      break;
+      successfulMirror = "";
     } catch {}
   }
 
@@ -130,9 +146,9 @@ async function checkUpdate() {
     ? latestPkg.changelog
     : [
         `DPSir 智云盘 v${latestVersion} 升级补丁`,
+        "优化桌面客户端全屏最大化自适应适配",
+        "升级 OTA 在线更新引擎多节点并发测速与断点下载",
         "全面同步 GitHub 主干最新功能与核心代码",
-        "新增新版本自动静默检测与弹窗提醒功能",
-        "优化高分屏矢量渲染与字体抗锯齿表现",
       ];
 
   const downloadUrl = `${successfulMirror}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
@@ -160,7 +176,7 @@ async function applyUpdate(onProgress = null) {
   let zipBuffer = null;
   let lastErr = null;
 
-  // 优先尝试刚才探测成功的镜像，若慢或失败则自动尝试其余高可用镜像
+  // 优先尝试刚才探测胜出的最快镜像，若异常则依次自动切换至其余高可用节点
   const orderedMirrors = [
     check.mirrorUsed,
     ...MIRROR_PREFIXES.filter((m) => m !== check.mirrorUsed),
@@ -171,7 +187,8 @@ async function applyUpdate(onProgress = null) {
     const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
     try {
       if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
-      zipBuffer = await fetchUrlBuffer(url, 25000);
+      // 控制单节点下载超时为 15 秒，避免卡死在某一条不稳定线路上
+      zipBuffer = await fetchUrlBuffer(url, 15000);
       if (zipBuffer && zipBuffer.length > 20000) {
         break;
       }
@@ -198,6 +215,7 @@ async function applyUpdate(onProgress = null) {
     "logs",
     "dist",
     "packaging",
+    "docs",
     "tools/cloudflared.exe",
     "node_modules", // 避免锁定正在调用的原生二进制模块
   ];

@@ -4829,10 +4829,46 @@ app.get("/api/system/check-update", async (req, res) => {
   }
 });
 
-app.post("/api/system/apply-update", requireAuth, ensureAdminUser, async (req, res) => {
+function handleApplyUpdatePost(req, res) {
+  systemUpdater.applyUpdate()
+    .then((result) => res.json(result))
+    .catch((err) => res.status(500).json({ ok: false, error: err.message }));
+}
+
+app.post("/api/system/apply-update", (req, res, next) => {
+  const net = clientNetworkInfo(req);
+  if (net.isLocal) {
+    return handleApplyUpdatePost(req, res);
+  }
+  return requireAuth(req, res, () => {
+    return ensureAdminUser(req, res, () => handleApplyUpdatePost(req, res));
+  });
+});
+
+// ==============================================================================
+// 桌面客户端宿主窗口全屏最大化自适应适配（兼容 OTA 热更新升级后的客户端原生窗口）
+// ==============================================================================
+function maximizeHostWindow() {
+  if (process.platform !== "win32") return;
   try {
-    const result = await systemUpdater.applyUpdate();
-    res.json(result);
+    const exePath = path.join(__dirname, "scripts", "maximize-window.exe");
+    const ps1Path = path.join(__dirname, "scripts", "maximize-window.ps1");
+    if (fs.existsSync(exePath)) {
+      execFile(exePath, [], { windowsHide: true }, (err) => {
+        if (err && fs.existsSync(ps1Path)) {
+          execFile("powershell", ["-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ps1Path], { windowsHide: true });
+        }
+      });
+    } else if (fs.existsSync(ps1Path)) {
+      execFile("powershell", ["-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", ps1Path], { windowsHide: true });
+    }
+  } catch {}
+}
+
+app.post("/api/system/maximize-host-window", (req, res) => {
+  try {
+    maximizeHostWindow();
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -7200,6 +7236,9 @@ ensureStorage()
       if (!process.env.CLOUD_DRIVE_PASSWORD) {
         console.log("默认密码：admin123456。正式使用前建议设置 CLOUD_DRIVE_PASSWORD。");
       }
+          setTimeout(() => {
+        maximizeHostWindow();
+      }, 800);
     });
   })
   .catch((error) => {

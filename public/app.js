@@ -10633,7 +10633,8 @@ async function handleApplyUpdate() {
   if (updateApplyingDesc) updateApplyingDesc.textContent = "通过高速镜像下载最新代码并解压覆盖，请勿关闭窗口...";
 
   try {
-    const res = await fetch("/api/system/apply-update", { method: "POST" });
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
+    const res = await fetch("/api/system/apply-update", { method: "POST", headers });
     const data = await res.json();
     if (!data.ok) {
       if (typeof showToast === "function") showToast(data.error || "在线升级失败", "error");
@@ -10923,3 +10924,18 @@ stopServerNowBtn?.addEventListener("click", handleStopServerFromUI);
 
 // 初始化获取自启状态 (1.5 秒后静默获取)
 setTimeout(fetchAutostartStatus, 1500);
+
+
+// ==============================================================================
+// ?????????????????????? OTA ???????????
+// ==============================================================================
+(function autoMaximizeOnClientLaunch() {
+  try {
+    if (!sessionStorage.getItem("host_window_maximized")) {
+      sessionStorage.setItem("host_window_maximized", "true");
+      setTimeout(() => {
+        fetch("/api/system/maximize-host-window", { method: "POST" }).catch(() => {});
+      }, 150);
+    }
+  } catch {}
+})();

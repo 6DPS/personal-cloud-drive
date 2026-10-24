@@ -6,3 +6,9 @@
 # Ensure macOS and Linux shell scripts use Unix LF
 *.sh text eol=lf
 *.command text eol=lf
+
+# Exclude non-runtime documentation and heavy screenshot files from GitHub Release & OTA zip archives
+docs/ export-ignore
+*.pdf export-ignore
+packaging/ export-ignore
+backups/ export-ignore

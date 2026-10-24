@@ -126,6 +126,13 @@ namespace DPSir.ZhiYunPan {
             InitWebView();
         }
 
+        protected override void OnShown(EventArgs e) {
+            base.OnShown(e);
+            try {
+                this.WindowState = FormWindowState.Maximized;
+            } catch {}
+        }
+
         private async void InitWebView() {
             try {
                 string localData = Path.Combine(
