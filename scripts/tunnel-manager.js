@@ -15,18 +15,12 @@ function findCloudflaredExe() {
   const localExe = path.join(ROOT, "tools", "cloudflared.exe");
   if (fs.existsSync(localExe)) return localExe;
 
-  const altExe = "C:\\Users\\17480\\Documents\\琐碎小事儿\\personal-cloud-drive\\tools\\cloudflared.exe";
-  if (fs.existsSync(altExe)) return altExe;
-
   return null;
 }
 
 function findConfigFile() {
   const localConfig = path.join(ROOT, ".cloudflared", "config.yml");
   if (fs.existsSync(localConfig)) return localConfig;
-
-  const altConfig = "C:\\Users\\17480\\Documents\\琐碎小事儿\\personal-cloud-drive\\.cloudflared\\config.yml";
-  if (fs.existsSync(altConfig)) return altConfig;
 
   const userConfig = path.join(process.env.USERPROFILE || "", ".cloudflared", "config.yml");
   if (fs.existsSync(userConfig)) return userConfig;
