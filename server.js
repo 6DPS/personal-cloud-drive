@@ -4843,7 +4843,7 @@ app.post("/api/system/apply-update", requireAuth, ensureAdminUser, async (req, r
 // ==============================================================================
 const autostartManager = require("./scripts/autostart-manager");
 
-app.get("/api/system/autostart", requireAuth, (req, res) => {
+app.get("/api/system/autostart", (req, res) => {
   try {
     const status = autostartManager.getStatus();
     res.json(status);
@@ -4852,7 +4852,7 @@ app.get("/api/system/autostart", requireAuth, (req, res) => {
   }
 });
 
-app.post("/api/system/autostart", requireAuth, ensureAdminUser, (req, res) => {
+function handleAutostartPost(req, res) {
   try {
     const { enabled } = req.body || {};
     let status;
@@ -4865,15 +4865,35 @@ app.post("/api/system/autostart", requireAuth, ensureAdminUser, (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
+}
+
+app.post("/api/system/autostart", (req, res, next) => {
+  const net = clientNetworkInfo(req);
+  if (net.isLocal) {
+    return handleAutostartPost(req, res);
+  }
+  return requireAuth(req, res, () => {
+    return ensureAdminUser(req, res, () => handleAutostartPost(req, res));
+  });
 });
 
-app.post("/api/system/stop-service", requireAuth, ensureAdminUser, (req, res) => {
+function handleStopServicePost(req, res) {
   try {
     const result = autostartManager.stopService();
     res.json(result);
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
+}
+
+app.post("/api/system/stop-service", (req, res, next) => {
+  const net = clientNetworkInfo(req);
+  if (net.isLocal) {
+    return handleStopServicePost(req, res);
+  }
+  return requireAuth(req, res, () => {
+    return ensureAdminUser(req, res, () => handleStopServicePost(req, res));
+  });
 });
 
 app.get("/api/storage-usage", requireAuth, async (req, res, next) => {

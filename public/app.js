@@ -10831,13 +10831,18 @@ function renderAutostartUI(enabled) {
 async function fetchAutostartStatus() {
   try {
     const res = await fetch("/api/system/autostart");
-    if (!res.ok) return;
+    if (!res.ok) {
+      renderAutostartUI(false);
+      return;
+    }
     const data = await res.json();
-    if (data.ok) {
+    if (data && data.ok) {
       renderAutostartUI(data.enabled);
+    } else {
+      renderAutostartUI(false);
     }
   } catch (e) {
-    // 静默忽略网络异常
+    renderAutostartUI(false);
   }
 }
 
