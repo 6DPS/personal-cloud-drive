@@ -10796,7 +10796,7 @@ function renderAutostartUI(enabled) {
   if (autostartStatusSub) {
     autostartStatusSub.textContent = currentAutostartEnabled
       ? "电脑开机后在后台静默运行 (8081端口)，无弹窗打扰，手机随时可连"
-      : "仅在手动双击启动图标时运行，平时不占用 8081 端口";
+      : "仅在双击桌面图标时运行，平时不占用 8081 端口";
   }
 
   if (autostartStatusIconWrap) {
@@ -10811,6 +10811,9 @@ function renderAutostartUI(enabled) {
 
   if (toggleAutostartBtn) {
     toggleAutostartBtn.disabled = false;
+    toggleAutostartBtn.style.minWidth = "104px";
+    toggleAutostartBtn.style.flexShrink = "0";
+    toggleAutostartBtn.style.padding = "7px 14px";
     if (currentAutostartEnabled) {
       toggleAutostartBtn.textContent = "关闭自启";
       toggleAutostartBtn.className = "ghost compact";
