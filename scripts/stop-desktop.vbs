@@ -9,6 +9,7 @@ Else
 End If
 
 stopCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command """ & _
+          "Stop-Process -Name 'cloudflared' -Force -ErrorAction SilentlyContinue; " & _
           "$portConn = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue; " & _
           "if ($portConn) { Stop-Process -Id $portConn.OwningProcess -Force -ErrorAction SilentlyContinue }; " & _
           "$pidFile = Join-Path '" & rootDir & "' 'logs\server-watchdog.pid'; " & _
@@ -27,5 +28,5 @@ If WScript.Arguments.Count > 0 Then
 End If
 
 If Not isSilent Then
-    MsgBox "DPSir 智云盘后台服务已成功停止！" & vbCrLf & vbCrLf & "8081 端口及后台看门狗已全部释放关闭。" & vbCrLf & "下次需要使用时，只需双击桌面【DPSir 智云盘】图标即可快速启动。", 64, "DPSir 智云盘"
+    MsgBox "DPSir 智云盘服务已成功停止！" & vbCrLf & vbCrLf & "8081 端口与公网隧道已全部释放关闭。" & vbCrLf & "下次需要使用时，只需双击桌面【DPSir 智云盘】图标即可开启。", 64, "DPSir 智云盘"
 End If

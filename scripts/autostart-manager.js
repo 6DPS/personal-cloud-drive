@@ -194,6 +194,11 @@ function disableAutostart() {
 function stopService() {
   const platform = process.platform;
 
+  try {
+    const tunnelManager = require("./tunnel-manager");
+    tunnelManager.stopTunnel();
+  } catch {}
+
   if (platform === "win32") {
     const vbs = path.join(ROOT, "scripts", "stop-desktop.vbs");
     if (fs.existsSync(vbs)) {
@@ -208,7 +213,7 @@ function stopService() {
 
   return {
     ok: true,
-    message: "智云盘服务正在安全停止，端口 8081 即将释放。",
+    message: "智云盘服务正在安全停止，端口 8081 与公网隧道即将释放。",
   };
 }
 

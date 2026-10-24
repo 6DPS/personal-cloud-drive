@@ -4878,6 +4878,7 @@ app.post("/api/system/maximize-host-window", (req, res) => {
 // 开机后台自启与后台服务生命周期管理
 // ==============================================================================
 const autostartManager = require("./scripts/autostart-manager");
+const tunnelManager = require("./scripts/tunnel-manager");
 
 app.get("/api/system/autostart", (req, res) => {
   try {
@@ -7240,6 +7241,10 @@ ensureStorage()
         maximizeHostWindow();
       }, 800);
     });
+      try {
+        tunnelManager.startTunnel();
+      } catch {}
+    
   })
   .catch((error) => {
     console.error("启动失败：", error);
