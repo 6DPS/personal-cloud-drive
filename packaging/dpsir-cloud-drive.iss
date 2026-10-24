@@ -37,7 +37,10 @@ Name: "chinesesimp"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "autostart"; Description: "开机自动在后台启动网盘服务"; GroupDescription: "自动化选项:"; Flags: unchecked
+
+[InstallDelete]
+; 确保不保留任何开机自启动项，必须用户手动双击桌面图标才启动
+Type: files; Name: "{userstartup}\{#MyAppName}.lnk"
 
 [Files]
 ; 原生桌面客户端引擎及运行库 (独立原生 EXE，彻底消除 Edge 图标问题)
@@ -68,7 +71,6 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{a
 Name: "{group}\停止网盘服务"; Filename: "wscript.exe"; Parameters: """{app}\stop-desktop.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\app-icon.ico"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: autostart
 
 [Run]
 ; 自动配置 Windows 防火墙允许 8081 局域网访问（手机扫码互联畅通）
