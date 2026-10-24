@@ -10741,3 +10741,177 @@ autoUpdateDismissBtn?.addEventListener("click", () => {
 // 客户端加载 1.2 秒后首次检测，后续每 15 分钟后台高频静默轮询一次，保证新推送第一时间感知
 setTimeout(silentCheckUpdate, 1200);
 setInterval(silentCheckUpdate, 15 * 60 * 1000);
+
+// ==============================================================================
+// 开机后台自启与后台服务管理交互逻辑
+// ==============================================================================
+const popoverAutostartBtn = $("#popoverAutostartBtn");
+const popoverAutostartTag = $("#popoverAutostartTag");
+const autostartModal = $("#autostartModal");
+const closeAutostartModalBtn = $("#closeAutostartModalBtn");
+const closeAutostartModalActionBtn = $("#closeAutostartModalActionBtn");
+const autostartStatusIconWrap = $("#autostartStatusIconWrap");
+const autostartStatusTitle = $("#autostartStatusTitle");
+const autostartStatusSub = $("#autostartStatusSub");
+const toggleAutostartBtn = $("#toggleAutostartBtn");
+const stopServerNowBtn = $("#stopServerNowBtn");
+
+let currentAutostartEnabled = false;
+
+function openAutostartModal() {
+  if (typeof closeUserAccountPopover === "function") {
+    closeUserAccountPopover();
+  }
+  autostartModal?.classList.remove("hidden");
+  autostartModal?.setAttribute("aria-hidden", "false");
+  fetchAutostartStatus();
+}
+
+function closeAutostartModal() {
+  autostartModal?.classList.add("hidden");
+  autostartModal?.setAttribute("aria-hidden", "true");
+}
+
+function renderAutostartUI(enabled) {
+  currentAutostartEnabled = !!enabled;
+
+  if (popoverAutostartTag) {
+    if (currentAutostartEnabled) {
+      popoverAutostartTag.textContent = "已开启";
+      popoverAutostartTag.style.background = "#dcfce7";
+      popoverAutostartTag.style.color = "#15803d";
+    } else {
+      popoverAutostartTag.textContent = "已关闭";
+      popoverAutostartTag.style.background = "#f1f5f9";
+      popoverAutostartTag.style.color = "#64748b";
+    }
+  }
+
+  if (autostartStatusTitle) {
+    autostartStatusTitle.textContent = currentAutostartEnabled
+      ? "已开启开机后台静默自启"
+      : "开机自启已关闭";
+  }
+
+  if (autostartStatusSub) {
+    autostartStatusSub.textContent = currentAutostartEnabled
+      ? "电脑开机后在后台静默运行 (8081端口)，无弹窗打扰，手机随时可连"
+      : "仅在手动双击启动图标时运行，平时不占用 8081 端口";
+  }
+
+  if (autostartStatusIconWrap) {
+    if (currentAutostartEnabled) {
+      autostartStatusIconWrap.style.background = "#dcfce7";
+      autostartStatusIconWrap.style.color = "#16a34a";
+    } else {
+      autostartStatusIconWrap.style.background = "#f1f5f9";
+      autostartStatusIconWrap.style.color = "#64748b";
+    }
+  }
+
+  if (toggleAutostartBtn) {
+    toggleAutostartBtn.disabled = false;
+    if (currentAutostartEnabled) {
+      toggleAutostartBtn.textContent = "关闭自启";
+      toggleAutostartBtn.className = "ghost compact";
+      toggleAutostartBtn.style.color = "#ef4444";
+      toggleAutostartBtn.style.borderColor = "#fca5a5";
+    } else {
+      toggleAutostartBtn.textContent = "开启后台自启";
+      toggleAutostartBtn.className = "primary compact";
+      toggleAutostartBtn.style.color = "";
+      toggleAutostartBtn.style.borderColor = "";
+    }
+  }
+}
+
+async function fetchAutostartStatus() {
+  try {
+    const res = await fetch("/api/system/autostart");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.ok) {
+      renderAutostartUI(data.enabled);
+    }
+  } catch (e) {
+    // 静默忽略网络异常
+  }
+}
+
+async function handleToggleAutostart() {
+  if (!toggleAutostartBtn) return;
+  toggleAutostartBtn.disabled = true;
+  toggleAutostartBtn.textContent = "正在配置...";
+
+  const targetState = !currentAutostartEnabled;
+
+  try {
+    const res = await fetch("/api/system/autostart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: targetState }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      if (typeof showToast === "function") showToast(data.error || "配置开机自启失败", "error");
+      renderAutostartUI(currentAutostartEnabled);
+      return;
+    }
+
+    renderAutostartUI(data.enabled);
+    if (typeof showToast === "function") {
+      showToast(
+        data.enabled
+          ? "已成功开启开机后台静默自启！开机绝无弹窗打扰"
+          : "已关闭开机自启！下次需手动双击桌面图标启动",
+        "success"
+      );
+    }
+  } catch (err) {
+    if (typeof showToast === "function") showToast("配置开机自启请求失败", "error");
+    renderAutostartUI(currentAutostartEnabled);
+  }
+}
+
+async function handleStopServerFromUI() {
+  const confirmed = confirm(
+    "确定要停止网盘后台服务并释放 8081 端口吗？\n\n停止后网盘将退出运行，网页将暂时无法连接。\n下次使用时，只需双击桌面【DPSir 智云盘】图标即可快速启动。"
+  );
+  if (!confirmed) return;
+
+  if (stopServerNowBtn) {
+    stopServerNowBtn.disabled = true;
+    stopServerNowBtn.textContent = "正在停止服务...";
+  }
+
+  try {
+    await fetch("/api/system/stop-service", { method: "POST" });
+    if (typeof showToast === "function") {
+      showToast("智云盘服务已成功停止，端口 8081 已释放！", "info");
+    }
+    setTimeout(() => {
+      closeAutostartModal();
+      document.body.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;font-family:system-ui,-apple-system,sans-serif;color:#334155;background:#f8fafc;">
+          <div style="background:#fff;padding:32px 40px;border-radius:16px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08);text-align:center;max-width:420px;">
+            <div style="font-size:36px;margin-bottom:12px;">🛑</div>
+            <h2 style="margin:0 0 8px;font-size:18px;color:#0f172a;">网盘服务已停止</h2>
+            <p style="margin:0 0 20px;font-size:13px;color:#64748b;line-height:1.6;">端口 8081 及后台进程已全部安全释放。<br>如需重新使用，双击桌面【DPSir 智云盘】图标即可唤醒。</p>
+          </div>
+        </div>
+      `;
+    }, 400);
+  } catch (e) {
+    closeAutostartModal();
+    window.location.reload();
+  }
+}
+
+popoverAutostartBtn?.addEventListener("click", openAutostartModal);
+closeAutostartModalBtn?.addEventListener("click", closeAutostartModal);
+closeAutostartModalActionBtn?.addEventListener("click", closeAutostartModal);
+toggleAutostartBtn?.addEventListener("click", handleToggleAutostart);
+stopServerNowBtn?.addEventListener("click", handleStopServerFromUI);
+
+// 初始化获取自启状态 (1.5 秒后静默获取)
+setTimeout(fetchAutostartStatus, 1500);

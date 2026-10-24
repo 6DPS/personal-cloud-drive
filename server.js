@@ -4838,6 +4838,44 @@ app.post("/api/system/apply-update", requireAuth, ensureAdminUser, async (req, r
   }
 });
 
+// ==============================================================================
+// 开机后台自启与后台服务生命周期管理
+// ==============================================================================
+const autostartManager = require("./scripts/autostart-manager");
+
+app.get("/api/system/autostart", requireAuth, (req, res) => {
+  try {
+    const status = autostartManager.getStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/system/autostart", requireAuth, ensureAdminUser, (req, res) => {
+  try {
+    const { enabled } = req.body || {};
+    let status;
+    if (enabled) {
+      status = autostartManager.enableAutostart();
+    } else {
+      status = autostartManager.disableAutostart();
+    }
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post("/api/system/stop-service", requireAuth, ensureAdminUser, (req, res) => {
+  try {
+    const result = autostartManager.stopService();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
   try {
     const bytes = await getUserStorageUsage(req.user.id);

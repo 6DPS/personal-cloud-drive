@@ -1,7 +1,3 @@
-' ==============================================================================
-' DPSir Ф≥╨Д╨▒Г⌡≤ - Silent Stopper
-' Safely stops the watchdog and node server processes
-' ==============================================================================
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
@@ -19,3 +15,17 @@ stopCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command """ & _
           "if (Test-Path $pidFile) { $wPid = Get-Content $pidFile; Stop-Process -Id $wPid -Force -ErrorAction SilentlyContinue; Remove-Item $pidFile -Force -ErrorAction SilentlyContinue }"""
 
 WshShell.Run stopCmd, 0, True
+
+isSilent = False
+If WScript.Arguments.Count > 0 Then
+    For i = 0 To WScript.Arguments.Count - 1
+        arg = LCase(WScript.Arguments(i))
+        If InStr(arg, "silent") > 0 Or arg = "/s" Then
+            isSilent = True
+        End If
+    Next
+End If
+
+If Not isSilent Then
+    MsgBox "DPSir жгтфел╨Сл╗╥ЧнЯряЁи╧╕мёж╧ё║" & vbCrLf & vbCrLf & "8081 ╤к©з╪╟╨Сл╗©╢це╧╥рях╚╡©йм╥е╧ь╠у║ё" & vbCrLf & "об╢нпХр╙й╧сцй╠ё╛ж╩пХк╚╩ВвюцФ║╬DPSir жгтфел║©м╪╠Й╪╢©и©ЛкыфТ╤╞║ё", 64, "DPSir жгтфел"
+End If
