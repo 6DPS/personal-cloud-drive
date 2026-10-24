@@ -49,7 +49,25 @@ const RUNTIME_LOG_DIR = path.join(__dirname, "logs");
 const PORT = Number(process.env.PORT || 8081);
 const HOST = process.env.HOST || "0.0.0.0";
 const RAW_PUBLIC_ACCESS_URL = (process.env.PUBLIC_ACCESS_URL || "").trim();
-const PUBLIC_ACCESS_URL = /^https?:\/\/pan\.yourdomain\.com\/?$/i.test(RAW_PUBLIC_ACCESS_URL) ? "" : RAW_PUBLIC_ACCESS_URL;
+let PUBLIC_ACCESS_URL = /^https?:\/\/pan\.yourdomain\.com\/?$/i.test(RAW_PUBLIC_ACCESS_URL) ? "" : RAW_PUBLIC_ACCESS_URL;
+
+if (!PUBLIC_ACCESS_URL) {
+  try {
+    const hostCandidates = [
+      path.join(__dirname, ".cloudflared", "hostname.txt"),
+      path.join(process.env.USERPROFILE || "", ".cloudflared", "hostname.txt"),
+    ];
+    for (const hostFile of hostCandidates) {
+      if (fs.existsSync(hostFile)) {
+        const h = fs.readFileSync(hostFile, "utf8").trim();
+        if (h) {
+          PUBLIC_ACCESS_URL = `https://${h}`;
+          break;
+        }
+      }
+    }
+  } catch {}
+}
 const PUBLIC_ROOT = path.join(__dirname, "public");
 const ADMIN_USER = process.env.CLOUD_DRIVE_USER || "admin";
 const defaultStorageFallback = () => {

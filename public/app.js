@@ -2719,7 +2719,9 @@ function renderAccessInfo(data) {
     if (data.publicUrl) {
       publicAccessLink.classList.remove("hidden");
       publicAccessLink.href = withAuthParam(data.publicUrl);
-      publicAccessLink.textContent = `公网备用：${data.publicUrl}`;
+      publicAccessLink.textContent = `公网访问：${data.publicUrl}`;
+      publicAccessLink.target = "_blank";
+      publicAccessLink.rel = "noreferrer";
     } else {
       publicAccessLink.classList.add("hidden");
       publicAccessLink.removeAttribute("href");
