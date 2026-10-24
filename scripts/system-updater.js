@@ -18,12 +18,15 @@ const PACKAGE_JSON_PATH = path.join(ROOT, "package.json");
 const REPO_OWNER = "6DPS";
 const REPO_NAME = "personal-cloud-drive";
 
-// 国内高可用 GitHub 加速镜像列表
+// 国内高可用 GitHub 加速镜像列表（按测速响应与大文件下载稳定性排序）
 const MIRROR_PREFIXES = [
   "https://ghfast.top/",
-  "https://gh-proxy.com/",
   "https://ghproxy.net/",
+  "https://mirror.ghproxy.com/",
+  "https://gh-proxy.com/",
+  "https://hub.gitmirror.com/",
   "https://gh.llkk.cc/",
+  "https://github.moeyy.xyz/",
   "", // 直接官方通道（作为兜底）
 ];
 
@@ -154,12 +157,31 @@ async function applyUpdate(onProgress = null) {
     throw new Error(check.error || "获取更新信息失败");
   }
 
-  const downloadUrl = check.downloadUrl;
-  if (onProgress) onProgress("正在通过高速镜像下载代码更新包...");
+  let zipBuffer = null;
+  let lastErr = null;
 
-  const zipBuffer = await fetchUrlBuffer(downloadUrl, 60000);
-  if (!zipBuffer || zipBuffer.length < 50000) {
-    throw new Error("更新包下载不完整，请稍后重试");
+  // 优先尝试刚才探测成功的镜像，若慢或失败则自动尝试其余高可用镜像
+  const orderedMirrors = [
+    check.mirrorUsed,
+    ...MIRROR_PREFIXES.filter((m) => m !== check.mirrorUsed),
+  ];
+
+  for (const prefix of orderedMirrors) {
+    const mirrorName = prefix ? prefix.replace("https://", "").replace("/", "") : "官方通道";
+    const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
+    try {
+      if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
+      zipBuffer = await fetchUrlBuffer(url, 25000);
+      if (zipBuffer && zipBuffer.length > 20000) {
+        break;
+      }
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+
+  if (!zipBuffer || zipBuffer.length < 20000) {
+    throw new Error("更新包下载失败或超时：" + (lastErr ? lastErr.message : "未能获取到有效数据包"));
   }
 
   if (onProgress) onProgress("更新包下载完毕，正在校验并解压覆盖核心代码...");

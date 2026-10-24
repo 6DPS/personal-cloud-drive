@@ -44,7 +44,7 @@ ElseIf fso.FileExists(edgeX86) Then
 End If
 
 If edgeExe <> "" Then
-    WshShell.Run """" & edgeExe & """ --app=http://localhost:8081 --window-size=1200,820", 1, False
+    WshShell.Run """" & edgeExe & """ --app=http://localhost:8081 --start-maximized", 1, False
 Else
     WshShell.Run "powershell.exe -NoProfile -Command ""Start-Process http://localhost:8081""", 0, False
 End If

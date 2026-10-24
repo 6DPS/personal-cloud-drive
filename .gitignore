@@ -11,6 +11,7 @@ tmp/
 # 用户私有环境配置与网络证书
 .env
 .cloudflared/
+tools/cloudflared.exe
 
 # OCR 离线数据包
 *.traineddata

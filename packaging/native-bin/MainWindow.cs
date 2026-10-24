@@ -105,6 +105,7 @@ namespace DPSir.ZhiYunPan {
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MinimumSize = new Size(800, 600);
             this.BackColor = Color.FromArgb(240, 244, 249);
+            this.WindowState = FormWindowState.Maximized;
 
             // 优先加载打包的高清图标
             string iconPath = Path.Combine(appDir, "app-icon.ico");
