@@ -156,5 +156,42 @@ namespace DPSir.ZhiYunPan {
                 MessageBox.Show("启动显示引擎遇到异常：" + ex.Message, "DPSir 智云盘", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
+        protected override void OnFormClosed(FormClosedEventArgs e) {
+            base.OnFormClosed(e);
+            try {
+                // 判断当前是否处于“专用服务器模式 (已开启开机自启)”
+                string userStartup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                string lnkA = Path.Combine(userStartup, "DPSir 智云盘后台服务.lnk");
+                string lnkB = Path.Combine(userStartup, "DPSir 智云盘.lnk");
+                string commonStartup = Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
+                string lnkC = Path.Combine(commonStartup, "DPSir 智云盘后台服务.lnk");
+
+                bool isServerMode = File.Exists(lnkA) || File.Exists(lnkB) || File.Exists(lnkC);
+                if (!isServerMode) {
+                    // 日常电脑模式（未开自启）：退出客户端时自动彻底停止后台服务，立刻释放 8081 端口！
+                    StopServer();
+                }
+            } catch {}
+        }
+
+        private void StopServer() {
+            try {
+                string vbs = Path.Combine(appDir, "stop-desktop.vbs");
+                if (!File.Exists(vbs)) {
+                    vbs = Path.Combine(appDir, @"scripts\stop-desktop.vbs");
+                }
+                if (File.Exists(vbs)) {
+                    ProcessStartInfo psi = new ProcessStartInfo();
+                    psi.FileName = "wscript.exe";
+                    psi.Arguments = "\"" + vbs + "\" /silent";
+                    psi.CreateNoWindow = true;
+                    psi.WindowStyle = ProcessWindowStyle.Hidden;
+                    psi.UseShellExecute = false;
+                    Process p = Process.Start(psi);
+                    if (p != null) p.WaitForExit(1500);
+                }
+            } catch {}
+        }
     }
 }
