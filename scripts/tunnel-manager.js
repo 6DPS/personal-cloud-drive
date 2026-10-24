@@ -12,19 +12,28 @@ const { spawn, execSync } = require("child_process");
 const ROOT = path.resolve(__dirname, "..");
 
 function findCloudflaredExe() {
-  const localExe = path.join(ROOT, "tools", "cloudflared.exe");
-  if (fs.existsSync(localExe)) return localExe;
-
+  const candidates = [
+    path.join(ROOT, "tools", "cloudflared.exe"),
+    path.join(process.env.USERPROFILE || "", ".cloudflared", "cloudflared.exe"),
+    "C:\\Program Files\\cloudflared\\cloudflared.exe",
+    "C:\\Program Files (x86)\\cloudflared\\cloudflared.exe",
+  ];
+  for (const c of candidates) {
+    if (c && fs.existsSync(c)) return c;
+  }
   return null;
 }
 
 function findConfigFile() {
-  const localConfig = path.join(ROOT, ".cloudflared", "config.yml");
-  if (fs.existsSync(localConfig)) return localConfig;
-
-  const userConfig = path.join(process.env.USERPROFILE || "", ".cloudflared", "config.yml");
-  if (fs.existsSync(userConfig)) return userConfig;
-
+  const candidates = [
+    path.join(ROOT, ".cloudflared", "config.yml"),
+    path.join(ROOT, ".cloudflared", "config.yaml"),
+    path.join(process.env.USERPROFILE || "", ".cloudflared", "config.yml"),
+    path.join(process.env.USERPROFILE || "", ".cloudflared", "config.yaml"),
+  ];
+  for (const c of candidates) {
+    if (c && fs.existsSync(c)) return c;
+  }
   return null;
 }
 

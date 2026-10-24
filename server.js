@@ -61,7 +61,7 @@ if (!PUBLIC_ACCESS_URL) {
       if (fs.existsSync(hostFile)) {
         const h = fs.readFileSync(hostFile, "utf8").trim();
         if (h) {
-          PUBLIC_ACCESS_URL = `https://${h}`;
+          PUBLIC_ACCESS_URL = /^https?:\/\//i.test(h) ? h : `https://${h}`;
           break;
         }
       }
@@ -7262,6 +7262,15 @@ ensureStorage()
       try {
         tunnelManager.startTunnel();
       } catch {}
+
+      function gracefulShutdown() {
+        try {
+          tunnelManager.stopTunnel();
+        } catch {}
+        process.exit(0);
+      }
+      process.on("SIGINT", gracefulShutdown);
+      process.on("SIGTERM", gracefulShutdown);
     
   })
   .catch((error) => {

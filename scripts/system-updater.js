@@ -153,6 +153,10 @@ async function checkUpdate() {
 
   const downloadUrl = `${successfulMirror}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
 
+  const mirrorDisplay = successfulMirror
+    ? successfulMirror.replace("https://", "").replace("/", "")
+    : "GitHub Official";
+
   return {
     ok: true,
     hasUpdate,
@@ -160,7 +164,8 @@ async function checkUpdate() {
     latestVersion,
     changelog,
     downloadUrl,
-    mirrorUsed: successfulMirror || "GitHub Official",
+    mirrorPrefix: successfulMirror,
+    mirrorUsed: mirrorDisplay,
   };
 }
 
@@ -177,9 +182,13 @@ async function applyUpdate(onProgress = null) {
   let lastErr = null;
 
   // 优先尝试刚才探测胜出的最快镜像，若异常则依次自动切换至其余高可用节点
+  const bestPrefix = (check.mirrorPrefix !== undefined)
+    ? check.mirrorPrefix
+    : (check.mirrorUsed === "GitHub Official" ? "" : (check.mirrorUsed || ""));
+
   const orderedMirrors = [
-    check.mirrorUsed,
-    ...MIRROR_PREFIXES.filter((m) => m !== check.mirrorUsed),
+    bestPrefix,
+    ...MIRROR_PREFIXES.filter((m) => m !== bestPrefix),
   ];
 
   for (const prefix of orderedMirrors) {
@@ -211,6 +220,7 @@ async function applyUpdate(onProgress = null) {
   const PROTECTED_PREFIXES = [
     ".env",
     ".git",
+    ".cloudflared",
     "runtime",
     "logs",
     "dist",

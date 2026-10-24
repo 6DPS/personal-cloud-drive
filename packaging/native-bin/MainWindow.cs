@@ -170,12 +170,23 @@ namespace DPSir.ZhiYunPan {
             try {
                 // 判断当前是否处于“专用服务器模式 (已开启开机自启)”
                 string userStartup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                string lnkA = Path.Combine(userStartup, "DPSir 智云盘后台服务.lnk");
-                string lnkB = Path.Combine(userStartup, "DPSir 智云盘.lnk");
                 string commonStartup = Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup);
-                string lnkC = Path.Combine(commonStartup, "DPSir 智云盘后台服务.lnk");
+                string[] startupPaths = new string[] {
+                    Path.Combine(userStartup, "DPSir 智云盘后台服务.lnk"),
+                    Path.Combine(userStartup, "DPSir 智云盘.lnk"),
+                    Path.Combine(userStartup, "DPSir 智云盘服务.lnk"),
+                    Path.Combine(commonStartup, "DPSir 智云盘后台服务.lnk"),
+                    Path.Combine(commonStartup, "DPSir 智云盘.lnk"),
+                    Path.Combine(commonStartup, "DPSir 智云盘服务.lnk")
+                };
 
-                bool isServerMode = File.Exists(lnkA) || File.Exists(lnkB) || File.Exists(lnkC);
+                bool isServerMode = false;
+                foreach (string p in startupPaths) {
+                    if (File.Exists(p)) {
+                        isServerMode = true;
+                        break;
+                    }
+                }
                 if (!isServerMode) {
                     // 日常电脑模式（未开自启）：退出客户端时自动彻底停止后台服务，立刻释放 8081 端口！
                     StopServer();

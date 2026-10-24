@@ -162,12 +162,14 @@ function disableAutostart() {
       execSync(`wscript.exe "${vbs}" /silent`, { stdio: "ignore", windowsHide: true });
     } else {
       // 兜底直接删除启动项文件
-      const startupDir = getWindowsStartupDir();
+      const startupDirs = getWindowsStartupDirs();
       const files = ["DPSir 智云盘后台服务.lnk", "DPSir 智云盘.lnk", "DPSir 智云盘服务.lnk"];
-      for (const f of files) {
-        const p = path.join(startupDir, f);
-        if (fs.existsSync(p)) {
-          try { fs.unlinkSync(p); } catch {}
+      for (const dir of startupDirs) {
+        for (const f of files) {
+          const p = path.join(dir, f);
+          if (fs.existsSync(p)) {
+            try { fs.unlinkSync(p); } catch {}
+          }
         }
       }
     }

@@ -4,13 +4,17 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 userStartup = WshShell.SpecialFolders("Startup")
 commonStartup = WshShell.SpecialFolders("AllUsersStartup")
 
+silentName = "\DPSir " & ChrW(26234) & ChrW(20113) & ChrW(30424) & ChrW(21518) & ChrW(21488) & ChrW(26381) & ChrW(21153) & ".lnk"
+legacyName = "\DPSir " & ChrW(26234) & ChrW(20113) & ChrW(30424) & ".lnk"
+altName    = "\DPSir " & ChrW(26234) & ChrW(20113) & ChrW(30424) & ChrW(26381) & ChrW(21153) & ".lnk"
+
 filesToDelete = Array( _
-    userStartup & "\DPSir 智云盘后台服务.lnk", _
-    userStartup & "\DPSir 智云盘.lnk", _
-    userStartup & "\DPSir 智云盘服务.lnk", _
-    commonStartup & "\DPSir 智云盘后台服务.lnk", _
-    commonStartup & "\DPSir 智云盘.lnk", _
-    commonStartup & "\DPSir 智云盘服务.lnk" _
+    userStartup & silentName, _
+    userStartup & legacyName, _
+    userStartup & altName, _
+    commonStartup & silentName, _
+    commonStartup & legacyName, _
+    commonStartup & altName _
 )
 
 On Error Resume Next
@@ -32,5 +36,7 @@ If WScript.Arguments.Count > 0 Then
 End If
 
 If Not isSilent Then
-    MsgBox "已成功关闭开机自启！" & vbCrLf & vbCrLf & "电脑开机后将不会自动启动智云盘后台服务，也不会占用 8081 端口。" & vbCrLf & "当您需要使用网盘时，只需双击桌面【DPSir 智云盘】图标即可快速启动。", 64, "DPSir 智云盘 - 开机自启设置"
+    msg = ChrW(24050) & ChrW(25104) & ChrW(21151) & ChrW(20851) & ChrW(38381) & ChrW(24320) & ChrW(26426) & ChrW(33258) & ChrW(21551) & ChrW(65281) & vbCrLf & vbCrLf & ChrW(19979) & ChrW(27425) & ChrW(24320) & ChrW(26426) & ChrW(21518) & ChrW(23558) & ChrW(19981) & ChrW(20250) & ChrW(33258) & ChrW(21160) & ChrW(21551) & ChrW(21160) & ChrW(32593) & ChrW(30424) & ChrW(21518) & ChrW(21488) & ChrW(26381) & ChrW(21153) & ChrW(65292) & ChrW(20063) & ChrW(19981) & ChrW(20250) & ChrW(21344) & ChrW(29992) & " 8081 " & ChrW(31471) & ChrW(21475) & ChrW(12290) & vbCrLf & ChrW(33509) & ChrW(24179) & ChrW(26102) & ChrW(38656) & ChrW(35201) & ChrW(20351) & ChrW(29992) & ChrW(32593) & ChrW(30424) & ChrW(65292) & ChrW(21482) & ChrW(38656) & ChrW(21452) & ChrW(20987) & ChrW(26700) & ChrW(38754) & ChrW(12304) & "DPSir " & ChrW(26234) & ChrW(20113) & ChrW(30424) & ChrW(12305) & ChrW(22270) & ChrW(26631) & ChrW(21363) & ChrW(21487) & ChrW(31186) & ChrW(32423) & ChrW(24320) & ChrW(21551) & ChrW(12290)
+    title = "DPSir " & ChrW(26234) & ChrW(20113) & ChrW(30424) & " - " & ChrW(24320) & ChrW(26426) & ChrW(33258) & ChrW(21551) & ChrW(35774) & ChrW(32622)
+    MsgBox msg, 64, title
 End If

@@ -1,5 +1,5 @@
 ' ==============================================================================
-' DPSir 智云盘 - Silent Launcher
+' DPSir ZhiYunPan - Silent Launcher
 ' Launches background watchdog server and opens dedicated desktop window / browser
 ' ==============================================================================
 Set WshShell = CreateObject("WScript.Shell")
