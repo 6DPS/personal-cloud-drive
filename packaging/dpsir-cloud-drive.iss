@@ -4,7 +4,7 @@
 ; ==============================================================================
 
 #define MyAppName "DPSir 智云盘"
-#define MyAppVersion "1.0.8"
+#define MyAppVersion "1.0.9"
 #define MyAppPublisher "DPSir Studio"
 #define MyAppExeName "DPSir-ZhiYunPan.exe"
 #define MyIconFile "app-icon.ico"
@@ -20,7 +20,7 @@ DefaultDirName={autopf}\DPSir 智云盘
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist
-OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.0.8
+OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.0.9
 SetupIconFile={#MyIconFile}
 WizardSmallImageFile=wizard-small.bmp
 Compression=lzma2/ultra64
