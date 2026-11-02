@@ -30,37 +30,96 @@ namespace DPSir.ZhiYunPan {
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool SetProcessDPIAware();
 
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll")]
+        static extern bool IsWindowVisible(IntPtr hWnd);
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        private const int SW_MAXIMIZE = 3;
+        private const int SW_RESTORE = 9;
+
         private static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4);
+
+        private static void ActivateExistingInstance() {
+            try {
+                Process current = Process.GetCurrentProcess();
+                System.Collections.Generic.HashSet<uint> targetPids = new System.Collections.Generic.HashSet<uint>();
+                foreach (Process p in Process.GetProcessesByName(current.ProcessName)) {
+                    if (p.Id != current.Id) {
+                        targetPids.Add((uint)p.Id);
+                        if (p.MainWindowHandle != IntPtr.Zero) {
+                            ShowWindow(p.MainWindowHandle, SW_MAXIMIZE);
+                            SetForegroundWindow(p.MainWindowHandle);
+                        }
+                    }
+                }
+
+                if (targetPids.Count > 0) {
+                    EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
+                        if (IsWindowVisible(hWnd)) {
+                            uint pid;
+                            GetWindowThreadProcessId(hWnd, out pid);
+                            if (targetPids.Contains(pid)) {
+                                ShowWindow(hWnd, SW_MAXIMIZE);
+                                SetForegroundWindow(hWnd);
+                            }
+                        }
+                        return true;
+                    }, IntPtr.Zero);
+                }
+            } catch {}
+        }
 
         [STAThread]
         static void Main() {
-            // 启用顶级 Per-Monitor V2 高 DPI 矢量渲染，防止 125%/150%/200% 屏幕缩放下的字体模糊
-            try {
-                if (!SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
-                    try {
-                        SetProcessDpiAwareness(2); // PROCESS_PER_MONITOR_DPI_AWARE
-                    } catch {
-                        SetProcessDPIAware();
-                    }
+            bool createdNew;
+            using (System.Threading.Mutex mutex = new System.Threading.Mutex(true, @"Global\DPSir_ZhiYunPan_App_SingleInstance_Mutex", out createdNew)) {
+                if (!createdNew) {
+                    // 已有实例在运行：将已有窗口置顶并最大化唤醒，当前进程秒退，防止多开窗口
+                    ActivateExistingInstance();
+                    return;
                 }
-            } catch {}
 
-            try {
-                // 专属 AppID，确保 Windows 任务栏完全独立归类并使用专属图标
-                SetCurrentProcessExplicitAppUserModelID("DPSir.ZhiYunPan.Client");
-            } catch {}
+                // 启用顶级 Per-Monitor V2 高 DPI 矢量渲染，防止 125%/150%/200% 屏幕缩放下的字体模糊
+                try {
+                    if (!SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+                        try {
+                            SetProcessDpiAwareness(2); // PROCESS_PER_MONITOR_DPI_AWARE
+                        } catch {
+                            SetProcessDPIAware();
+                        }
+                    }
+                } catch {}
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+                try {
+                    // 专属 AppID，确保 Windows 任务栏完全独立归类并使用专属图标
+                    SetCurrentProcessExplicitAppUserModelID("DPSir.ZhiYunPan.Client");
+                } catch {}
 
-            string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            try {
-                CoreWebView2Environment.SetLoaderDllFolderPath(appDir);
-            } catch {}
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
 
-            EnsureServerRunning(appDir);
+                string appDir = AppDomain.CurrentDomain.BaseDirectory;
+                try {
+                    CoreWebView2Environment.SetLoaderDllFolderPath(appDir);
+                } catch {}
 
-            Application.Run(new MainForm(appDir));
+                EnsureServerRunning(appDir);
+
+                Application.Run(new MainForm(appDir));
+            }
         }
 
         static void EnsureServerRunning(string appDir) {
