@@ -240,16 +240,50 @@ async function applyUpdate(onProgress = null) {
     }
     if (!relativePath) continue;
 
+    // 特殊例外：允许热更新桌面客户端原生外壳 packaging/native-bin/DPSir-ZhiYunPan.exe
+    const isNativeExe = relativePath === "packaging/native-bin/DPSir-ZhiYunPan.exe";
+
     // 保护检查
-    const isProtected = PROTECTED_PREFIXES.some(
+    const isProtected = !isNativeExe && PROTECTED_PREFIXES.some(
       (prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`) || relativePath.startsWith(`${prefix}\\`)
     );
     if (isProtected) continue;
 
+    const fileContent = await fileObj.async("nodebuffer");
+
+    if (isNativeExe) {
+      // 1. 同步保存至仓库 native-bin 目录
+      const repoTarget = path.join(ROOT, "packaging", "native-bin", "DPSir-ZhiYunPan.exe");
+      try {
+        await fsp.mkdir(path.dirname(repoTarget), { recursive: true });
+        await fsp.writeFile(repoTarget, fileContent);
+      } catch {}
+
+      // 2. 如果当前 ROOT 或已知安装目录存在运行外壳，利用 Windows 重命名无锁机制热替换
+      const candidateExePaths = [
+        path.join(ROOT, "DPSir-ZhiYunPan.exe"),
+        "D:\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
+        "C:\\Program Files\\DPSir 智云盘\\DPSir-ZhiYunPan.exe"
+      ];
+      for (const exePath of candidateExePaths) {
+        if (fs.existsSync(exePath)) {
+          try {
+            const oldPath = exePath + ".old";
+            if (fs.existsSync(oldPath)) {
+              try { await fsp.unlink(oldPath); } catch {}
+            }
+            await fsp.rename(exePath, oldPath);
+            await fsp.writeFile(exePath, fileContent);
+          } catch (err) {
+            try { await fsp.writeFile(exePath, fileContent); } catch {}
+          }
+        }
+      }
+      continue;
+    }
+
     const targetPath = path.join(ROOT, relativePath);
     await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-
-    const fileContent = await fileObj.async("nodebuffer");
     await fsp.writeFile(targetPath, fileContent);
   }
 

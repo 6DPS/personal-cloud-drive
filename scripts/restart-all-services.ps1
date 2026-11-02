@@ -36,6 +36,27 @@ Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction Sil
 Start-Sleep -Seconds 1
 Write-Host "  [OK] Old background processes terminated safely." -ForegroundColor Green
 
+# 自动同步最新编译的原生客户端外壳至运行目录（热重命名无锁替换）
+$nativeSource = Join-Path $root "packaging\native-bin\DPSir-ZhiYunPan.exe"
+if (Test-Path -LiteralPath $nativeSource) {
+    $candidateTargets = @(
+        (Join-Path $root "DPSir-ZhiYunPan.exe"),
+        "D:\DPSir 智云盘\DPSir-ZhiYunPan.exe",
+        "C:\Program Files\DPSir 智云盘\DPSir-ZhiYunPan.exe"
+    )
+    foreach ($tgt in $candidateTargets) {
+        if (Test-Path -LiteralPath $tgt) {
+            try {
+                $oldTgt = "$tgt.old"
+                if (Test-Path -LiteralPath $oldTgt) { Remove-Item -LiteralPath $oldTgt -Force -ErrorAction SilentlyContinue }
+                Rename-Item -LiteralPath $tgt -NewName (Split-Path $oldTgt -Leaf) -Force -ErrorAction SilentlyContinue
+                Copy-Item -LiteralPath $nativeSource -Destination $tgt -Force -ErrorAction SilentlyContinue
+                Write-Host "  [OK] Synchronized latest native client shell: $tgt" -ForegroundColor Green
+            } catch {}
+        }
+    }
+}
+
 # Auto-heal: verify firewall rule covers all network profiles (Profile: Any)
 $fw = Get-NetFirewallRule -Name "DPSir-CloudDrive-LAN" -ErrorAction SilentlyContinue
 if (-not $fw -or $fw.Profile -ne "Any") {
