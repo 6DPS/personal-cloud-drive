@@ -96,6 +96,7 @@ const OFFICE_RENDER_TIMEOUT_MS = Number(process.env.OFFICE_RENDER_TIMEOUT_MS || 
 const PASSWORD_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-password.txt");
 const SESSION_SECRET_FILE = path.join(__dirname, ".cloudflared", "cloud-drive-session-secret.txt");
 const FILE_PASSWORD = fs.existsSync(PASSWORD_FILE) ? fs.readFileSync(PASSWORD_FILE, "utf8").trim() : "";
+const HAS_CONFIGURED_ADMIN_PASSWORD = Boolean(process.env.CLOUD_DRIVE_PASSWORD || FILE_PASSWORD);
 const ADMIN_PASSWORD = process.env.CLOUD_DRIVE_PASSWORD || FILE_PASSWORD || "admin123456";
 const DEFAULT_USER_QUOTA_GB = Number(process.env.DEFAULT_USER_QUOTA_GB || 20);
 const DEFAULT_USER_QUOTA_BYTES =
@@ -186,10 +187,6 @@ function exitAfterFatal(kind, error) {
   setTimeout(() => process.exit(1), 250).unref();
 }
 
-process.on("uncaughtException", (error) => {
-  exitAfterFatal("uncaughtException", error);
-});
-
 const NON_FATAL_ERROR_CODES = new Set([
   "ECONNRESET",
   "EPIPE",
@@ -218,6 +215,21 @@ function isNonFatalNetworkOrClientError(error) {
   }
   return false;
 }
+
+process.on("uncaughtException", (error) => {
+  if (isNonFatalNetworkOrClientError(error)) {
+    const detail = error?.stack || error?.message || String(error);
+    console.warn(`[Safe Guard] 忽略非致命网络/流异常：${detail.split("\n")[0]}`);
+    try {
+      appendRuntimeLogSync(
+        path.join(RUNTIME_LOG_DIR, "server-warnings.log"),
+        `[${new Date().toISOString()}] Ignored non-fatal uncaughtException: ${detail}\n\n`
+      );
+    } catch {}
+    return;
+  }
+  exitAfterFatal("uncaughtException", error);
+});
 
 process.on("unhandledRejection", (reason) => {
   if (isNonFatalNetworkOrClientError(reason)) {
@@ -316,7 +328,11 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: "1mb" }));
+const defaultJsonParser = express.json({ limit: "1mb" });
+app.use((req, res, next) => {
+  if (req.path.replace(/\/+$/, "") === "/api/user/avatar") return next();
+  return defaultJsonParser(req, res, next);
+});
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -324,12 +340,34 @@ app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });
+function socketRemoteIp(req) {
+  return String(req.socket?.remoteAddress || req.ip || "").replace(/^::ffff:/, "");
+}
+
+function isLoopbackIp(ip = "") {
+  const normalized = String(ip || "").trim().toLowerCase();
+  return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
+}
+
+function isDirectLocalRequest(req) {
+  if (!isLoopbackIp(socketRemoteIp(req))) return false;
+  return Boolean(
+    !req.headers["cf-connecting-ip"] &&
+    !req.headers["cf-ray"] &&
+    !req.headers["x-forwarded-for"] &&
+    !req.headers["x-forwarded-host"]
+  );
+}
+
 function clientIp(req) {
-  const forwarded = String(req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || "")
-    .split(",")[0]
-    .trim();
-  const raw = forwarded || req.socket.remoteAddress || req.ip || "";
-  return raw.replace(/^::ffff:/, "");
+  const rawSocketIp = socketRemoteIp(req);
+  if (isLoopbackIp(rawSocketIp)) {
+    const forwarded = String(req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || "")
+      .split(",")[0]
+      .trim();
+    if (forwarded) return forwarded.replace(/^::ffff:/, "");
+  }
+  return rawSocketIp;
 }
 
 function activeClientSnapshot() {
@@ -343,9 +381,19 @@ function activeClientSnapshot() {
   };
 }
 
+const MAX_RATE_LIMIT_ENTRIES = 20000;
 function cleanupRateLimitStore(store, now = Date.now()) {
   for (const [key, entry] of store.entries()) {
     if (!entry?.resetAt || entry.resetAt <= now) store.delete(key);
+  }
+  if (store.size > MAX_RATE_LIMIT_ENTRIES) {
+    const overflow = store.size - MAX_RATE_LIMIT_ENTRIES;
+    let removed = 0;
+    for (const key of store.keys()) {
+      store.delete(key);
+      removed += 1;
+      if (removed >= overflow) break;
+    }
   }
 }
 
@@ -605,6 +653,26 @@ function publicRegistrationKey(record) {
 }
 
 const fileWriteQueues = new Map();
+const keyedAsyncLocks = new Map();
+
+async function withKeyedLock(lockKey, fn) {
+  const prev = keyedAsyncLocks.get(lockKey) || Promise.resolve();
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const tail = prev.then(() => gate, () => gate);
+  keyedAsyncLocks.set(lockKey, tail);
+  try {
+    await prev.catch(() => {});
+    return await fn();
+  } finally {
+    release();
+    if (keyedAsyncLocks.get(lockKey) === tail) {
+      keyedAsyncLocks.delete(lockKey);
+    }
+  }
+}
 
 async function safeAtomicWriteJson(filePath, data, options = {}) {
   const previousPromise = fileWriteQueues.get(filePath) || Promise.resolve();
@@ -862,113 +930,123 @@ async function writeTrashMeta(userId, items) {
 }
 
 async function moveToTrash(userId, relPath, sourceFullPath, stat) {
-  const trashDir = userTrashRoot(userId);
-  await fsp.mkdir(trashDir, { recursive: true });
-  const id = `${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
-  const targetTrashPath = path.join(trashDir, id);
-  await fsp.rename(sourceFullPath, targetTrashPath);
+  return withKeyedLock(`trash:${userId}`, async () => {
+    const trashDir = userTrashRoot(userId);
+    await fsp.mkdir(trashDir, { recursive: true });
+    const id = `${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+    const targetTrashPath = path.join(trashDir, id);
+    await fsp.rename(sourceFullPath, targetTrashPath);
 
-  const isDirectory = stat.isDirectory();
-  const meta = {
-    id,
-    originalRelPath: relPath,
-    name: path.basename(sourceFullPath),
-    type: isDirectory ? "folder" : "file",
-    isDirectory,
-    size: isDirectory ? null : stat.size,
-    deletedAt: new Date().toISOString(),
-  };
+    const isDirectory = stat.isDirectory();
+    const meta = {
+      id,
+      originalRelPath: relPath,
+      name: path.basename(sourceFullPath),
+      type: isDirectory ? "folder" : "file",
+      isDirectory,
+      size: isDirectory ? null : stat.size,
+      deletedAt: new Date().toISOString(),
+    };
 
-  const items = await readTrashMeta(userId);
-  items.unshift(meta);
-  await writeTrashMeta(userId, items);
-  if (!isDirectory && Number.isFinite(stat.size)) {
-    adjustUserStorageUsage(userId, -stat.size);
-  } else {
-    invalidateUserStorageUsage(userId);
-  }
-  return meta;
+    const items = await readTrashMeta(userId);
+    items.unshift(meta);
+    await writeTrashMeta(userId, items);
+    if (!isDirectory && Number.isFinite(stat.size)) {
+      adjustUserStorageUsage(userId, -stat.size);
+    } else {
+      invalidateUserStorageUsage(userId);
+    }
+    return meta;
+  });
 }
 
 async function restoreFromTrash(userId, trashId) {
-  const items = await readTrashMeta(userId);
-  const index = items.findIndex((item) => item.id === trashId);
-  if (index === -1) throw new Error("回收站中未找到该项目");
-  const meta = items[index];
+  return withKeyedLock(`trash:${userId}`, async () => {
+    const items = await readTrashMeta(userId);
+    const index = items.findIndex((item) => item.id === trashId);
+    if (index === -1) throw new Error("回收站中未找到该项目");
+    const meta = items[index];
 
-  const trashDir = userTrashRoot(userId);
-  const trashPath = path.join(trashDir, meta.id);
-  if (!fs.existsSync(trashPath)) {
+    const trashDir = userTrashRoot(userId);
+    const trashPath = path.join(trashDir, meta.id);
+    if (!fs.existsSync(trashPath)) {
+      items.splice(index, 1);
+      await writeTrashMeta(userId, items);
+      throw new Error("回收站物理文件已丢失");
+    }
+
+    let destRel = meta.originalRelPath;
+    let destFull = resolveDrivePathForUser(userId, destRel);
+    await fsp.mkdir(path.dirname(destFull), { recursive: true });
+
+    if (fs.existsSync(destFull)) {
+      const parsed = path.parse(meta.name);
+      const ts = new Date().toISOString().slice(11, 19).replace(/:/g, "");
+      const isDir = Boolean(meta.isDirectory || meta.type === "folder");
+      const newName = isDir ? `${parsed.name}_恢复_${ts}` : `${parsed.name}_恢复_${ts}${parsed.ext}`;
+      destRel = webPath(parentWebPath(meta.originalRelPath), newName);
+      destFull = resolveDrivePathForUser(userId, destRel);
+    }
+
+    await fsp.rename(trashPath, destFull);
+    if (!meta.isDirectory && Number.isFinite(meta.size)) {
+      adjustUserStorageUsage(userId, meta.size);
+    } else {
+      invalidateUserStorageUsage(userId);
+    }
     items.splice(index, 1);
     await writeTrashMeta(userId, items);
-    throw new Error("回收站物理文件已丢失");
-  }
-
-  let destRel = meta.originalRelPath;
-  let destFull = resolveDrivePathForUser(userId, destRel);
-  await fsp.mkdir(path.dirname(destFull), { recursive: true });
-
-  if (fs.existsSync(destFull)) {
-    const parsed = path.parse(meta.name);
-    const ts = new Date().toISOString().slice(11, 19).replace(/:/g, "");
-    const isDir = Boolean(meta.isDirectory || meta.type === "folder");
-    const newName = isDir ? `${parsed.name}_恢复_${ts}` : `${parsed.name}_恢复_${ts}${parsed.ext}`;
-    destRel = webPath(parentWebPath(meta.originalRelPath), newName);
-    destFull = resolveDrivePathForUser(userId, destRel);
-  }
-
-  await fsp.rename(trashPath, destFull);
-  if (!meta.isDirectory && Number.isFinite(meta.size)) {
-    adjustUserStorageUsage(userId, meta.size);
-  } else {
-    invalidateUserStorageUsage(userId);
-  }
-  items.splice(index, 1);
-  await writeTrashMeta(userId, items);
-  return { ok: true, restoredPath: destRel, name: path.basename(destFull) };
+    return { ok: true, restoredPath: destRel, name: path.basename(destFull) };
+  });
 }
 
 async function deleteFromTrashPermanently(userId, trashId) {
-  const items = await readTrashMeta(userId);
-  const index = items.findIndex((item) => item.id === trashId);
-  if (index === -1) return { ok: true };
-  const meta = items[index];
-  const trashPath = path.join(userTrashRoot(userId), meta.id);
-  await removePath(trashPath).catch(() => {});
-  items.splice(index, 1);
-  await writeTrashMeta(userId, items);
-  return { ok: true };
+  return withKeyedLock(`trash:${userId}`, async () => {
+    const items = await readTrashMeta(userId);
+    const index = items.findIndex((item) => item.id === trashId);
+    if (index === -1) return { ok: true };
+    const meta = items[index];
+    const trashPath = path.join(userTrashRoot(userId), meta.id);
+    await removePath(trashPath).catch(() => {});
+    items.splice(index, 1);
+    await writeTrashMeta(userId, items);
+    return { ok: true };
+  });
 }
 
 async function clearTrash(userId) {
-  const trashDir = userTrashRoot(userId);
-  await removePath(trashDir).catch(() => {});
-  await fsp.mkdir(trashDir, { recursive: true });
-  await writeTrashMeta(userId, []);
-  return { ok: true };
+  return withKeyedLock(`trash:${userId}`, async () => {
+    const trashDir = userTrashRoot(userId);
+    await removePath(trashDir).catch(() => {});
+    await fsp.mkdir(trashDir, { recursive: true });
+    await writeTrashMeta(userId, []);
+    return { ok: true };
+  });
 }
 
 async function purgeExpiredTrash(userId) {
-  try {
-    const items = await readTrashMeta(userId);
-    const now = Date.now();
-    const maxAgeMs = 30 * 24 * 60 * 60 * 1000;
-    const remaining = [];
-    for (const item of items) {
-      const deletedAt = new Date(item.deletedAt).getTime();
-      if (now - deletedAt > maxAgeMs) {
-        const trashPath = path.join(userTrashRoot(userId), item.id);
-        await removePath(trashPath).catch(() => {});
-      } else {
-        remaining.push(item);
+  return withKeyedLock(`trash:${userId}`, async () => {
+    try {
+      const items = await readTrashMeta(userId);
+      const now = Date.now();
+      const maxAgeMs = 30 * 24 * 60 * 60 * 1000;
+      const remaining = [];
+      for (const item of items) {
+        const deletedAt = new Date(item.deletedAt).getTime();
+        if (now - deletedAt > maxAgeMs) {
+          const trashPath = path.join(userTrashRoot(userId), item.id);
+          await removePath(trashPath).catch(() => {});
+        } else {
+          remaining.push(item);
+        }
       }
+      if (remaining.length !== items.length) {
+        await writeTrashMeta(userId, remaining);
+      }
+    } catch (err) {
+      console.warn("Purge trash failed for", userId, err.message);
     }
-    if (remaining.length !== items.length) {
-      await writeTrashMeta(userId, remaining);
-    }
-  } catch (err) {
-    console.warn("Purge trash failed for", userId, err.message);
-  }
+  });
 }
 
 async function performSystemBackup() {
@@ -1084,6 +1162,9 @@ async function purgeUserData(userId) {
 
   // 4. 清理内存缓存
   folderPasswordStores.delete(userId);
+  starredStores.delete(userId);
+  userStorageUsageCache.delete(userId);
+  userFileHashMap.delete(userId);
   activeClients.delete(userId);
 }
 
@@ -1276,7 +1357,13 @@ function getCookie(req, name) {
   const raw = req.headers.cookie || "";
   for (const part of raw.split(";")) {
     const [key, ...rest] = part.trim().split("=");
-    if (key === name) return decodeURIComponent(rest.join("="));
+    if (key === name) {
+      try {
+        return decodeURIComponent(rest.join("="));
+      } catch {
+        return "";
+      }
+    }
   }
   return "";
 }
@@ -1493,7 +1580,12 @@ function verifyFolderPasswordRecord(record, password) {
 function verifyAdminPassword(password) {
   const user = currentUser();
   if (user?.password && verifyPasswordRecord(user.password, password)) return true;
-  return user?.username === ADMIN_USER && String(password || "") === ADMIN_PASSWORD;
+  return (
+    user?.username === ADMIN_USER &&
+    HAS_CONFIGURED_ADMIN_PASSWORD &&
+    !user?.passwordCustomized &&
+    String(password || "") === ADMIN_PASSWORD
+  );
 }
 
 async function loadFolderPasswordStore(userId = currentUserId()) {
@@ -1548,7 +1640,7 @@ function readUnlockedFolders(req) {
   const token = getCookie(req, UNLOCK_COOKIE_NAME);
   if (!token || !token.includes(".")) return [];
   const [body, signature] = token.split(".");
-  if (!body || !signature || sign(`unlock:${body}`) !== signature) return [];
+  if (!body || !signature || !safeCompare(sign(`unlock:${body}`), signature)) return [];
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     if (payload.userId !== currentUserId()) return [];
@@ -1767,10 +1859,7 @@ async function saveStarredStore(userId = currentUserId()) {
   const store = getStarredStore(userId);
   const list = Array.from(store.values());
   const filePath = userStarredFile(userId);
-  const tmpPath = `${filePath}.tmp`;
-  await fsp.mkdir(path.dirname(filePath), { recursive: true });
-  await fsp.writeFile(tmpPath, JSON.stringify(list, null, 2), "utf8");
-  await fsp.rename(tmpPath, filePath);
+  await safeAtomicWriteJson(filePath, list, { backup: false });
 }
 
 function isStarred(userId, relPath) {
@@ -2261,6 +2350,23 @@ function uniqueArchiveName(usedNames, desiredName) {
   return candidate;
 }
 
+function wireZipResponseLifecycle(res, archive) {
+  archive.on("warning", (warn) => {
+    if (warn?.code !== "ENOENT") {
+      console.warn("[Zip Archive Warning]", warn?.message || warn);
+    }
+  });
+  archive.on("error", (error) => {
+    if (!res.headersSent) res.status(500).json({ error: "压缩文件失败" });
+    else res.destroy(error);
+  });
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      try { archive.abort(); } catch {}
+    }
+  });
+}
+
 function sendFolderZip(res, folderPath) {
   const filename = `${readableName(path.basename(folderPath)) || "folder"}.zip`;
   res.setHeader("Content-Type", "application/zip");
@@ -2268,13 +2374,10 @@ function sendFolderZip(res, folderPath) {
   res.setHeader("Cache-Control", "no-store, no-cache, no-transform");
   res.setHeader("X-Content-Type-Options", "nosniff");
   const archive = archiver("zip", { zlib: { level: 6 } });
-  archive.on("error", (error) => {
-    if (!res.headersSent) res.status(500).json({ error: "压缩文件失败" });
-    else res.destroy(error);
-  });
+  wireZipResponseLifecycle(res, archive);
   archive.pipe(res);
   addFolderToArchive(archive, folderPath, readableName(path.basename(folderPath)) || "folder");
-  archive.finalize();
+  Promise.resolve(archive.finalize()).catch(() => {});
 }
 
 function sendBulkZip(res, items, customFilename) {
@@ -2284,10 +2387,7 @@ function sendBulkZip(res, items, customFilename) {
   res.setHeader("Cache-Control", "no-store, no-cache, no-transform");
   res.setHeader("X-Content-Type-Options", "nosniff");
   const archive = archiver("zip", { zlib: { level: 6 } });
-  archive.on("error", (error) => {
-    if (!res.headersSent) res.status(500).json({ error: "压缩文件失败" });
-    else res.destroy(error);
-  });
+  wireZipResponseLifecycle(res, archive);
   archive.pipe(res);
 
   const usedNames = new Set();
@@ -2299,7 +2399,13 @@ function sendBulkZip(res, items, customFilename) {
       archive.file(item.fullPath, { name: archiveName });
     }
   }
-  archive.finalize();
+  Promise.resolve(archive.finalize()).catch(() => {});
+}
+
+function applyInlineSandboxCsp(res, contentType) {
+  if (/^(?:text\/html|image\/svg\+xml|application\/xml|text\/xml|application\/xhtml\+xml|text\/javascript|application\/javascript)\b/i.test(String(contentType || ""))) {
+    res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: blob:;");
+  }
 }
 
 async function sendFileStream(req, res, filePath, options = {}) {
@@ -2345,6 +2451,7 @@ async function sendFileStream(req, res, filePath, options = {}) {
     res.setHeader("Content-Disposition", contentDisposition(disposition, filename));
     res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
     res.setHeader("X-Content-Type-Options", "nosniff");
+    if (disposition === "inline") applyInlineSandboxCsp(res, contentType);
     await pipeline(fs.createReadStream(filePath, { start, end, highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
     return;
   }
@@ -2355,6 +2462,7 @@ async function sendFileStream(req, res, filePath, options = {}) {
   res.setHeader("Accept-Ranges", "bytes");
   res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
   res.setHeader("X-Content-Type-Options", "nosniff");
+  if (disposition === "inline") applyInlineSandboxCsp(res, contentType);
   await pipeline(fs.createReadStream(filePath, { highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
 }
 
@@ -2483,12 +2591,15 @@ function watchedPathUserId(filename) {
 
 function startStorageWatcher() {
   try {
-    fs.watch(path.join(STORAGE_BASE_ROOT, "users"), { recursive: true }, (eventType, filename) => {
+    const watcher = fs.watch(path.join(STORAGE_BASE_ROOT, "users"), { recursive: true }, (eventType, filename) => {
       const name = String(filename || "");
       if (name.includes(`${path.sep}.tmp`) || name.includes(`${path.sep}.preview`)) return;
       if (name.includes(`${path.sep}.preview-cache`)) return;
       const userId = watchedPathUserId(name);
       if (userId) notifyFileChange(userId);
+    });
+    watcher.on("error", (error) => {
+      console.warn("文件实时监听出现异常：", error.message);
     });
   } catch (error) {
     console.warn("文件实时监听不可用，将仅在操作后刷新：", error.message);
@@ -2658,6 +2769,31 @@ class OfficePreviewWorker {
         { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] }
       );
       this.process = child;
+      child.stdin?.on("error", () => {});
+
+      let startSettled = false;
+      const startTimer = setTimeout(() => {
+        if (!startSettled) {
+          startSettled = true;
+          try { child.kill(); } catch {}
+          this.reset();
+          reject(new Error(`${this.kind} preview worker start timed out`));
+        }
+      }, 25000);
+      startTimer.unref?.();
+
+      const settleResolve = () => {
+        if (startSettled) return;
+        startSettled = true;
+        clearTimeout(startTimer);
+        resolve();
+      };
+      const settleReject = (err) => {
+        if (startSettled) return;
+        startSettled = true;
+        clearTimeout(startTimer);
+        reject(err);
+      };
 
       const onStartLine = (line) => {
         let data = null;
@@ -2672,9 +2808,9 @@ class OfficePreviewWorker {
           child.stdout.off("data", onStartData);
           this.readline = readline.createInterface({ input: child.stdout });
           this.readline.on("line", (message) => this.handleMessage(message));
-          resolve();
+          settleResolve();
         } else if (data.status === "error") {
-          reject(new Error(data.error || `${this.kind} preview worker failed to start`));
+          settleReject(new Error(data.error || `${this.kind} preview worker failed to start`));
         }
       };
       const onStartData = (chunk) => {
@@ -2690,12 +2826,13 @@ class OfficePreviewWorker {
       });
       child.once("error", (error) => {
         this.reset();
-        reject(error);
+        settleReject(error);
       });
       child.once("exit", (code) => {
         const error = new Error(`${this.kind} preview worker exited with code ${code}`);
         const active = this.active;
         this.reset();
+        settleReject(error);
         if (active) active.reject(error);
         for (const task of this.queue.splice(0)) task.reject(error);
       });
@@ -3363,16 +3500,20 @@ function writeCachedExtractedText(filePath, stat, text) {
     setMemoryCachedText(hash, capped);
     const indexDir = path.join(currentPreviewRoot(), ".text-index");
     const cacheFile = path.join(indexDir, `${hash}.txt`);
+    const tmpCacheFile = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
     fsp
       .mkdir(indexDir, { recursive: true })
-      .then(() => fsp.writeFile(cacheFile, capped, "utf8"))
+      .then(() => fsp.writeFile(tmpCacheFile, capped, "utf8"))
+      .then(() => fsp.rename(tmpCacheFile, cacheFile))
       .then(() => {
         textIndexWriteCount += 1;
         if (textIndexWriteCount % 25 === 0) {
           return pruneTextIndexCacheDir(indexDir);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        fsp.rm(tmpCacheFile, { force: true }).catch(() => {});
+      });
   } catch {}
 }
 
@@ -4240,7 +4381,7 @@ function sameIpv4Subnet(a, b, prefixLength = 24) {
 function clientNetworkInfo(req, lanAddresses = lanAccessAddresses()) {
   const ip = clientIp(req);
   const normalizedIp = ip === "::1" ? "127.0.0.1" : ip;
-  const isLocal = normalizedIp === "127.0.0.1" || normalizedIp === "localhost";
+  const isLocal = isDirectLocalRequest(req) && (normalizedIp === "127.0.0.1" || normalizedIp === "localhost");
   const sameLan =
     isLocal ||
     lanAddresses.some((entry) => normalizedIp === entry.address || sameIpv4Subnet(normalizedIp, entry.address));
@@ -4420,6 +4561,7 @@ app.post("/api/admin/users/:id/reset-password", requireAuth, ensureAdminUser, cr
       return res.status(400).json({ error: "新密码长度至少需要 6 位字符" });
     }
     targetUser.password = createPasswordRecord(newPassword);
+    targetUser.passwordCustomized = true;
     targetUser.tokenVersion = (Number(targetUser.tokenVersion) || 0) + 1;
     targetUser.updatedAt = new Date().toISOString();
     await saveAccountsStore();
@@ -4540,6 +4682,8 @@ app.post("/api/login", loginIpRateLimit, loginAccountRateLimit, (req, res) => {
   );
   const localAdminPasswordOk =
     user?.id === SINGLE_USER_ID &&
+    HAS_CONFIGURED_ADMIN_PASSWORD &&
+    !user.passwordCustomized &&
     (String(password || "") === ADMIN_PASSWORD || (FILE_PASSWORD && String(password || "") === FILE_PASSWORD));
   if (user && (verifyPasswordRecord(user.password, password) || localAdminPasswordOk)) {
     if (localAdminPasswordOk && !verifyPasswordRecord(user.password, password)) {
@@ -4597,15 +4741,18 @@ app.post("/api/password-reset", passwordResetIpRateLimit, createRateLimitMiddlew
     const matchesUserKey = Boolean(userKeyNormalized && safeCompare(inputKeyNormalized, userKeyNormalized));
 
     const matchesAdminFallback = Boolean(isTargetAdmin && (
-      String(recoveryKey) === ADMIN_PASSWORD ||
-      (FILE_PASSWORD && String(recoveryKey) === FILE_PASSWORD) ||
-      verifyPasswordRecord(targetUser.password, recoveryKey)
+      verifyPasswordRecord(targetUser.password, recoveryKey) ||
+      (HAS_CONFIGURED_ADMIN_PASSWORD && !targetUser.passwordCustomized && (
+        String(recoveryKey) === ADMIN_PASSWORD ||
+        (FILE_PASSWORD && String(recoveryKey) === FILE_PASSWORD)
+      ))
     ));
 
     if (!matchesUserKey && !matchesAdminFallback) {
       return res.status(401).json({ error: "安全恢复密钥错误或不匹配该账号" });
     }
     targetUser.password = createPasswordRecord(newPassword);
+    targetUser.passwordCustomized = true;
     targetUser.tokenVersion = (Number(targetUser.tokenVersion) || 0) + 1;
     targetUser.updatedAt = new Date().toISOString();
     await saveAccountsStore();
@@ -4641,6 +4788,7 @@ app.post("/api/user/change-password", requireAuth, createRateLimitMiddleware({
       return res.status(401).json({ error: "当前原密码输入错误，请重新输入" });
     }
     req.user.password = createPasswordRecord(newPassword);
+    req.user.passwordCustomized = true;
     req.user.tokenVersion = (Number(req.user.tokenVersion) || 0) + 1;
     req.user.updatedAt = new Date().toISOString();
     await saveAccountsStore();
@@ -4753,6 +4901,9 @@ app.get("/api/user/avatar", (req, res) => {
     return res.status(401).json({ error: "请先登录" });
   }
   const targetUserId = req.query.u ? String(req.query.u).trim() : user.id;
+  if (targetUserId !== user.id && user.role !== "admin") {
+    return res.status(403).json({ error: "无权访问其他用户的头像" });
+  }
   const avatarPath = userAvatarFile(targetUserId);
   if (!fs.existsSync(avatarPath)) {
     return res.status(404).json({ error: "未设置自定义头像" });
@@ -4778,12 +4929,12 @@ app.post("/api/user/avatar", requireAuth, express.json({ limit: "10mb" }), async
     if (!dataUrl || typeof dataUrl !== "string") {
       return res.status(400).json({ error: "请提供头像图片数据" });
     }
-    const matches = dataUrl.match(/^data:image\/[a-zA-Z0-9.+_-]+;base64,(.+)$/);
-    if (!matches || matches.length !== 2) {
-      return res.status(400).json({ error: "头像图片数据格式不正确" });
+    const matches = dataUrl.match(/^data:image\/(png|jpe?g|webp|gif|bmp);base64,(.+)$/i);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: "头像图片数据格式不正确，仅支持 PNG/JPG/WebP/GIF/BMP" });
     }
-    const buffer = Buffer.from(matches[1], "base64");
-    if (buffer.length > 5 * 1024 * 1024) {
+    const buffer = Buffer.from(matches[2], "base64");
+    if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
       return res.status(400).json({ error: "头像文件过大（不可超过 5MB）" });
     }
     const avatarPath = userAvatarFile(userId);
@@ -4838,7 +4989,7 @@ app.get("/api/system/version", (req, res) => {
   });
 });
 
-app.get("/api/system/check-update", async (req, res) => {
+app.get("/api/system/check-update", requireAuth, async (req, res) => {
   try {
     const result = await systemUpdater.checkUpdate();
     res.json(result);
@@ -4853,19 +5004,12 @@ function handleApplyUpdatePost(req, res) {
     .catch((err) => res.status(500).json({ ok: false, error: err.message }));
 }
 
-app.post("/api/system/apply-update", (req, res, next) => {
-  const net = clientNetworkInfo(req);
-  if (net.isLocal) {
-    return handleApplyUpdatePost(req, res);
-  }
-  return requireAuth(req, res, () => {
-    return ensureAdminUser(req, res, () => handleApplyUpdatePost(req, res));
-  });
-});
+app.post("/api/system/apply-update", requireAuth, ensureAdminUser, handleApplyUpdatePost);
 
 // ==============================================================================
 // 桌面客户端宿主窗口全屏最大化自适应适配（兼容 OTA 热更新升级后的客户端原生窗口）
 // ==============================================================================
+let lastHostMaximizeAt = 0;
 function maximizeHostWindow() {
   if (process.platform !== "win32") return;
   try {
@@ -4884,6 +5028,14 @@ function maximizeHostWindow() {
 }
 
 app.post("/api/system/maximize-host-window", (req, res) => {
+  if (!isDirectLocalRequest(req)) {
+    return res.status(403).json({ ok: false, error: "仅允许本机客户端调用此接口" });
+  }
+  const now = Date.now();
+  if (now - lastHostMaximizeAt < 3000) {
+    return res.json({ ok: true, throttled: true });
+  }
+  lastHostMaximizeAt = now;
   try {
     maximizeHostWindow();
     res.json({ ok: true });
@@ -4898,7 +5050,7 @@ app.post("/api/system/maximize-host-window", (req, res) => {
 const autostartManager = require("./scripts/autostart-manager");
 const tunnelManager = require("./scripts/tunnel-manager");
 
-app.get("/api/system/autostart", (req, res) => {
+app.get("/api/system/autostart", requireAuth, ensureAdminUser, (req, res) => {
   try {
     const status = autostartManager.getStatus();
     res.json(status);
@@ -4922,15 +5074,7 @@ function handleAutostartPost(req, res) {
   }
 }
 
-app.post("/api/system/autostart", (req, res, next) => {
-  const net = clientNetworkInfo(req);
-  if (net.isLocal) {
-    return handleAutostartPost(req, res);
-  }
-  return requireAuth(req, res, () => {
-    return ensureAdminUser(req, res, () => handleAutostartPost(req, res));
-  });
-});
+app.post("/api/system/autostart", requireAuth, ensureAdminUser, handleAutostartPost);
 
 function handleStopServicePost(req, res) {
   try {
@@ -4941,15 +5085,7 @@ function handleStopServicePost(req, res) {
   }
 }
 
-app.post("/api/system/stop-service", (req, res, next) => {
-  const net = clientNetworkInfo(req);
-  if (net.isLocal) {
-    return handleStopServicePost(req, res);
-  }
-  return requireAuth(req, res, () => {
-    return ensureAdminUser(req, res, () => handleStopServicePost(req, res));
-  });
-});
+app.post("/api/system/stop-service", requireAuth, ensureAdminUser, handleStopServicePost);
 
 app.get("/api/storage-usage", requireAuth, async (req, res, next) => {
   try {
@@ -5463,8 +5599,14 @@ app.post("/api/upload-chunk/:uploadId/:index(\\d+)", requireAuth, chunkUpload.si
   }
 });
 
+const finishingUploadIds = new Set();
+
 app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, next) => {
   const uploadId = safeUploadId(req.params.uploadId);
+  if (finishingUploadIds.has(uploadId)) {
+    return res.status(409).json({ error: "上传正在合并中，请稍候" });
+  }
+  finishingUploadIds.add(uploadId);
   const user = req.user;
   const userId = user?.id;
   if (user) requestContext.enterWith({ user });
@@ -5475,7 +5617,7 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
       return res.status(403).json({ error: "上传会话不属于当前账号，请重新上传" });
     }
     const chunkCount = Number(req.body.chunkCount || 0);
-    if (!Number.isInteger(chunkCount) || chunkCount < 1) {
+    if (!Number.isInteger(chunkCount) || chunkCount < 1 || chunkCount > 200000) {
       return res.status(400).json({ error: "Invalid chunk count." });
     }
     rejectHiddenDrivePath(meta.targetPath || "");
@@ -5489,28 +5631,37 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
     await fsp.mkdir(dir, { recursive: true });
     const targetDir = path.join(dir, path.dirname(relativePath));
     await fsp.mkdir(targetDir, { recursive: true });
+    assertRealDriveBoundary(userId, targetDir);
     const target = meta.conflictAction === "replace"
       ? path.join(dir, relativePath)
       : uniqueDestinationForRelativePath(dir, relativePath);
     const tmpTarget = `${target}.uploading-${uploadId}`;
     const output = fs.createWriteStream(tmpTarget, { flags: "wx" });
+    let outputError = null;
+    output.on("error", (err) => {
+      if (!outputError) outputError = err;
+    });
     try {
       for (let index = 0; index < chunkCount; index += 1) {
         const chunkPath = path.join(sessionDir, `${index}.part`);
-        const input = fs.createReadStream(chunkPath);
-        input.pipe(output, { end: false });
-        await once(input, "end");
+        await pipeline(fs.createReadStream(chunkPath), output, { end: false });
+        if (outputError) throw outputError;
       }
       output.end();
       await once(output, "finish");
+      if (outputError) throw outputError;
       const stat = await fsp.stat(tmpTarget);
-      if (Number(meta.size) && stat.size !== Number(meta.size)) {
+      if (meta.size !== undefined && meta.size !== null && stat.size !== Number(meta.size)) {
         throw Object.assign(new Error("Uploaded size mismatch. Please upload again."), { status: 400 });
       }
-      let netByteChange = stat.size;
-      if (meta.conflictAction === "replace" && fs.existsSync(target)) {
-        const oldStat = await fsp.stat(target).catch(() => null);
-        if (oldStat) netByteChange -= oldStat.size;
+      const existingTargetStat = meta.conflictAction === "replace" && fs.existsSync(target)
+        ? await fsp.stat(target).catch(() => null)
+        : null;
+      const netByteChange = stat.size - (existingTargetStat ? existingTargetStat.size : 0);
+      if (netByteChange > 0) {
+        await ensureUserStorageQuota(req.user, netByteChange);
+      }
+      if (existingTargetStat) {
         await fsp.rm(target, { force: true }).catch(() => {});
       }
       await fsp.rename(tmpTarget, target);
@@ -5525,6 +5676,8 @@ app.post("/api/upload-chunk/:uploadId/finish", requireAuth, async (req, res, nex
     }
   } catch (error) {
     next(error);
+  } finally {
+    finishingUploadIds.delete(uploadId);
   }
 });
 
@@ -5603,6 +5756,9 @@ app.get("/api/office-preview", requireAuth, async (req, res, next) => {
     const stat = await fsp.stat(target);
     if (stat.isDirectory()) {
       return res.status(400).json({ error: "文件夹不能预览，请进入文件夹查看" });
+    }
+    if (stat.size > 50 * 1024 * 1024) {
+      return res.status(413).json({ error: "Office 文件过大，请下载后在本地打开" });
     }
     if (isWord(target)) {
       return res.json(await wordPreview(target));
@@ -6131,15 +6287,22 @@ app.post("/api/trash/clear", requireAuth, async (req, res, next) => {
 // 2. 秒传哈希比对 API 与内存哈希索引
 // ==========================================
 const userFileHashMap = new Map();
+const MAX_HASH_ENTRIES_PER_USER = 5000;
 
 function recordFileHash(userId, hash, filePath, size, mtimeMs) {
   if (!userId || !hash) return;
+  const key = hash.toLowerCase();
   let map = userFileHashMap.get(userId);
   if (!map) {
     map = new Map();
     userFileHashMap.set(userId, map);
   }
-  map.set(hash.toLowerCase(), { path: filePath, size, mtimeMs: mtimeMs || Date.now() });
+  if (map.has(key)) map.delete(key);
+  else if (map.size >= MAX_HASH_ENTRIES_PER_USER) {
+    const oldest = map.keys().next().value;
+    if (oldest) map.delete(oldest);
+  }
+  map.set(key, { path: filePath, size, mtimeMs: mtimeMs || Date.now() });
 }
 
 function findCachedMatchingFile(userId, hash, expectedSize) {
@@ -6180,7 +6343,7 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
     const targetPath = normalizeRelative(req.body.targetPath || req.body.path || "");
     const conflictAction = req.body.conflictAction || "keep_both";
     const name = safeName(req.body.name);
-    if (!hash || !name || size <= 0) {
+    if (!/^[0-9a-f]{64}$/.test(hash) || !name || !Number.isFinite(size) || size <= 0) {
       return res.json({ instant: false });
     }
     await ensureUserStorageQuota(req.user, size);
@@ -6197,15 +6360,17 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
     if (!matchedPath) {
       const storageRoot = userStorageRoot(req.user.id);
 
-      async function searchMatchingFile(currentDir) {
+      async function searchMatchingFile(currentDir, currentRel = "") {
         if (matchedPath) return;
         const entries = await fsp.readdir(currentDir, { withFileTypes: true });
         for (const entry of entries) {
           if (matchedPath) return;
+          if (isSkippedDriveEntry(entry)) continue;
           const full = path.join(currentDir, entry.name);
+          const nextRel = webPath(currentRel, entry.name);
           if (entry.isDirectory()) {
-            if (!isHiddenDriveEntry(entry.name)) {
-              await searchMatchingFile(full);
+            if (!findLockedFolderForRequest(req, nextRel, true)) {
+              await searchMatchingFile(full, nextRel);
             }
           } else if (entry.isFile()) {
             const s = await fsp.stat(full).catch(() => null);
@@ -6221,7 +6386,7 @@ app.post("/api/upload-check-hash", requireAuth, async (req, res, next) => {
         }
       }
 
-      await searchMatchingFile(storageRoot);
+      await searchMatchingFile(storageRoot, "");
     }
 
     if (matchedPath) {
@@ -6286,6 +6451,9 @@ app.get("/api/archive/entry", requireAuth, async (req, res, next) => {
   try {
     const rel = normalizeRelative(req.query.path || "");
     const entryPath = String(req.query.entry || "").trim();
+    if (entryPath.includes("\0")) {
+      return res.status(400).json({ error: "非法的压缩包条目路径" });
+    }
     if (req.query.download !== undefined && req.query.download !== "" && req.query.download !== "0" && req.query.download !== "false") {
       return res.status(403).json({ error: "压缩包不支持单文件独立下载，请直接下载完整压缩包。" });
     }
@@ -6335,10 +6503,21 @@ app.get("/api/archive/entry", requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: "未找到压缩包中的该文件" });
     }
 
+    const declaredSize = Number(file._data?.uncompressedSize || 0);
+    if (declaredSize > 80 * 1024 * 1024) {
+      return res.status(413).json({ error: "压缩包内单个文件过大（超过 80MB），请下载完整压缩包后在本地查看" });
+    }
     const content = await file.async("nodebuffer");
+    if (content.length > 80 * 1024 * 1024) {
+      return res.status(413).json({ error: "压缩包内单个文件过大（超过 80MB），请下载完整压缩包后在本地查看" });
+    }
     const entryName = readableName(path.basename(resolvedKey || entryPath));
-    res.setHeader("Content-Type", contentTypeFor(entryName));
+    const entryContentType = contentTypeFor(entryName);
+    res.setHeader("Content-Type", entryContentType);
     res.setHeader("Content-Disposition", "inline; filename*=UTF-8''" + encodeURIComponent(entryName));
+    res.setHeader("Cache-Control", "no-store, no-cache");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    applyInlineSandboxCsp(res, entryContentType);
     res.end(content);
   } catch (err) {
     next(err);
@@ -6352,6 +6531,9 @@ app.post("/api/shares", requireAuth, async (req, res, next) => {
   try {
     const password = String(req.body.password || "").trim();
     const expireDays = Number(req.body.expireDays || 0);
+    if (!Number.isFinite(expireDays) || expireDays < 0 || expireDays > 36500) {
+      return res.status(400).json({ error: "分享有效期天数不合法" });
+    }
     const paths = Array.isArray(req.body.paths)
       ? req.body.paths.map((p) => normalizeRelative(p || "")).filter(Boolean)
       : (req.body.path ? [normalizeRelative(req.body.path)] : []);
@@ -6360,16 +6542,35 @@ app.post("/api/shares", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "请选择要分享的文件或文件夹" });
     }
 
-    const isBatch = paths.length > 1;
-    const shares = await readShares();
+    const checkLockedDescendants = (folderRel) => {
+      const unlockedSet = new Set(readUnlockedFolders(req));
+      const prefix = `${folderRel}/`;
+      for (const [protectedPath, rec] of Object.entries(getFolderPasswordStore())) {
+        if (!rec?.salt || !rec?.hash) continue;
+        if (protectedPath.startsWith(prefix) && !unlockedSet.has(protectedPath)) {
+          throw Object.assign(new Error("目标文件夹内包含未解锁的加密子文件夹，请先解锁后再分享"), {
+            status: 403,
+            code: "FOLDER_LOCKED",
+            folderPath: protectedPath,
+          });
+        }
+      }
+    };
 
-    if (!isBatch) {
-      const rel = paths[0];
-      rejectHiddenDrivePath(rel);
-      ensureFolderAccess(req, rel);
-      const target = resolveDrivePathForUser(req.user.id, rel);
-      if (!fs.existsSync(target)) return res.status(404).json({ error: "文件不存在" });
-      const stat = await fsp.stat(target);
+    const isBatch = paths.length > 1;
+    const resultRecord = await withKeyedLock("shares:store", async () => {
+      const shares = await readShares();
+
+      if (!isBatch) {
+        const rel = paths[0];
+        rejectHiddenDrivePath(rel);
+        ensureFolderAccess(req, rel);
+        const target = resolveDrivePathForUser(req.user.id, rel);
+        if (!fs.existsSync(target)) throw Object.assign(new Error("文件不存在"), { status: 404 });
+        const lstat = await fsp.lstat(target);
+        if (lstat.isSymbolicLink()) throw Object.assign(new Error("不支持分享符号链接"), { status: 400 });
+        const stat = await fsp.stat(target);
+        if (stat.isDirectory()) checkLockedDescendants(rel);
 
       const existingIndex = shares.findIndex(
         (s) => !s.isBatch && s.userId === req.user.id && s.relPath === rel && (!s.expiresAt || new Date(s.expiresAt).getTime() > Date.now())
@@ -6401,65 +6602,64 @@ app.post("/api/shares", requireAuth, async (req, res, next) => {
         shares.unshift(record);
       }
 
+        await writeShares(shares);
+        return record;
+      }
+
+      // 多文件/文件夹批量单链接分享
+      const validItems = [];
+      let totalSize = 0;
+      for (const rel of paths) {
+        rejectHiddenDrivePath(rel);
+        ensureFolderAccess(req, rel);
+        const target = resolveDrivePathForUser(req.user.id, rel);
+        if (!fs.existsSync(target)) continue;
+        const lstat = await fsp.lstat(target);
+        if (lstat.isSymbolicLink()) continue;
+        const stat = await fsp.stat(target);
+        if (stat.isDirectory()) checkLockedDescendants(rel);
+        const isDir = stat.isDirectory();
+        const size = isDir ? 0 : stat.size;
+        totalSize += size;
+        validItems.push({
+          relPath: rel,
+          name: path.basename(target),
+          isDirectory: isDir,
+          size,
+        });
+      }
+
+      if (!validItems.length) {
+        throw Object.assign(new Error("选中的文件不存在"), { status: 404 });
+      }
+
+      const shareId = crypto.randomBytes(6).toString("hex");
+      const summaryName = `${validItems[0].name} 等 ${validItems.length} 个项目`;
+      const record = {
+        id: shareId,
+        userId: req.user.id,
+        isBatch: true,
+        name: summaryName,
+        items: validItems,
+        isDirectory: false,
+        size: totalSize,
+        hasPassword: Boolean(password),
+        passwordHash: password ? crypto.createHash("sha256").update(password).digest("hex") : "",
+        expiresAt: expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null,
+        createdAt: new Date().toISOString(),
+        downloads: 0,
+      };
+      shares.unshift(record);
+
       await writeShares(shares);
-      const lan = lanAccessAddresses();
-      const primaryLanUrl = lan[0]?.url || "";
-      return res.json({
-        ok: true,
-        share: { ...record, passwordHash: undefined },
-        publicBaseUrl: PUBLIC_ACCESS_URL,
-        lanBaseUrl: primaryLanUrl,
-      });
-    }
+      return record;
+    });
 
-    // 多文件/文件夹批量单链接分享
-    const validItems = [];
-    let totalSize = 0;
-    for (const rel of paths) {
-      rejectHiddenDrivePath(rel);
-      ensureFolderAccess(req, rel);
-      const target = resolveDrivePathForUser(req.user.id, rel);
-      if (!fs.existsSync(target)) continue;
-      const stat = await fsp.stat(target);
-      const isDir = stat.isDirectory();
-      const size = isDir ? 0 : stat.size;
-      totalSize += size;
-      validItems.push({
-        relPath: rel,
-        name: path.basename(target),
-        isDirectory: isDir,
-        size,
-      });
-    }
-
-    if (!validItems.length) {
-      return res.status(404).json({ error: "选中的文件不存在" });
-    }
-
-    const shareId = crypto.randomBytes(6).toString("hex");
-    const summaryName = `${validItems[0].name} 等 ${validItems.length} 个项目`;
-    const record = {
-      id: shareId,
-      userId: req.user.id,
-      isBatch: true,
-      name: summaryName,
-      items: validItems,
-      isDirectory: false,
-      size: totalSize,
-      hasPassword: Boolean(password),
-      passwordHash: password ? crypto.createHash("sha256").update(password).digest("hex") : "",
-      expiresAt: expireDays > 0 ? new Date(Date.now() + expireDays * 86400000).toISOString() : null,
-      createdAt: new Date().toISOString(),
-      downloads: 0,
-    };
-    shares.unshift(record);
-
-    await writeShares(shares);
     const lan = lanAccessAddresses();
     const primaryLanUrl = lan[0]?.url || "";
     return res.json({
       ok: true,
-      share: { ...record, passwordHash: undefined },
+      share: { ...resultRecord, passwordHash: undefined },
       publicBaseUrl: PUBLIC_ACCESS_URL,
       lanBaseUrl: primaryLanUrl,
     });
@@ -6487,9 +6687,11 @@ app.get("/api/shares", requireAuth, async (req, res, next) => {
 
 app.delete("/api/shares/:id", requireAuth, async (req, res, next) => {
   try {
-    const shares = await readShares();
-    const filtered = shares.filter((s) => !(s.id === req.params.id && s.userId === req.user.id));
-    await writeShares(filtered);
+    await withKeyedLock("shares:store", async () => {
+      const shares = await readShares();
+      const filtered = shares.filter((s) => !(s.id === req.params.id && s.userId === req.user.id));
+      await writeShares(filtered);
+    });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -6571,14 +6773,25 @@ app.all(["/api/public-share/:id/download", "/api/public-share/:id/preview"], pub
       // 1. 批量分享中的某一个单独文件/文件夹下载
       const itemIndexStr = req.query.index;
       if (itemIndexStr !== undefined && itemIndexStr !== "") {
-        const idx = parseInt(itemIndexStr, 10);
+        if (!/^\d+$/.test(String(itemIndexStr))) {
+          return res.status(400).json({ error: "非法的项目序号" });
+        }
+        const idx = Number(itemIndexStr);
         const item = share.items && share.items[idx];
         if (!item) return res.status(404).json({ error: "指定的分享项目不存在" });
         const target = resolveDrivePathForUser(share.userId, item.relPath);
         if (!fs.existsSync(target)) return res.status(404).json({ error: "目标文件已不在网盘中" });
+        const lstat = await fsp.lstat(target);
+        if (lstat.isSymbolicLink()) return res.status(403).json({ error: "不支持访问符号链接文件" });
         if (isDownload) {
-          share.downloads = (share.downloads || 0) + 1;
-          writeShares(shares).catch(() => {});
+          withKeyedLock("shares:store", async () => {
+            const latestShares = await readShares();
+            const targetShare = latestShares.find((s) => s.id === req.params.id);
+            if (targetShare) {
+              targetShare.downloads = (targetShare.downloads || 0) + 1;
+              await writeShares(latestShares);
+            }
+          }).catch(() => {});
         }
         const stat = await fsp.stat(target);
         if (stat.isDirectory()) {
@@ -6608,8 +6821,14 @@ app.all(["/api/public-share/:id/download", "/api/public-share/:id/preview"], pub
       if (!itemsList.length) return res.status(404).json({ error: "分享的文件均已不存在" });
 
       if (isDownload) {
-        share.downloads = (share.downloads || 0) + 1;
-        writeShares(shares).catch(() => {});
+        withKeyedLock("shares:store", async () => {
+          const latestShares = await readShares();
+          const targetShare = latestShares.find((s) => s.id === req.params.id);
+          if (targetShare) {
+            targetShare.downloads = (targetShare.downloads || 0) + 1;
+            await writeShares(latestShares);
+          }
+        }).catch(() => {});
       }
 
       const zipFilename = `${share.name || "batch-share"}.zip`;
@@ -6619,10 +6838,18 @@ app.all(["/api/public-share/:id/download", "/api/public-share/:id/preview"], pub
     // 单项目常规下载
     const target = resolveDrivePathForUser(share.userId, share.relPath);
     if (!fs.existsSync(target)) return res.status(404).json({ error: "目标文件已不在网盘中" });
+    const lstat = await fsp.lstat(target);
+    if (lstat.isSymbolicLink()) return res.status(403).json({ error: "不支持访问符号链接文件" });
 
     if (isDownload) {
-      share.downloads = (share.downloads || 0) + 1;
-      writeShares(shares).catch(() => {});
+      withKeyedLock("shares:store", async () => {
+        const latestShares = await readShares();
+        const targetShare = latestShares.find((s) => s.id === req.params.id);
+        if (targetShare) {
+          targetShare.downloads = (targetShare.downloads || 0) + 1;
+          await writeShares(latestShares);
+        }
+      }).catch(() => {});
     }
 
     const stat = await fsp.stat(target);
@@ -6763,7 +6990,7 @@ app.get("/s/:id", (req, res) => {
 '          };' +
 '        }' +
 '      } catch (e) {' +
-'        container.innerHTML = \'<div class="share-title" style="color:#f87171;">加载失败</div><div class="share-meta">\' + e.message + \'</div>\';' +
+'        container.innerHTML = \'<div class="share-title" style="color:#f87171;">加载失败</div><div class="share-meta">\' + esc(e.message) + \'</div>\';' +
 '      }' +
 '    }' +
 '    loadShare();' +
@@ -7229,10 +7456,15 @@ app.post("/api/ai/summarize-doc", requireAuth, async (req, res, next) => {
 });
 
 app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return res.destroy(error);
+  }
   const status = error.status || error.statusCode || 500;
   let message = friendlySystemError(error, status === 500 ? "服务器出错了" : "操作失败");
   if (error.code === "LIMIT_FILE_SIZE") message = `单个文件不能超过 ${MAX_UPLOAD_MB} MB`;
   if (error.code === "LIMIT_FILE_COUNT") message = `一次最多上传 ${MAX_UPLOAD_FILES} 个文件`;
+  if (error.type === "entity.too.large") message = "请求数据体积过大";
+  if (error instanceof SyntaxError && error.status === 400) message = "请求 JSON 数据格式不正确";
   if (status === 500) console.error(error);
   const payload = { error: message };
   if (error.code) payload.code = error.code;
@@ -7248,6 +7480,11 @@ ensureStorage()
     server.headersTimeout = 66000;
     server.keepAliveTimeout = 65000;
     server.timeout = 0;
+    server.on("error", (err) => {
+      writeFatalRuntimeLog("httpServerError", err);
+      console.error("HTTP 服务监听异常：", err.message);
+      process.exit(1);
+    });
     server.listen(PORT, HOST, () => {
       console.log(`DPSir 智云盘已启动：http://${HOST}:${PORT}`);
       console.log(`默认管理员文件目录：${STORAGE_ROOT}`);

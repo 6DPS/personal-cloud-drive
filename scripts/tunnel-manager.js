@@ -82,6 +82,9 @@ function startTunnel() {
       windowsHide: true,
     });
 
+    try { fs.closeSync(outStream); } catch {}
+    try { fs.closeSync(errStream); } catch {}
+
     tunnelChild.unref();
 
     return { ok: true, pid: tunnelChild.pid };

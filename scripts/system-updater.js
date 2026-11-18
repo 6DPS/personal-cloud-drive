@@ -37,13 +37,26 @@ function getLocalVersion() {
   return "1.0.0";
 }
 
-function fetchUrlBuffer(url, timeoutMs = 15000) {
+const MAX_DOWNLOAD_BYTES = 150 * 1024 * 1024;
+const MAX_REDIRECTS = 5;
+
+function fetchUrlBuffer(url, timeoutMs = 15000, redirectsLeft = MAX_REDIRECTS) {
   return new Promise((resolve, reject) => {
-    const isHttps = url.startsWith("https");
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return reject(new Error("无效的下载地址"));
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return reject(new Error(`不支持的下载协议: ${parsed.protocol}`));
+    }
+
+    const isHttps = parsed.protocol === "https:";
     const client = isHttps ? https : http;
 
     const req = client.get(
-      url,
+      parsed.href,
       {
         headers: {
           "User-Agent": "DPSir-ZhiYunPan-Updater/1.0",
@@ -52,9 +65,14 @@ function fetchUrlBuffer(url, timeoutMs = 15000) {
         timeout: timeoutMs,
       },
       (res) => {
-        // 自动跟随 301 / 302 重定向
+        // 自动跟随 301 / 302 重定向（限制最大深度，防止循环重定向）
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return fetchUrlBuffer(res.headers.location, timeoutMs)
+          res.resume();
+          if (redirectsLeft <= 0) {
+            return reject(new Error("重定向次数过多"));
+          }
+          const nextUrl = new URL(res.headers.location, parsed.href).href;
+          return fetchUrlBuffer(nextUrl, timeoutMs, redirectsLeft - 1)
             .then(resolve)
             .catch(reject);
         }
@@ -65,7 +83,15 @@ function fetchUrlBuffer(url, timeoutMs = 15000) {
         }
 
         const chunks = [];
-        res.on("data", (chunk) => chunks.push(chunk));
+        let receivedBytes = 0;
+        res.on("data", (chunk) => {
+          receivedBytes += chunk.length;
+          if (receivedBytes > MAX_DOWNLOAD_BYTES) {
+            req.destroy(new Error("更新包体积超出安全限制"));
+            return;
+          }
+          chunks.push(chunk);
+        });
         res.on("end", () => resolve(Buffer.concat(chunks)));
         res.on("error", reject);
       }
@@ -282,7 +308,12 @@ async function applyUpdate(onProgress = null) {
       continue;
     }
 
-    const targetPath = path.join(ROOT, relativePath);
+    const rootWithSep = ROOT.endsWith(path.sep) ? ROOT : `${ROOT}${path.sep}`;
+    const targetPath = path.resolve(ROOT, relativePath);
+    if (targetPath !== ROOT && !targetPath.startsWith(rootWithSep)) {
+      console.warn("[Updater] Skipped unsafe archive entry outside ROOT:", relativePath);
+      continue;
+    }
     await fsp.mkdir(path.dirname(targetPath), { recursive: true });
     await fsp.writeFile(targetPath, fileContent);
   }

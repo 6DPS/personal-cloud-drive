@@ -3,6 +3,7 @@ import sys
 import shutil
 import zipfile
 import stat
+import json
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BUILD_DIR = os.path.join(ROOT_DIR, "packaging", "mac-build")
@@ -12,10 +13,20 @@ MACOS_DIR = os.path.join(CONTENTS, "MacOS")
 RESOURCES = os.path.join(CONTENTS, "Resources")
 APP_PAYLOAD = os.path.join(RESOURCES, "app")
 DIST_DIR = os.path.join(ROOT_DIR, "dist")
-OUTPUT_ZIP = os.path.join(DIST_DIR, "DPSir-ZhiYunPan-macOS-v1.0.4.zip")
+
+# 动态获取 package.json 中的版本号
+pkg_json_path = os.path.join(ROOT_DIR, "package.json")
+try:
+    with open(pkg_json_path, "r", encoding="utf-8") as f:
+        pkg_data = json.load(f)
+    VERSION = pkg_data.get("version", "1.1.1")
+except Exception as e:
+    VERSION = "1.1.1"
+
+OUTPUT_ZIP = os.path.join(DIST_DIR, f"DPSir-ZhiYunPan-macOS-v{VERSION}.zip")
 
 print("===============================================================")
-print("     正在构建 DPSir 智云盘 macOS 商业标准版 (.app / .zip)...   ")
+print(f"     正在构建 DPSir 智云盘 macOS 商业标准版 v{VERSION} (.app / .zip)...   ")
 print("===============================================================")
 
 # 1. 清理并准备目录
@@ -26,7 +37,7 @@ os.makedirs(APP_PAYLOAD, exist_ok=True)
 os.makedirs(DIST_DIR, exist_ok=True)
 
 # 2. 写入 Info.plist
-info_plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+info_plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -47,9 +58,9 @@ info_plist_content = """<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.4</string>
+    <string>{VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1.0.4</string>
+    <string>{VERSION}</string>
     <key>LSMinimumSystemVersion</key>
     <string>10.15</string>
     <key>NSHighResolutionCapable</key>

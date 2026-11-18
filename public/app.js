@@ -1528,12 +1528,17 @@ function appendInlineMarkdown(parent, text = "") {
     }
     const token = match[0];
     if (match[2] && match[3]) {
-      const a = document.createElement("a");
-      a.href = match[3];
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = match[2];
-      parent.append(a);
+      const rawHref = match[3].trim();
+      if (/^(https?:\/\/|mailto:|\/|#)/i.test(rawHref)) {
+        const a = document.createElement("a");
+        a.href = rawHref;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = match[2];
+        parent.append(a);
+      } else {
+        parent.append(document.createTextNode(match[2]));
+      }
     } else if (match[4]) {
       const strong = document.createElement("strong");
       strong.textContent = match[4];
@@ -1906,13 +1911,14 @@ function renderInnerMarkdown(text = "") {
         breaks: true,
         gfm: true,
       });
-      const safeHtml = window.DOMPurify?.sanitize
-        ? window.DOMPurify.sanitize(rawHtml, {
-            USE_PROFILES: { html: true },
-            ADD_TAGS: ["details", "summary"],
-            ADD_ATTR: ["align", "alt", "checked", "class", "disabled", "height", "loading", "open", "rel", "start", "target", "title", "width"],
-          })
-        : rawHtml;
+      if (!window.DOMPurify?.sanitize) {
+        throw new Error("DOMPurify unavailable");
+      }
+      const safeHtml = window.DOMPurify.sanitize(rawHtml, {
+        USE_PROFILES: { html: true },
+        ADD_TAGS: ["details", "summary"],
+        ADD_ATTR: ["align", "alt", "checked", "class", "disabled", "height", "loading", "open", "rel", "start", "target", "title", "width"],
+      });
       container.innerHTML = restoreMathSegments(safeHtml, mathSegments);
       container.querySelectorAll("a[href]").forEach((link) => {
         link.target = "_blank";
@@ -7005,7 +7011,11 @@ function renderWordPreview(data) {
   const wrap = document.createElement("article");
   wrap.className = "word-preview";
   const rawHtml = data.html || "<p>这个 Word 文档没有可提取的正文。</p>";
-  wrap.innerHTML = window.DOMPurify?.sanitize ? window.DOMPurify.sanitize(rawHtml) : rawHtml;
+  if (window.DOMPurify?.sanitize) {
+    wrap.innerHTML = window.DOMPurify.sanitize(rawHtml);
+  } else {
+    wrap.textContent = String(rawHtml).replace(/<[^>]+>/g, " ").trim();
+  }
   previewBody.append(wrap);
 }
 
@@ -7257,8 +7267,8 @@ async function openPreview(item) {
     fallback.className = "preview-fallback";
     fallback.innerHTML = `
       <strong>这个类型暂时不能直接预览</strong>
-      <span>${itemName(item)}</span>
-      <small>文件大小：${formatSize(item.size)}</small>
+      <span>${escapeHtml(itemName(item))}</span>
+      <small>文件大小：${escapeHtml(formatSize(item.size))}</small>
       <p>点击右上角“下载”可以保存到电脑。本页面不会因为点击文件名而自动下载。</p>
     `;
     previewBody.append(fallback);
@@ -7321,6 +7331,10 @@ function syncAdminUi() {
     popoverRoleTag.textContent = isAdmin ? "超级管理员" : "普通用户";
     popoverRoleTag.classList.toggle("role-user", !isAdmin);
   }
+
+  // 宿主更新与开机自启仅超级管理员可见与可控
+  popoverCheckUpdateBtn?.classList.toggle("hidden", !isAdmin);
+  popoverAutostartBtn?.classList.toggle("hidden", !isAdmin);
 
   // 普通用户可自愿注销账户，超级管理员为系统根基不可注销
   popoverDeregisterBtn?.classList.toggle("hidden", isAdmin);
@@ -8010,8 +8024,13 @@ async function enterDrive(user = state.currentUser) {
   await refreshHealthStatus();
   startAccessInfoRefresh();
   startRealtimeRefresh();
-  if (typeof silentCheckUpdate === "function") {
-    setTimeout(silentCheckUpdate, 800);
+  if (state.currentUser?.role === "admin") {
+    if (typeof silentCheckUpdate === "function") {
+      setTimeout(silentCheckUpdate, 800);
+    }
+    if (typeof fetchAutostartStatus === "function") {
+      setTimeout(fetchAutostartStatus, 900);
+    }
   }
   // Idle pre-warm of AI drawer DOM & GPU pipeline so first click opens with zero hitch
   const prewarmAiDrawer = () => {
@@ -10598,7 +10617,8 @@ function showUpdateView(viewName) {
 async function triggerCheckUpdate() {
   showUpdateView("checking");
   try {
-    const res = await fetch("/api/system/check-update");
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
+    const res = await fetch("/api/system/check-update", { headers, cache: "no-store" });
     const data = await res.json();
     if (!data.ok) {
       if (typeof showToast === "function") showToast(data.error || "检查更新失败", "error");
@@ -10685,6 +10705,7 @@ const dockMenuDot = document.getElementById("dockMenuDot");
 let lastDetectedUpdateVer = "";
 
 async function silentCheckUpdate() {
+  if (!state.currentUser || state.currentUser.role !== "admin") return;
   try {
     const headers = typeof authHeaders === "function" ? authHeaders() : {};
     const res = await fetch("/api/system/check-update", { headers, cache: "no-store" });
@@ -10741,8 +10762,7 @@ autoUpdateDismissBtn?.addEventListener("click", () => {
   }
 });
 
-// 客户端加载 1.2 秒后首次检测，后续每 15 分钟后台高频静默轮询一次，保证新推送第一时间感知
-setTimeout(silentCheckUpdate, 1200);
+// 后续每 15 分钟后台静默轮询一次（仅管理员登录后有效）
 setInterval(silentCheckUpdate, 15 * 60 * 1000);
 
 // ==============================================================================
@@ -10832,8 +10852,10 @@ function renderAutostartUI(enabled) {
 }
 
 async function fetchAutostartStatus() {
+  if (!state.currentUser || state.currentUser.role !== "admin") return;
   try {
-    const res = await fetch("/api/system/autostart");
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
+    const res = await fetch("/api/system/autostart", { headers, cache: "no-store" });
     if (!res.ok) {
       renderAutostartUI(false);
       return;
@@ -10857,9 +10879,10 @@ async function handleToggleAutostart() {
   const targetState = !currentAutostartEnabled;
 
   try {
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
     const res = await fetch("/api/system/autostart", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ enabled: targetState }),
     });
     const data = await res.json();
@@ -10896,7 +10919,8 @@ async function handleStopServerFromUI() {
   }
 
   try {
-    await fetch("/api/system/stop-service", { method: "POST" });
+    const headers = typeof authHeaders === "function" ? authHeaders() : {};
+    await fetch("/api/system/stop-service", { method: "POST", headers });
     if (typeof showToast === "function") {
       showToast("智云盘服务已成功停止，端口 8081 已释放！", "info");
     }
@@ -10924,8 +10948,7 @@ closeAutostartModalActionBtn?.addEventListener("click", closeAutostartModal);
 toggleAutostartBtn?.addEventListener("click", handleToggleAutostart);
 stopServerNowBtn?.addEventListener("click", handleStopServerFromUI);
 
-// 初始化获取自启状态 (1.5 秒后静默获取)
-setTimeout(fetchAutostartStatus, 1500);
+// 自启状态在管理员登录进入网盘后按需获取
 
 
 // ==============================================================================

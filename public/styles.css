@@ -2725,15 +2725,15 @@ tr:hover .name-cell .star-toggle-btn {
 
 #backBtn,
 .back-nav-btn {
-  flex: 0 0 36px !important;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
-  max-width: 36px !important;
-  max-height: 36px !important;
+  flex: 0 0 52px !important;
+  width: 52px !important;
+  height: 38px !important;
+  min-width: 52px !important;
+  min-height: 38px !important;
+  max-width: 52px !important;
+  max-height: 38px !important;
   padding: 0 !important;
-  border-radius: 50% !important;
+  border-radius: 999px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2754,8 +2754,8 @@ tr:hover .name-cell .star-toggle-btn {
 
 #backBtn svg,
 .back-nav-btn svg {
-  width: 18px !important;
-  height: 18px !important;
+  width: 21px !important;
+  height: 21px !important;
   display: block !important;
   color: currentColor !important;
   transition: transform 0.18s ease !important;
@@ -6633,17 +6633,20 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 
   #backBtn,
   .back-nav-btn {
-    flex: 0 0 32px !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    flex: 0 0 44px !important;
+    width: 44px !important;
+    height: 34px !important;
+    min-width: 44px !important;
+    min-height: 34px !important;
+    max-width: 44px !important;
+    max-height: 34px !important;
+    border-radius: 999px !important;
   }
 
   #backBtn svg,
   .back-nav-btn svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 
   #statusLine {
