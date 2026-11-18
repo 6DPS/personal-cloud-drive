@@ -10454,15 +10454,48 @@ tbody tr.context-active-row {
  * 系统在线热更新模态框样式 (OTA System Update Modal)
  * ============================================================================== */
 .update-modal-card {
-  max-width: 440px !important;
+  width: min(468px, 94vw) !important;
+  max-width: 468px !important;
+  max-height: min(88vh, 740px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 22px 26px 22px !important;
   text-align: center;
+}
+
+.update-modal-card .modal-header {
+  flex-shrink: 0;
+  padding: 0 0 14px !important;
+  text-align: left;
 }
 
 .update-status-view {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 4px 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 10px 2px 2px;
+}
+
+.update-status-view .update-badge-icon,
+.update-status-view h3,
+.update-status-view .update-version-tag,
+.update-status-view .modal-hint,
+.update-status-view .modal-actions {
+  flex-shrink: 0;
+}
+
+.update-status-view .modal-actions:not(.compact) {
+  margin-top: 14px !important;
+  padding-top: 14px !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .update-status-text {
@@ -10516,28 +10549,61 @@ tbody tr.context-active-row {
 
 .update-changelog-box {
   width: 100%;
+  flex: 0 1 auto;
+  min-height: 104px;
+  max-height: min(250px, 36vh);
+  display: flex;
+  flex-direction: column;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin: 12px 0 6px;
+  border-radius: 14px;
+  padding: 12px 8px 10px 14px;
+  margin: 10px 0 4px;
   text-align: left;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .changelog-title {
+  flex-shrink: 0;
   font-size: 13px;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .changelog-list {
   margin: 0;
-  padding-left: 18px;
+  padding: 0 8px 6px 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   font-size: 12.5px;
   color: #475569;
   line-height: 1.6;
+}
+
+.changelog-list li + li {
+  margin-top: 6px;
+}
+
+.changelog-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.changelog-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.changelog-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.48);
+  border-radius: 999px;
+}
+
+.changelog-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.72);
 }
 
 .update-progress-bar {
