@@ -18,11 +18,10 @@ const PACKAGE_JSON_PATH = path.join(ROOT, "package.json");
 const REPO_OWNER = "6DPS";
 const REPO_NAME = "personal-cloud-drive";
 
-// 国内高可用 GitHub 加速镜像列表（已通过实时测速与高并发筛选的最优节点）
+// 国内高可用 GitHub 加速镜像列表（优先健康稳定节点）
 const MIRROR_PREFIXES = [
   "https://ghfast.top/",
   "https://gh-proxy.com/",
-  "https://gh.llkk.cc/",
   "https://ghproxy.net/",
   "", // 直接官方通道（作为兜底）
 ];
@@ -119,44 +118,80 @@ function compareSemver(v1, v2) {
 }
 
 /**
- * 检查是否有新版本（并发探测所有高速加速节点，毫秒级响应）
+ * 检查是否有新版本（全节点并发探测 + GitHub API 防缓存兜底，取最高版本避免旧镜像缓存抢答）
  */
+async function fetchLatestCommitSha(timeoutMs = 3000) {
+  try {
+    const buf = await fetchUrlBuffer(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`,
+      timeoutMs
+    );
+    const data = JSON.parse(buf.toString("utf8"));
+    const sha = String(data?.sha || "").trim();
+    return /^[0-9a-f]{40}$/i.test(sha) ? sha : "";
+  } catch {
+    return "";
+  }
+}
+
+async function fetchPackageViaGitHubApi(timeoutMs = 3500) {
+  const startedAt = Date.now();
+  const buf = await fetchUrlBuffer(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/package.json?ref=main`,
+    timeoutMs
+  );
+  const data = JSON.parse(buf.toString("utf8"));
+  if (!data?.content) throw new Error("Missing API content");
+  const pkg = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+  if (!pkg || !pkg.version) throw new Error("Invalid API package.json");
+  return { prefix: "https://ghfast.top/", pkg, elapsedMs: Date.now() - startedAt, viaApi: true };
+}
+
 async function checkUpdate() {
   const currentVersion = getLocalVersion();
-  let latestPkg = null;
-  let successfulMirror = "";
+  const candidates = [];
 
-  // 并发向所有节点发起 3.5s 快速探测，只要任一节点返回合法版本信息即立刻采用
-  const probePromises = MIRROR_PREFIXES.map((prefix) => {
-    return new Promise(async (resolve, reject) => {
-      const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
-      try {
-        const buf = await fetchUrlBuffer(targetUrl, 3500);
-        const pkg = JSON.parse(buf.toString("utf8"));
-        if (pkg && pkg.version) {
-          return resolve({ prefix, pkg });
-        }
-        reject(new Error("Invalid package.json"));
-      } catch (err) {
-        reject(err);
-      }
-    });
+  // 并发探测所有镜像节点的 raw package.json，同时探测 GitHub API 防止 CDN 5 分钟旧缓存覆盖新版
+  const mirrorProbes = MIRROR_PREFIXES.map(async (prefix) => {
+    const startedAt = Date.now();
+    const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
+    const buf = await fetchUrlBuffer(targetUrl, 3500);
+    const pkg = JSON.parse(buf.toString("utf8"));
+    if (!pkg || !pkg.version) throw new Error("Invalid package.json");
+    return { prefix, pkg, elapsedMs: Date.now() - startedAt, viaApi: false };
   });
 
-  try {
-    const winner = await Promise.any(probePromises);
-    latestPkg = winner.pkg;
-    successfulMirror = winner.prefix;
-  } catch (err) {
-    // 若并发全部超时/失败，做一次官方通道 5 秒兜底重试
+  const commitShaPromise = fetchLatestCommitSha(3500);
+  const apiProbePromise = fetchPackageViaGitHubApi(3500);
+
+  const [results, commitSha] = await Promise.all([
+    Promise.allSettled([...mirrorProbes, apiProbePromise]),
+    commitShaPromise,
+  ]);
+
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value?.pkg?.version) {
+      candidates.push(r.value);
+    }
+  }
+
+  // 若并发全部超时/失败，做一次官方通道 5 秒兜底重试
+  if (candidates.length === 0) {
     try {
-      const buf = await fetchUrlBuffer(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`, 5000);
-      latestPkg = JSON.parse(buf.toString("utf8"));
-      successfulMirror = "";
+      const startedAt = Date.now();
+      const fallbackRef = commitSha || "main";
+      const buf = await fetchUrlBuffer(
+        `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${fallbackRef}/package.json?_t=${Date.now()}`,
+        5000
+      );
+      const pkg = JSON.parse(buf.toString("utf8"));
+      if (pkg && pkg.version) {
+        candidates.push({ prefix: "", pkg, elapsedMs: Date.now() - startedAt, viaApi: false });
+      }
     } catch {}
   }
 
-  if (!latestPkg || !latestPkg.version) {
+  if (candidates.length === 0) {
     return {
       ok: false,
       currentVersion,
@@ -164,6 +199,17 @@ async function checkUpdate() {
     };
   }
 
+  // 取最高语义化版本号；版本相同时优先非 API 镜像通道及耗时更短的节点
+  candidates.sort((a, b) => {
+    const cmp = compareSemver(b.pkg.version, a.pkg.version);
+    if (cmp !== 0) return cmp;
+    if (a.viaApi !== b.viaApi) return a.viaApi ? 1 : -1;
+    return a.elapsedMs - b.elapsedMs;
+  });
+
+  const winner = candidates[0];
+  const latestPkg = winner.pkg;
+  const successfulMirror = winner.prefix;
   const latestVersion = latestPkg.version;
   const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
 
@@ -177,7 +223,8 @@ async function checkUpdate() {
         "全面同步 GitHub 主干最新功能与核心代码",
       ];
 
-  const downloadUrl = `${successfulMirror}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
+  const archiveRef = commitSha || "refs/heads/main";
+  const downloadUrl = `${successfulMirror}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${archiveRef}.zip`;
 
   const mirrorDisplay = successfulMirror
     ? successfulMirror.replace("https://", "").replace("/", "")
@@ -188,6 +235,7 @@ async function checkUpdate() {
     hasUpdate,
     currentVersion,
     latestVersion,
+    commitSha,
     changelog,
     downloadUrl,
     mirrorPrefix: successfulMirror,
@@ -205,9 +253,11 @@ async function applyUpdate(onProgress = null) {
   }
 
   let zipBuffer = null;
+  let zip = null;
+  let subFolder = "";
   let lastErr = null;
 
-  // 优先尝试刚才探测胜出的最快镜像，若异常则依次自动切换至其余高可用节点
+  // 优先尝试刚才探测胜出的最快镜像，若异常或遇到旧版本缓存则依次自动切换节点
   const bestPrefix = (check.mirrorPrefix !== undefined)
     ? check.mirrorPrefix
     : (check.mirrorUsed === "GitHub Official" ? "" : (check.mirrorUsed || ""));
@@ -217,30 +267,49 @@ async function applyUpdate(onProgress = null) {
     ...MIRROR_PREFIXES.filter((m) => m !== bestPrefix),
   ];
 
-  for (const prefix of orderedMirrors) {
-    const mirrorName = prefix ? prefix.replace("https://", "").replace("/", "") : "官方通道";
-    const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
-    try {
-      if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
-      // 控制单节点下载超时为 15 秒，避免卡死在某一条不稳定线路上
-      zipBuffer = await fetchUrlBuffer(url, 15000);
-      if (zipBuffer && zipBuffer.length > 20000) {
+  const archivePaths = [];
+  if (check.commitSha) {
+    archivePaths.push(`archive/${check.commitSha}.zip`);
+  }
+  archivePaths.push("archive/refs/heads/main.zip");
+
+  for (const archivePath of archivePaths) {
+    for (const prefix of orderedMirrors) {
+      const mirrorName = prefix ? prefix.replace("https://", "").replace("/", "") : "官方通道";
+      const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/${archivePath}`;
+      try {
+        if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
+        const candidateBuf = await fetchUrlBuffer(url, 15000);
+        if (!candidateBuf || candidateBuf.length <= 20000) continue;
+
+        const loadedZip = await JSZip.loadAsync(candidateBuf);
+        const rootPrefixMatch = Object.keys(loadedZip.files).find((f) => f.includes("/"));
+        const folderPrefix = rootPrefixMatch ? rootPrefixMatch.split("/")[0] : "";
+        const pkgEntry = loadedZip.files[folderPrefix ? `${folderPrefix}/package.json` : "package.json"];
+        if (pkgEntry) {
+          const zipPkg = JSON.parse(await pkgEntry.async("string"));
+          if (zipPkg?.version && compareSemver(zipPkg.version, check.latestVersion) < 0) {
+            lastErr = new Error(`镜像 ${mirrorName} 缓存尚未刷新（仍为 v${zipPkg.version}），切换下一节点`);
+            continue;
+          }
+        }
+
+        zipBuffer = candidateBuf;
+        zip = loadedZip;
+        subFolder = folderPrefix;
         break;
+      } catch (err) {
+        lastErr = err;
       }
-    } catch (err) {
-      lastErr = err;
     }
+    if (zip) break;
   }
 
-  if (!zipBuffer || zipBuffer.length < 20000) {
+  if (!zipBuffer || !zip || zipBuffer.length < 20000) {
     throw new Error("更新包下载失败或超时：" + (lastErr ? lastErr.message : "未能获取到有效数据包"));
   }
 
   if (onProgress) onProgress("更新包下载完毕，正在校验并解压覆盖核心代码...");
-
-  const zip = await JSZip.loadAsync(zipBuffer);
-  const rootPrefixMatch = Object.keys(zip.files).find((f) => f.includes("/"));
-  const subFolder = rootPrefixMatch ? rootPrefixMatch.split("/")[0] : "";
 
   // 严禁覆盖的保护清单 (用户私有数据和核心配置永不受影响)
   const PROTECTED_PREFIXES = [
