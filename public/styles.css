@@ -10461,7 +10461,10 @@ tbody tr.context-active-row {
   flex-direction: column !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
-  padding: 22px 26px 22px !important;
+  padding: 22px 26px 24px !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   text-align: center;
 }
 
@@ -10477,10 +10480,8 @@ tbody tr.context-active-row {
   align-items: center;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  padding: 10px 2px 2px;
+  overflow: visible;
+  padding: 10px 0 0;
 }
 
 .update-status-view .update-badge-icon,
@@ -10496,6 +10497,20 @@ tbody tr.context-active-row {
   padding-top: 14px !important;
   margin-bottom: 0 !important;
   box-sizing: border-box !important;
+}
+
+.update-modal-card .modal-actions button.primary {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 5px 12px rgba(20, 115, 230, 0.16);
+}
+
+@media (max-height: 540px) {
+  .update-status-view {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 10px 14px;
+  }
 }
 
 .update-status-text {
