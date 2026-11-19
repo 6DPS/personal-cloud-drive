@@ -191,6 +191,7 @@ const NON_FATAL_ERROR_CODES = new Set([
   "ECONNRESET",
   "EPIPE",
   "ERR_STREAM_PREMATURE_CLOSE",
+  "ERR_STREAM_UNABLE_TO_PIPE",
   "ECANCELED",
   "ECONNABORTED",
   "ETIMEDOUT",
@@ -2452,7 +2453,12 @@ async function sendFileStream(req, res, filePath, options = {}) {
     res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (disposition === "inline") applyInlineSandboxCsp(res, contentType);
-    await pipeline(fs.createReadStream(filePath, { start, end, highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
+    if (req.aborted || res.destroyed || res.writableEnded) return;
+    try {
+      await pipeline(fs.createReadStream(filePath, { start, end, highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
+    } catch (err) {
+      if (!isNonFatalNetworkOrClientError(err)) throw err;
+    }
     return;
   }
 
@@ -2463,7 +2469,12 @@ async function sendFileStream(req, res, filePath, options = {}) {
   res.setHeader("Cache-Control", disposition === "inline" ? "private, no-cache" : "no-store, no-cache, no-transform");
   res.setHeader("X-Content-Type-Options", "nosniff");
   if (disposition === "inline") applyInlineSandboxCsp(res, contentType);
-  await pipeline(fs.createReadStream(filePath, { highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
+  if (req.aborted || res.destroyed || res.writableEnded) return;
+  try {
+    await pipeline(fs.createReadStream(filePath, { highWaterMark: DOWNLOAD_STREAM_HIGH_WATER_MARK }), res);
+  } catch (err) {
+    if (!isNonFatalNetworkOrClientError(err)) throw err;
+  }
 }
 
 async function cleanupHiddenDriveFiles(basePath = currentStorageRoot()) {
@@ -4981,11 +4992,14 @@ app.get("/api/access-info", requireAuth, (req, res) => {
 // ==============================================================================
 const systemUpdater = require("./scripts/system-updater");
 
+const SERVER_BOOT_ID = crypto.randomBytes(6).toString("hex");
+
 app.get("/api/system/version", (req, res) => {
   res.json({
     ok: true,
     name: "DPSir 智云盘",
     version: systemUpdater.getLocalVersion(),
+    bootId: SERVER_BOOT_ID,
   });
 });
 
@@ -5001,7 +5015,7 @@ app.get("/api/system/check-update", requireAuth, async (req, res) => {
 function handleApplyUpdatePost(req, res) {
   systemUpdater.applyUpdate()
     .then((result) => res.json(result))
-    .catch((err) => res.status(500).json({ ok: false, error: err.message }));
+    .catch((err) => res.status(err?.status || 500).json({ ok: false, error: err.message }));
 }
 
 app.post("/api/system/apply-update", requireAuth, ensureAdminUser, handleApplyUpdatePost);

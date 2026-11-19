@@ -10,5 +10,8 @@
 # Exclude non-runtime documentation and heavy screenshot files from GitHub Release & OTA zip archives
 docs/ export-ignore
 *.pdf export-ignore
-packaging/ export-ignore
+packaging/* export-ignore
+packaging/native-bin -export-ignore
+packaging/native-bin/* export-ignore
+packaging/native-bin/DPSir-ZhiYunPan.exe -export-ignore
 backups/ export-ignore

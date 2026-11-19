@@ -38,9 +38,16 @@ function getLocalVersion() {
 
 const MAX_DOWNLOAD_BYTES = 150 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
+let updateInProgress = false;
 
-function fetchUrlBuffer(url, timeoutMs = 15000, redirectsLeft = MAX_REDIRECTS) {
+function fetchUrlBuffer(url, timeoutMs = 15000, redirectsLeft = MAX_REDIRECTS, deadlineMs = 0) {
   return new Promise((resolve, reject) => {
+    const deadline = deadlineMs || (Date.now() + timeoutMs);
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      return reject(new Error(`请求总耗时超时 (${timeoutMs}ms)`));
+    }
+
     let parsed;
     try {
       parsed = new URL(url);
@@ -53,55 +60,84 @@ function fetchUrlBuffer(url, timeoutMs = 15000, redirectsLeft = MAX_REDIRECTS) {
 
     const isHttps = parsed.protocol === "https:";
     const client = isHttps ? https : http;
+    let settled = false;
+    let req = null;
 
-    const req = client.get(
+    const finishResolve = (buf) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(hardTimer);
+      resolve(buf);
+    };
+    const finishReject = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(hardTimer);
+      reject(err);
+    };
+
+    const hardTimer = setTimeout(() => {
+      try { req?.destroy(); } catch {}
+      finishReject(new Error(`请求总耗时超时 (${timeoutMs}ms)`));
+    }, remainingMs);
+    hardTimer.unref?.();
+
+    req = client.get(
       parsed.href,
       {
         headers: {
           "User-Agent": "DPSir-ZhiYunPan-Updater/1.0",
           Accept: "*/*",
         },
-        timeout: timeoutMs,
+        timeout: remainingMs,
       },
       (res) => {
-        // 自动跟随 301 / 302 重定向（限制最大深度，防止循环重定向）
+        // 自动跟随 301 / 302 重定向（限制最大深度，共享总截止时间）
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
           if (redirectsLeft <= 0) {
-            return reject(new Error("重定向次数过多"));
+            return finishReject(new Error("重定向次数过多"));
           }
-          const nextUrl = new URL(res.headers.location, parsed.href).href;
-          return fetchUrlBuffer(nextUrl, timeoutMs, redirectsLeft - 1)
-            .then(resolve)
-            .catch(reject);
+          clearTimeout(hardTimer);
+          let nextUrl;
+          try {
+            nextUrl = new URL(res.headers.location, parsed.href).href;
+          } catch {
+            return finishReject(new Error("无效的重定向地址"));
+          }
+          return fetchUrlBuffer(nextUrl, timeoutMs, redirectsLeft - 1, deadline)
+            .then(finishResolve)
+            .catch(finishReject);
         }
 
         if (res.statusCode !== 200) {
           res.resume();
-          return reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+          return finishReject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
         }
 
         const chunks = [];
         let receivedBytes = 0;
         res.on("data", (chunk) => {
+          if (settled) return;
           receivedBytes += chunk.length;
           if (receivedBytes > MAX_DOWNLOAD_BYTES) {
-            req.destroy(new Error("更新包体积超出安全限制"));
+            try { req.destroy(); } catch {}
+            finishReject(new Error("更新包体积超出安全限制"));
             return;
           }
           chunks.push(chunk);
         });
-        res.on("end", () => resolve(Buffer.concat(chunks)));
-        res.on("error", reject);
+        res.on("end", () => finishResolve(Buffer.concat(chunks)));
+        res.on("error", finishReject);
       }
     );
 
     req.on("timeout", () => {
-      req.destroy();
-      reject(new Error(`请求超时 (${timeoutMs}ms)`));
+      try { req.destroy(); } catch {}
+      finishReject(new Error(`请求超时 (${timeoutMs}ms)`));
     });
 
-    req.on("error", reject);
+    req.on("error", finishReject);
   });
 }
 
@@ -243,75 +279,40 @@ async function checkUpdate() {
   };
 }
 
-/**
- * 执行在线热更新 (下载 zip -> 解压覆盖代码 -> 守护进程平滑重启)
- */
-async function applyUpdate(onProgress = null) {
-  const check = await checkUpdate();
-  if (!check.ok) {
-    throw new Error(check.error || "获取更新信息失败");
-  }
-
-  let zipBuffer = null;
-  let zip = null;
-  let subFolder = "";
-  let lastErr = null;
-
-  // 优先尝试刚才探测胜出的最快镜像，若异常或遇到旧版本缓存则依次自动切换节点
-  const bestPrefix = (check.mirrorPrefix !== undefined)
-    ? check.mirrorPrefix
-    : (check.mirrorUsed === "GitHub Official" ? "" : (check.mirrorUsed || ""));
-
-  const orderedMirrors = [
-    bestPrefix,
-    ...MIRROR_PREFIXES.filter((m) => m !== bestPrefix),
-  ];
-
-  const archivePaths = [];
-  if (check.commitSha) {
-    archivePaths.push(`archive/${check.commitSha}.zip`);
-  }
-  archivePaths.push("archive/refs/heads/main.zip");
-
-  for (const archivePath of archivePaths) {
-    for (const prefix of orderedMirrors) {
-      const mirrorName = prefix ? prefix.replace("https://", "").replace("/", "") : "官方通道";
-      const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/${archivePath}`;
+async function atomicReplaceFile(targetPath, contentBuffer) {
+  await fsp.mkdir(path.dirname(targetPath), { recursive: true });
+  const tmpPath = `${targetPath}.ota.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2, 8)}.tmp`;
+  try {
+    await fsp.writeFile(tmpPath, contentBuffer);
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
-        const candidateBuf = await fetchUrlBuffer(url, 15000);
-        if (!candidateBuf || candidateBuf.length <= 20000) continue;
-
-        const loadedZip = await JSZip.loadAsync(candidateBuf);
-        const rootPrefixMatch = Object.keys(loadedZip.files).find((f) => f.includes("/"));
-        const folderPrefix = rootPrefixMatch ? rootPrefixMatch.split("/")[0] : "";
-        const pkgEntry = loadedZip.files[folderPrefix ? `${folderPrefix}/package.json` : "package.json"];
-        if (pkgEntry) {
-          const zipPkg = JSON.parse(await pkgEntry.async("string"));
-          if (zipPkg?.version && compareSemver(zipPkg.version, check.latestVersion) < 0) {
-            lastErr = new Error(`镜像 ${mirrorName} 缓存尚未刷新（仍为 v${zipPkg.version}），切换下一节点`);
-            continue;
-          }
-        }
-
-        zipBuffer = candidateBuf;
-        zip = loadedZip;
-        subFolder = folderPrefix;
+        await fsp.rename(tmpPath, targetPath);
+        lastErr = null;
         break;
       } catch (err) {
         lastErr = err;
+        if (err?.code === "EPERM" || err?.code === "EBUSY" || err?.code === "EACCES") {
+          await new Promise((r) => setTimeout(r, 120 * (attempt + 1)));
+          continue;
+        }
+        throw err;
       }
     }
-    if (zip) break;
+    if (lastErr) throw lastErr;
+  } catch (err) {
+    await fsp.rm(tmpPath, { force: true }).catch(() => {});
+    throw err;
   }
+}
 
-  if (!zipBuffer || !zip || zipBuffer.length < 20000) {
-    throw new Error("更新包下载失败或超时：" + (lastErr ? lastErr.message : "未能获取到有效数据包"));
-  }
-
-  if (onProgress) onProgress("更新包下载完毕，正在校验并解压覆盖核心代码...");
-
-  // 严禁覆盖的保护清单 (用户私有数据和核心配置永不受影响)
+/**
+ * 将已校验的压缩包事务化写入目标目录：
+ * 1) 先在内存中全部解压校验；
+ * 2) 逐个原子落盘并记录备份，失败自动回滚；
+ * 3) package.json 强制留在所有核心文件写入完成后最后一步落盘，杜绝半更新卡死。
+ */
+async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options = {}) {
   const PROTECTED_PREFIXES = [
     ".env",
     ".git",
@@ -325,40 +326,85 @@ async function applyUpdate(onProgress = null) {
     "node_modules", // 避免锁定正在调用的原生二进制模块
   ];
 
+  const rootResolved = path.resolve(targetRoot);
+  const rootWithSep = rootResolved.endsWith(path.sep) ? rootResolved : `${rootResolved}${path.sep}`;
+  const regularEntries = [];
+  let packageJsonEntry = null;
+  let nativeExeEntry = null;
+
+  // Phase 1: 全部读取到内存并完成路径安全边界校验（不碰磁盘）
   for (const [filename, fileObj] of Object.entries(zip.files)) {
     if (fileObj.dir) continue;
 
-    // 去掉 GitHub zip 根目录前缀 (例如: personal-cloud-drive-main/server.js -> server.js)
     let relativePath = filename;
     if (subFolder && relativePath.startsWith(`${subFolder}/`)) {
       relativePath = relativePath.slice(subFolder.length + 1);
     }
     if (!relativePath) continue;
 
-    // 特殊例外：允许热更新桌面客户端原生外壳 packaging/native-bin/DPSir-ZhiYunPan.exe
-    const isNativeExe = relativePath === "packaging/native-bin/DPSir-ZhiYunPan.exe";
+    const normalizedRel = relativePath.replace(/\\/g, "/");
+    const isNativeExe = normalizedRel === "packaging/native-bin/DPSir-ZhiYunPan.exe";
 
-    // 保护检查
     const isProtected = !isNativeExe && PROTECTED_PREFIXES.some(
-      (prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`) || relativePath.startsWith(`${prefix}\\`)
+      (prefix) => normalizedRel === prefix || normalizedRel.startsWith(`${prefix}/`)
     );
     if (isProtected) continue;
 
     const fileContent = await fileObj.async("nodebuffer");
 
     if (isNativeExe) {
-      // 1. 同步保存至仓库 native-bin 目录
-      const repoTarget = path.join(ROOT, "packaging", "native-bin", "DPSir-ZhiYunPan.exe");
+      nativeExeEntry = { relativePath: normalizedRel, fileContent };
+      continue;
+    }
+
+    const targetPath = path.resolve(rootResolved, normalizedRel);
+    if (targetPath !== rootResolved && !targetPath.startsWith(rootWithSep)) {
+      console.warn("[Updater] Skipped unsafe archive entry outside ROOT:", normalizedRel);
+      continue;
+    }
+
+    if (normalizedRel === "package.json") {
+      packageJsonEntry = { relativePath: normalizedRel, targetPath, fileContent };
+    } else {
+      regularEntries.push({ relativePath: normalizedRel, targetPath, fileContent });
+    }
+  }
+
+  // Phase 2: 创建临时回滚备份目录，依次原子替换普通文件 -> 原生外壳 -> 最后写 package.json
+  const backupDir = await fsp.mkdtemp(path.join(os.tmpdir(), "pcd-ota-backup-"));
+  const appliedJournal = [];
+  const orderedEntries = packageJsonEntry
+    ? [...regularEntries, packageJsonEntry]
+    : regularEntries;
+
+  const replaceFn = typeof options.replaceFile === "function" ? options.replaceFile : atomicReplaceFile;
+
+  try {
+    let idx = 0;
+    for (const entry of orderedEntries) {
+      const existed = fs.existsSync(entry.targetPath);
+      let backupPath = null;
+      if (existed) {
+        backupPath = path.join(backupDir, `${idx}.bak`);
+        await fsp.copyFile(entry.targetPath, backupPath);
+      }
+      idx += 1;
+
+      await replaceFn(entry.targetPath, entry.fileContent, entry.relativePath);
+      appliedJournal.push({ targetPath: entry.targetPath, existed, backupPath });
+    }
+
+    // Phase 3: 若包含 Windows 原生外壳且处于生产部署路径，利用 Windows 重命名无锁热替换
+    if (nativeExeEntry && !options.skipNativeExeSwap) {
+      const repoTarget = path.join(rootResolved, "packaging", "native-bin", "DPSir-ZhiYunPan.exe");
       try {
-        await fsp.mkdir(path.dirname(repoTarget), { recursive: true });
-        await fsp.writeFile(repoTarget, fileContent);
+        await atomicReplaceFile(repoTarget, nativeExeEntry.fileContent);
       } catch {}
 
-      // 2. 如果当前 ROOT 或已知安装目录存在运行外壳，利用 Windows 重命名无锁机制热替换
       const candidateExePaths = [
-        path.join(ROOT, "DPSir-ZhiYunPan.exe"),
+        path.join(rootResolved, "DPSir-ZhiYunPan.exe"),
         "D:\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
-        "C:\\Program Files\\DPSir 智云盘\\DPSir-ZhiYunPan.exe"
+        "C:\\Program Files\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
       ];
       for (const exePath of candidateExePaths) {
         if (fs.existsSync(exePath)) {
@@ -368,41 +414,138 @@ async function applyUpdate(onProgress = null) {
               try { await fsp.unlink(oldPath); } catch {}
             }
             await fsp.rename(exePath, oldPath);
-            await fsp.writeFile(exePath, fileContent);
-          } catch (err) {
-            try { await fsp.writeFile(exePath, fileContent); } catch {}
+            await fsp.writeFile(exePath, nativeExeEntry.fileContent);
+          } catch {
+            try { await fsp.writeFile(exePath, nativeExeEntry.fileContent); } catch {}
           }
         }
       }
-      continue;
     }
-
-    const rootWithSep = ROOT.endsWith(path.sep) ? ROOT : `${ROOT}${path.sep}`;
-    const targetPath = path.resolve(ROOT, relativePath);
-    if (targetPath !== ROOT && !targetPath.startsWith(rootWithSep)) {
-      console.warn("[Updater] Skipped unsafe archive entry outside ROOT:", relativePath);
-      continue;
+  } catch (err) {
+    // 任意一步写入失败 -> 按逆序自动回滚所有已改动文件，保持原有版本完整可用
+    for (let i = appliedJournal.length - 1; i >= 0; i -= 1) {
+      const rec = appliedJournal[i];
+      try {
+        if (rec.existed && rec.backupPath && fs.existsSync(rec.backupPath)) {
+          const origBuf = await fsp.readFile(rec.backupPath);
+          await atomicReplaceFile(rec.targetPath, origBuf);
+        } else if (!rec.existed) {
+          await fsp.rm(rec.targetPath, { force: true });
+        }
+      } catch (rollbackErr) {
+        console.error("[Updater] Rollback failed for", rec.targetPath, rollbackErr?.message);
+      }
     }
-    await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-    await fsp.writeFile(targetPath, fileContent);
+    throw err;
+  } finally {
+    await fsp.rm(backupDir, { recursive: true, force: true }).catch(() => {});
   }
+}
 
-  if (onProgress) onProgress("核心代码热替换完成，正在平滑重启服务...");
+/**
+ * 执行在线热更新 (并发锁 -> 下载 zip -> 校验版本 -> 原子覆盖+失败回滚 -> 守护进程平滑重启)
+ */
+async function applyUpdate(onProgress = null) {
+  if (updateInProgress) {
+    const busyErr = new Error("系统正在执行在线更新，请勿重复点击，稍候片刻即可完成");
+    busyErr.status = 409;
+    throw busyErr;
+  }
+  updateInProgress = true;
 
-  // 触发守护进程重启 (1.2 秒后让当前 node 正常退出，server-watchdog 会在 1 秒内拉起全新代码)
-  setTimeout(() => {
-    process.exit(0);
-  }, 1200);
+  try {
+    const check = await checkUpdate();
+    if (!check.ok) {
+      throw new Error(check.error || "获取更新信息失败");
+    }
 
-  return {
-    ok: true,
-    version: check.latestVersion,
-    message: `升级成功！系统已更新至 v${check.latestVersion}，正在平滑热重启...`,
-  };
+    let zipBuffer = null;
+    let zip = null;
+    let subFolder = "";
+    let lastErr = null;
+
+    // 优先尝试刚才探测胜出的最快镜像，若异常或遇到旧版本缓存则依次自动切换节点
+    const bestPrefix = (check.mirrorPrefix !== undefined)
+      ? check.mirrorPrefix
+      : (check.mirrorUsed === "GitHub Official" ? "" : (check.mirrorUsed || ""));
+
+    const orderedMirrors = [
+      bestPrefix,
+      ...MIRROR_PREFIXES.filter((m) => m !== bestPrefix),
+    ];
+
+    const archivePaths = [];
+    if (check.commitSha) {
+      archivePaths.push(`archive/${check.commitSha}.zip`);
+    }
+    archivePaths.push("archive/refs/heads/main.zip");
+
+    for (const archivePath of archivePaths) {
+      for (const prefix of orderedMirrors) {
+        const mirrorName = prefix ? prefix.replace("https://", "").replace("/", "") : "官方通道";
+        const url = `${prefix}https://github.com/${REPO_OWNER}/${REPO_NAME}/${archivePath}`;
+        try {
+          if (onProgress) onProgress(`正在通过高速加速镜像下载核心补丁包 (${mirrorName})...`);
+          // 单节点硬性总耗时上限 20 秒，避免慢速滴水线路长期卡死
+          const candidateBuf = await fetchUrlBuffer(url, 20000);
+          if (!candidateBuf || candidateBuf.length <= 20000) continue;
+
+          const loadedZip = await JSZip.loadAsync(candidateBuf);
+          const rootPrefixMatch = Object.keys(loadedZip.files).find((f) => f.includes("/"));
+          const folderPrefix = rootPrefixMatch ? rootPrefixMatch.split("/")[0] : "";
+          const pkgEntry = loadedZip.files[folderPrefix ? `${folderPrefix}/package.json` : "package.json"];
+          if (pkgEntry) {
+            const zipPkg = JSON.parse(await pkgEntry.async("string"));
+            if (zipPkg?.version && compareSemver(zipPkg.version, check.latestVersion) < 0) {
+              lastErr = new Error(`镜像 ${mirrorName} 缓存尚未刷新（仍为 v${zipPkg.version}），切换下一节点`);
+              continue;
+            }
+          }
+
+          zipBuffer = candidateBuf;
+          zip = loadedZip;
+          subFolder = folderPrefix;
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (zip) break;
+    }
+
+    if (!zipBuffer || !zip || zipBuffer.length < 20000) {
+      throw new Error("更新包下载失败或超时：" + (lastErr ? lastErr.message : "未能获取到有效数据包"));
+    }
+
+    if (onProgress) onProgress("更新包下载完毕，正在事务化校验并替换核心代码...");
+    await extractZipAtomically(zip, subFolder, ROOT);
+
+    if (onProgress) onProgress("核心代码热替换完成，正在平滑重启服务...");
+
+    // 触发守护进程重启 (1.2 秒后让当前 node 正常退出，server-watchdog 会自动拉起全新代码)
+    // 保持 updateInProgress=true 直到进程退出，杜绝重启窗口内重复触发
+    setTimeout(() => {
+      process.exit(0);
+    }, 1200);
+
+    return {
+      ok: true,
+      version: check.latestVersion,
+      message: `升级成功！系统已更新至 v${check.latestVersion}，正在平滑热重启...`,
+    };
+  } catch (err) {
+    updateInProgress = false;
+    throw err;
+  }
 }
 
 module.exports = {
   getLocalVersion,
   checkUpdate,
   applyUpdate,
+  _internal: {
+    fetchUrlBuffer,
+    extractZipAtomically,
+    isUpdateInProgress: () => updateInProgress,
+  },
 };

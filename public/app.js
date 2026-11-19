@@ -10649,38 +10649,79 @@ async function triggerCheckUpdate() {
   }
 }
 
+let isApplyingSystemUpdate = false;
+
+async function waitForServerReadyAndReload(previousBootId = "") {
+  if (updateApplyingTitle) updateApplyingTitle.textContent = "升级成功！正在等待新版本服务重启就绪...";
+  if (updateApplyingDesc) updateApplyingDesc.textContent = "守护进程正在平滑拉起新版服务（约 4～6 秒），就绪后将自动刷新...";
+
+  // 先等待 1.8 秒，确保旧进程已执行 1.2s 延迟退出，避免探针误连旧进程
+  await new Promise((r) => setTimeout(r, 1800));
+
+  const deadline = Date.now() + 25000;
+  let sawOffline = false;
+
+  while (Date.now() < deadline) {
+    try {
+      const controller = typeof AbortController === "function" ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 2000) : null;
+      const res = await fetch(`/api/system/version?_t=${Date.now()}`, {
+        cache: "no-store",
+        signal: controller?.signal,
+      });
+      if (timer) clearTimeout(timer);
+      if (res.ok) {
+        const info = await res.json().catch(() => null);
+        const bootChanged = Boolean(previousBootId && info?.bootId && info.bootId !== previousBootId);
+        if (bootChanged || sawOffline || !previousBootId) {
+          if (updateApplyingTitle) updateApplyingTitle.textContent = "新版服务已就绪，正在刷新页面...";
+          window.location.reload();
+          return;
+        }
+      }
+    } catch {
+      sawOffline = true;
+    }
+    await new Promise((r) => setTimeout(r, 700));
+  }
+
+  window.location.reload();
+}
+
 async function handleApplyUpdate() {
+  if (isApplyingSystemUpdate) return;
+  isApplyingSystemUpdate = true;
+  if (confirmApplyUpdateBtn) confirmApplyUpdateBtn.disabled = true;
+
   showUpdateView("applying");
   if (updateApplyingTitle) updateApplyingTitle.textContent = "正在极速下载更新补丁包...";
-  if (updateApplyingDesc) updateApplyingDesc.textContent = "通过高速镜像下载最新代码并解压覆盖，请勿关闭窗口...";
+  if (updateApplyingDesc) updateApplyingDesc.textContent = "通过高速镜像下载最新代码并校验替换，请勿关闭窗口...";
+
+  let previousBootId = "";
+  try {
+    const verRes = await fetch(`/api/system/version?_t=${Date.now()}`, { cache: "no-store" });
+    if (verRes.ok) {
+      const verData = await verRes.json().catch(() => null);
+      previousBootId = String(verData?.bootId || "");
+    }
+  } catch {}
 
   try {
     const headers = typeof authHeaders === "function" ? authHeaders() : {};
     const res = await fetch("/api/system/apply-update", { method: "POST", headers });
-    const data = await res.json();
-    if (!data.ok) {
+    const data = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+    if (!res.ok || !data.ok) {
+      isApplyingSystemUpdate = false;
+      if (confirmApplyUpdateBtn) confirmApplyUpdateBtn.disabled = false;
       if (typeof showToast === "function") showToast(data.error || "在线升级失败", "error");
       showUpdateView("available");
       return;
     }
 
-    if (updateApplyingTitle) updateApplyingTitle.textContent = "升级成功！系统正在平滑热重启...";
-    if (updateApplyingDesc) updateApplyingDesc.textContent = "约 3 秒后客户端将自动刷新生效，请稍候...";
-
-    let countdown = 3;
-    const interval = setInterval(() => {
-      countdown--;
-      if (countdown <= 0) {
-        clearInterval(interval);
-        window.location.reload();
-      }
-    }, 1000);
+    await waitForServerReadyAndReload(previousBootId);
   } catch (err) {
-    // 平滑重启过程中连接断开属于正常现象
-    if (updateApplyingTitle) updateApplyingTitle.textContent = "服务正在重启，即将刷新页面...";
-    setTimeout(() => {
-      window.location.reload();
-    }, 2500);
+    // 平滑重启过程中连接断开属于正常现象，转为轮询等待新版就绪后刷新
+    await waitForServerReadyAndReload(previousBootId);
   }
 }
 
@@ -10920,7 +10961,18 @@ async function handleStopServerFromUI() {
 
   try {
     const headers = typeof authHeaders === "function" ? authHeaders() : {};
-    await fetch("/api/system/stop-service", { method: "POST", headers });
+    const res = await fetch("/api/system/stop-service", { method: "POST", headers });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (stopServerNowBtn) {
+        stopServerNowBtn.disabled = false;
+        stopServerNowBtn.textContent = "立即停止服务";
+      }
+      if (typeof showToast === "function") {
+        showToast(errData.error || "停止服务失败，请确认使用管理员账号登录", "error");
+      }
+      return;
+    }
     if (typeof showToast === "function") {
       showToast("智云盘服务已成功停止，端口 8081 已释放！", "info");
     }
