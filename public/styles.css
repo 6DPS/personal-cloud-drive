@@ -9318,6 +9318,152 @@ select:focus {
   }
 }
 
+/* =========================================================================
+   AI 对话抽屉手动左右拖拽调节宽度 + 中间文件列表名称流式自适应
+   ========================================================================= */
+.ai-drawer-resize-handle {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  body.ai-drawer-open .ai-drawer,
+  .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer {
+    width: var(--ai-dock-width) !important;
+  }
+
+  body.ai-drawer-open .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer-resize-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 20px;
+    bottom: 20px;
+    right: calc(var(--ai-dock-width) + 2px);
+    width: 14px;
+    z-index: 46;
+    pointer-events: auto;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .ai-drawer-resize-handle::after {
+    content: "";
+    width: 4px;
+    height: 48px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.36);
+    transition: background 160ms ease, height 180ms ease, width 160ms ease, box-shadow 160ms ease;
+  }
+
+  .ai-drawer-resize-handle:hover::after,
+  body.ai-drawer-resizing .ai-drawer-resize-handle::after {
+    width: 4.5px;
+    height: 76px;
+    background: rgba(37, 99, 235, 0.78);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  /* 拖拽中关闭过渡与文本选中，实现零延迟跟手缩放 */
+  body.ai-drawer-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  body.ai-drawer-resizing .content {
+    transition: none !important;
+  }
+
+  body.ai-drawer-resizing .ai-drawer {
+    transition: none !important;
+  }
+
+  body.ai-drawer-resizing .drive-shell * {
+    pointer-events: none;
+  }
+
+  /* 抽屉停靠时：文件名单元格自动吃满剩余宽度并随拖拽宽度实时伸缩省略 */
+  .drive-shell.ai-drawer-docked .name-cell {
+    min-width: 0;
+  }
+
+  .drive-shell.ai-drawer-docked .name-title-wrap {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .drive-shell.ai-drawer-docked .name-title-wrap .name-btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drive-shell.ai-drawer-docked .name-cell .file-icon {
+    flex: 0 0 auto !important;
+  }
+
+  .drive-shell.ai-drawer-docked .name-cell > span:not(.file-icon) {
+    flex: 1 1 0%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 中间区域随抽屉拉宽变窄时自动收紧次要列，保障文件名始终清晰可读 */
+  .drive-shell.ai-drawer-docked.ai-content-compact th:nth-child(3),
+  .drive-shell.ai-drawer-docked.ai-content-compact td:nth-child(3) {
+    width: 62px !important;
+    min-width: 56px !important;
+    padding-inline: 2px !important;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-compact th:nth-child(4),
+  .drive-shell.ai-drawer-docked.ai-content-compact td:nth-child(4) {
+    width: 118px !important;
+    min-width: 112px !important;
+    padding-inline: 2px !important;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-compact th:nth-child(5),
+  .drive-shell.ai-drawer-docked.ai-content-compact td:nth-child(5) {
+    width: 164px !important;
+    min-width: 156px !important;
+    padding-inline: 2px 6px !important;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight th:nth-child(3),
+  .drive-shell.ai-drawer-docked.ai-content-tight td:nth-child(3),
+  .drive-shell.ai-drawer-docked.ai-content-tight th:nth-child(4),
+  .drive-shell.ai-drawer-docked.ai-content-tight td:nth-child(4) {
+    display: none !important;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .topbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .path-panel {
+    flex: 1 1 220px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .ai-drawer-shell.ai-drawer-narrow .ai-drawer-header .model-badge {
+    display: none !important;
+  }
+}
+
 @keyframes aiDrawerDockIn {
   0% {
     opacity: 0;

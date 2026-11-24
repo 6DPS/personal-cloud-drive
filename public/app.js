@@ -266,6 +266,7 @@ const aiModeToggleBtn = $("#aiModeToggleBtn");
 const aiGlobalSearchBtn = $("#aiGlobalSearchBtn");
 const aiDrawer = $("#aiDrawer");
 const aiDrawerBackdrop = $("#aiDrawerBackdrop");
+const aiDrawerResizeHandle = $("#aiDrawerResizeHandle");
 const aiDrawerBackBtn = $("#aiDrawerBackBtn");
 const aiHistoryBtn = $("#aiHistoryBtn");
 const aiNewChatBtn = $("#aiNewChatBtn");
@@ -1159,6 +1160,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   renderAiDrawer();
   driveView?.classList.add("ai-drawer-docked");
   document.body.classList.add("ai-drawer-open");
+  restoreSavedAiDrawerWidth();
   aiDrawer?.classList.remove("closing");
   aiDrawer?.classList.remove("hidden");
   aiDrawer?.setAttribute("aria-hidden", "false");
@@ -1247,7 +1249,9 @@ function closeAiDrawer() {
   closeRowActionMenus();
   if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
   aiPromptInput?.blur();
-  driveView?.classList.remove("ai-drawer-docked");
+  endAiDrawerResizeDrag({ persist: false });
+  driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
+  aiDrawer?.classList.remove("ai-drawer-narrow");
   document.body.classList.remove("ai-drawer-open");
   window.clearTimeout(aiDrawerCloseTimer);
   aiDrawer.classList.add("closing");
@@ -8808,6 +8812,186 @@ aiHistoryBtn?.addEventListener("click", toggleAiHistoryPanel);
 aiNewChatBtn?.addEventListener("click", startNewAiChat);
 aiCloseHistoryBtn?.addEventListener("click", closeAiHistoryPanel);
 aiClearAllHistoryBtn?.addEventListener("click", clearAllAiSessions);
+const AI_DRAWER_WIDTH_STORAGE_KEY = "dpsir_ai_drawer_width_px";
+let aiDrawerResizeDrag = null;
+let aiDrawerResizeRaf = 0;
+let aiDrawerPendingWidth = null;
+
+function isDesktopAiDockViewport() {
+  return window.innerWidth >= 901;
+}
+
+function getAiDrawerWidthBounds() {
+  const sidebarEl = driveView?.querySelector(".sidebar");
+  const sidebarWidth = sidebarEl ? Math.round(sidebarEl.getBoundingClientRect().width) : 300;
+  const minContentWidth = Math.min(460, Math.max(360, Math.round(window.innerWidth * 0.3)));
+  const minWidth = 340;
+  const maxByViewport = Math.floor(window.innerWidth - sidebarWidth - minContentWidth - 16);
+  const maxWidth = Math.max(minWidth, Math.min(Math.floor(window.innerWidth * 0.68), maxByViewport));
+  return { minWidth, maxWidth, sidebarWidth };
+}
+
+function syncAiDockedContentDensity(explicitDrawerWidth = null) {
+  if (!driveView) return;
+  if (!driveView.classList.contains("ai-drawer-docked") || !isDesktopAiDockViewport()) {
+    driveView.classList.remove("ai-content-compact", "ai-content-tight");
+    return;
+  }
+  let contentWidth = 0;
+  if (Number.isFinite(explicitDrawerWidth)) {
+    const { sidebarWidth } = getAiDrawerWidthBounds();
+    contentWidth = Math.max(0, window.innerWidth - sidebarWidth - explicitDrawerWidth - 8);
+  } else {
+    const contentEl = driveView.querySelector(".content");
+    contentWidth = contentEl ? Math.round(contentEl.getBoundingClientRect().width) : window.innerWidth;
+  }
+  driveView.classList.toggle("ai-content-compact", contentWidth > 0 && contentWidth < 760);
+  driveView.classList.toggle("ai-content-tight", contentWidth > 0 && contentWidth < 620);
+  const effectiveDrawerWidth = Number.isFinite(explicitDrawerWidth)
+    ? explicitDrawerWidth
+    : Math.round(aiDrawer?.querySelector(".ai-drawer")?.getBoundingClientRect().width || 0);
+  aiDrawer?.classList.toggle("ai-drawer-narrow", effectiveDrawerWidth > 0 && effectiveDrawerWidth < 430);
+}
+
+function applyAiDrawerWidth(rawWidth, { persist = false } = {}) {
+  if (!isDesktopAiDockViewport()) return null;
+  const { minWidth, maxWidth } = getAiDrawerWidthBounds();
+  const clamped = Math.round(Math.min(maxWidth, Math.max(minWidth, Number(rawWidth) || minWidth)));
+  document.documentElement.style.setProperty("--ai-dock-width", `${clamped}px`);
+  if (aiDrawerResizeHandle) {
+    aiDrawerResizeHandle.setAttribute("aria-valuemin", String(minWidth));
+    aiDrawerResizeHandle.setAttribute("aria-valuemax", String(maxWidth));
+    aiDrawerResizeHandle.setAttribute("aria-valuenow", String(clamped));
+  }
+  syncAiDockedContentDensity(clamped);
+  if (persist) {
+    try {
+      localStorage.setItem(AI_DRAWER_WIDTH_STORAGE_KEY, String(clamped));
+    } catch {}
+  }
+  return clamped;
+}
+
+function restoreSavedAiDrawerWidth() {
+  if (!isDesktopAiDockViewport()) {
+    document.documentElement.style.removeProperty("--ai-dock-width");
+    syncAiDockedContentDensity();
+    return;
+  }
+  let saved = NaN;
+  try {
+    saved = Number(localStorage.getItem(AI_DRAWER_WIDTH_STORAGE_KEY));
+  } catch {}
+  if (Number.isFinite(saved) && saved > 0) {
+    applyAiDrawerWidth(saved, { persist: false });
+  } else {
+    document.documentElement.style.removeProperty("--ai-dock-width");
+    const panel = aiDrawer?.querySelector(".ai-drawer");
+    const currentWidth = panel ? Math.round(panel.getBoundingClientRect().width) : null;
+    syncAiDockedContentDensity(currentWidth && currentWidth > 0 ? currentWidth : null);
+  }
+}
+
+function resetAiDrawerWidth() {
+  try {
+    localStorage.removeItem(AI_DRAWER_WIDTH_STORAGE_KEY);
+  } catch {}
+  document.documentElement.style.removeProperty("--ai-dock-width");
+  window.requestAnimationFrame(() => {
+    const panel = aiDrawer?.querySelector(".ai-drawer");
+    const currentWidth = panel ? Math.round(panel.getBoundingClientRect().width) : null;
+    syncAiDockedContentDensity(currentWidth && currentWidth > 0 ? currentWidth : null);
+    autoResizeAiPromptInput();
+  });
+  setStatus("已恢复 AI 对话框默认宽度");
+}
+
+function endAiDrawerResizeDrag({ persist = true } = {}) {
+  if (aiDrawerResizeRaf) {
+    window.cancelAnimationFrame(aiDrawerResizeRaf);
+    aiDrawerResizeRaf = 0;
+  }
+  const active = aiDrawerResizeDrag;
+  aiDrawerResizeDrag = null;
+  document.body.classList.remove("ai-drawer-resizing");
+  if (!active) return;
+  if (aiDrawerResizeHandle && active.pointerId !== undefined) {
+    try {
+      if (aiDrawerResizeHandle.hasPointerCapture?.(active.pointerId)) {
+        aiDrawerResizeHandle.releasePointerCapture(active.pointerId);
+      }
+    } catch {}
+  }
+  const finalWidth = aiDrawerPendingWidth ?? active.lastWidth;
+  aiDrawerPendingWidth = null;
+  if (persist && Number.isFinite(finalWidth)) {
+    applyAiDrawerWidth(finalWidth, { persist: true });
+    autoResizeAiPromptInput();
+  }
+}
+
+aiDrawerResizeHandle?.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || !isDesktopAiDockViewport()) return;
+  if (!document.body.classList.contains("ai-drawer-open")) return;
+  const panel = aiDrawer?.querySelector(".ai-drawer");
+  if (!panel) return;
+  event.preventDefault();
+  const startWidth = Math.round(panel.getBoundingClientRect().width);
+  aiDrawerResizeDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startWidth,
+    lastWidth: startWidth,
+  };
+  aiDrawerPendingWidth = startWidth;
+  document.body.classList.add("ai-drawer-resizing");
+  try {
+    aiDrawerResizeHandle.setPointerCapture?.(event.pointerId);
+  } catch {}
+});
+
+window.addEventListener("pointermove", (event) => {
+  if (!aiDrawerResizeDrag) return;
+  if (aiDrawerResizeDrag.pointerId !== undefined && event.pointerId !== aiDrawerResizeDrag.pointerId) return;
+  const deltaX = aiDrawerResizeDrag.startX - event.clientX;
+  const nextWidth = aiDrawerResizeDrag.startWidth + deltaX;
+  aiDrawerPendingWidth = nextWidth;
+  aiDrawerResizeDrag.lastWidth = nextWidth;
+  if (!aiDrawerResizeRaf) {
+    aiDrawerResizeRaf = window.requestAnimationFrame(() => {
+      aiDrawerResizeRaf = 0;
+      if (aiDrawerPendingWidth !== null) {
+        applyAiDrawerWidth(aiDrawerPendingWidth, { persist: false });
+      }
+    });
+  }
+});
+
+window.addEventListener("pointerup", (event) => {
+  if (!aiDrawerResizeDrag) return;
+  if (aiDrawerResizeDrag.pointerId !== undefined && event.pointerId !== aiDrawerResizeDrag.pointerId) return;
+  endAiDrawerResizeDrag({ persist: true });
+});
+
+window.addEventListener("pointercancel", () => {
+  if (aiDrawerResizeDrag) endAiDrawerResizeDrag({ persist: false });
+});
+
+window.addEventListener("blur", () => {
+  if (aiDrawerResizeDrag) endAiDrawerResizeDrag({ persist: true });
+});
+
+aiDrawerResizeHandle?.addEventListener("dblclick", (event) => {
+  event.preventDefault();
+  resetAiDrawerWidth();
+});
+
+window.addEventListener("resize", () => {
+  if (driveView?.classList.contains("ai-drawer-docked")) {
+    restoreSavedAiDrawerWidth();
+  }
+});
+
 aiDrawerCloseBtn?.addEventListener("click", closeAiDrawer);
 aiDrawerBackdrop?.addEventListener("click", closeAiDrawer);
 aiDrawerBackBtn?.addEventListener("click", handleAiDrawerBackOrSwitch);
