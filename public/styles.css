@@ -4719,8 +4719,10 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 
 .ai-message {
   position: relative;
-  width: min(100%, 650px);
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   padding: 14px 18px;
   border: 1px solid rgba(220, 233, 247, 0.95);
   border-radius: 18px;
@@ -4748,7 +4750,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 .ai-message.user {
   align-self: flex-end;
   width: fit-content;
-  max-width: min(92%, 580px);
+  max-width: 86%;
   padding: 12px 18px;
   border-color: rgba(20, 187, 176, 0.35);
   background: linear-gradient(135deg, #e6f8f5 0%, #d6f2ee 55%, #fbf3df 100%);
