@@ -9181,6 +9181,91 @@ select:focus {
     gap: 12px;
   }
 
+  .sidebar .brand-row {
+    gap: 4px;
+    padding: 2px 0 10px;
+  }
+
+  .sidebar .brand-row .brand-mark {
+    flex: 0 0 80px;
+    width: 80px;
+    height: 80px;
+    margin-left: -4px;
+  }
+
+  .sidebar .brand-row > div:not(.brand-mark) {
+    margin-left: 0;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .sidebar .brand-row .eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar .brand-row h1 {
+    font-size: 18px;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .storage-dash-header {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+
+  .storage-dash-title {
+    white-space: nowrap;
+    font-size: 12.5px;
+  }
+
+  .storage-val-group {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .storage-capacity-val {
+    font-size: 12.5px;
+  }
+
+  .storage-subrow {
+    flex-wrap: wrap;
+    gap: 2px 6px;
+    font-size: 11px;
+  }
+
+  .storage-subrow > span {
+    white-space: nowrap;
+  }
+
+  .storage-mini-tile {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .storage-tile-label-wrap {
+    gap: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .sidebar-tool-tile {
+    height: 40px;
+    font-size: 12.5px;
+    gap: 5px;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+
+  .sidebar-tool-tile .btn-icon {
+    width: 14px;
+    height: 14px;
+  }
+
 
   body.ai-drawer-open .ai-drawer,
   .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer,
@@ -9302,14 +9387,117 @@ select:focus {
   }
 }
 
-/* 超窄便携设备 (901px - 1150px) 专属防溢出兜底：适度隐藏大小和修改时间列，绝对消除横向滚动条 */
+/* 超窄便携设备 (901px - 1150px) 专属防溢出兜底：侧边栏精简缩放 + 隐藏大小和修改时间列，绝对消除横向溢出 */
 @media (min-width: 901px) and (max-width: 1150px) {
   :root {
-    --ai-dock-width: 380px;
+    --ai-dock-width: clamp(330px, 36vw, 380px);
   }
 
   .drive-shell {
     grid-template-columns: 220px 1fr;
+  }
+
+  .sidebar {
+    padding: 14px 10px;
+    gap: 10px;
+    border-radius: 28px;
+    scrollbar-width: thin;
+  }
+
+  .sidebar .brand-row {
+    gap: 2px;
+    padding: 2px 0 8px;
+  }
+
+  .sidebar .brand-row .brand-mark {
+    flex: 0 0 66px;
+    width: 66px;
+    height: 66px;
+    margin-left: -4px;
+  }
+
+  .sidebar .brand-row .eyebrow {
+    font-size: 8.5px;
+    letter-spacing: 0;
+  }
+
+  .sidebar .brand-row h1 {
+    font-size: 15.5px;
+    line-height: 1.15;
+  }
+
+  .side-metrics {
+    padding: 9px 9px 8px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  .storage-dash-title-group {
+    gap: 4px;
+  }
+
+  .storage-dash-title {
+    font-size: 12px;
+  }
+
+  .storage-capacity-val {
+    font-size: 11.5px;
+  }
+
+  .storage-capacity-hint {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  .storage-embedded-tiles {
+    gap: 4px;
+  }
+
+  .storage-mini-tile {
+    padding: 3.5px 5px;
+    gap: 2px;
+  }
+
+  .storage-tile-label-wrap {
+    gap: 3px;
+    font-size: 10.5px;
+  }
+
+  .storage-tile-label-wrap svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+  }
+
+  .storage-mini-tile strong {
+    font-size: 11.5px;
+  }
+
+  .sidebar-tools-grid {
+    gap: 5px;
+  }
+
+  .sidebar-tool-tile {
+    height: 36px;
+    font-size: 11.5px;
+    gap: 3px;
+    padding: 0 4px;
+    border-radius: 12px;
+  }
+
+  .sidebar-tool-tile .btn-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .sidebar .wide {
+    min-height: 36px;
+    font-size: 12.5px;
+    padding: 0 8px;
+  }
+
+  .drive-shell.ai-drawer-docked .content {
+    padding: 12px 12px 14px;
   }
 
   .drive-shell.ai-drawer-docked th:nth-child(3),
@@ -9440,6 +9628,37 @@ select:focus {
     padding-inline: 2px 6px !important;
   }
 
+  .drive-shell.ai-drawer-docked.ai-content-compact .topbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-compact .path-panel {
+    flex: 1 1 200px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-compact .actions {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: auto;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-compact .actions button {
+    min-height: 34px;
+    height: 34px;
+    padding-inline: 11px;
+    font-size: 13px;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
   .drive-shell.ai-drawer-docked.ai-content-tight th:nth-child(3),
   .drive-shell.ai-drawer-docked.ai-content-tight td:nth-child(3),
   .drive-shell.ai-drawer-docked.ai-content-tight th:nth-child(4),
@@ -9450,15 +9669,141 @@ select:focus {
   .drive-shell.ai-drawer-docked.ai-content-tight .topbar {
     flex-wrap: wrap;
     row-gap: 8px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .drive-shell.ai-drawer-docked.ai-content-tight .path-panel {
-    flex: 1 1 220px;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px 12px;
+    min-height: 44px;
   }
 
   .drive-shell.ai-drawer-docked.ai-content-tight .actions {
-    flex: 0 0 auto;
-    margin-left: auto;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .actions button {
+    min-height: 31px;
+    height: 31px;
+    padding-inline: 9px;
+    font-size: 12px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .actions button .btn-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-panel {
+    padding: 8px 10px;
+    border-radius: 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-box {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-box input {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    font-size: 12.5px;
+    padding: 0 12px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight #searchBtn {
+    min-height: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0 11px;
+    font-size: 12px;
+    gap: 4px;
+    flex: 0 1 auto;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight #searchBtn .btn-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight #clearSearchBtn {
+    min-height: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    flex: 0 1 auto;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-mode-toggle {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 78px;
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-global-search {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 90px;
+    max-width: none;
+    min-height: 32px;
+    height: 32px;
+    max-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    gap: 3px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-global-search .btn-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-global-search span,
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-global-search.is-folder span {
+    font-size: 12px;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .ai-global-search.hidden {
+    display: none !important;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-tools {
+    flex-wrap: wrap;
+  }
+
+  .drive-shell.ai-drawer-docked.ai-content-tight .search-sort {
+    flex: 0 1 132px;
   }
 
   .ai-drawer-shell.ai-drawer-narrow .ai-drawer-header .model-badge {
