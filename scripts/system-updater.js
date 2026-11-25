@@ -187,21 +187,32 @@ async function checkUpdate() {
   const currentVersion = getLocalVersion();
   const candidates = [];
 
-  // 并发探测所有镜像节点的 raw package.json，同时探测 GitHub API 防止 CDN 5 分钟旧缓存覆盖新版
+  // 并发探测所有镜像节点的 raw package.json，同时探测 GitHub API 与 jsDelivr CDN 防止单通道超时或旧缓存覆盖新版
   const mirrorProbes = MIRROR_PREFIXES.map(async (prefix) => {
     const startedAt = Date.now();
     const targetUrl = `${prefix}https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/package.json?_t=${Date.now()}`;
-    const buf = await fetchUrlBuffer(targetUrl, 3500);
+    const buf = await fetchUrlBuffer(targetUrl, 7000);
     const pkg = JSON.parse(buf.toString("utf8"));
     if (!pkg || !pkg.version) throw new Error("Invalid package.json");
     return { prefix, pkg, elapsedMs: Date.now() - startedAt, viaApi: false };
   });
 
-  const commitShaPromise = fetchLatestCommitSha(3500);
-  const apiProbePromise = fetchPackageViaGitHubApi(3500);
+  const jsdelivrProbe = (async () => {
+    const startedAt = Date.now();
+    const buf = await fetchUrlBuffer(
+      `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@main/package.json?_t=${Date.now()}`,
+      7000
+    );
+    const pkg = JSON.parse(buf.toString("utf8"));
+    if (!pkg || !pkg.version) throw new Error("Invalid jsDelivr package.json");
+    return { prefix: "https://ghfast.top/", pkg, elapsedMs: Date.now() - startedAt, viaApi: true };
+  })();
+
+  const commitShaPromise = fetchLatestCommitSha(6000);
+  const apiProbePromise = fetchPackageViaGitHubApi(6000);
 
   const [results, commitSha] = await Promise.all([
-    Promise.allSettled([...mirrorProbes, apiProbePromise]),
+    Promise.allSettled([...mirrorProbes, apiProbePromise, jsdelivrProbe]),
     commitShaPromise,
   ]);
 
