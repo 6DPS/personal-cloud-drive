@@ -11476,6 +11476,19 @@ setAuthMode("login");
 // ==============================================================================
 const popoverCheckUpdateBtn = $("#popoverCheckUpdateBtn");
 const popoverVersionLabel = $("#popoverVersionLabel");
+
+async function syncLocalVersionLabel() {
+  if (!popoverVersionLabel) return;
+  try {
+    const res = await fetch(`/api/system/version?_t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const info = await res.json().catch(() => null);
+    if (info?.version) {
+      popoverVersionLabel.textContent = `检查更新 (v${info.version})`;
+    }
+  } catch {}
+}
+void syncLocalVersionLabel();
 const systemUpdateModal = $("#systemUpdateModal");
 const closeSystemUpdateModalBtn = $("#closeSystemUpdateModalBtn");
 const updateCheckingView = $("#updateCheckingView");

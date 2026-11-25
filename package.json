@@ -1,10 +1,8 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.1.18",
+  "version": "1.1.19",
   "changelog": [
-    "紧急修复 v1.1.17 中 package.json 路径反斜杠转义缺陷导致的版本解析异常与在线检查更新失败问题，全面恢复所有部署端一键 OTA 检查与升级",
-    "强化跨机 OTA 引擎：检查更新超时放宽至 7 秒并接入 jsDelivr CDN 兜底；升级写盘前执行字节级按需比对，未改动文件直接跳过不写盘，彻底规避杀软锁文件回滚；核心文件严格原子回滚，辅助文件容错不阻断升级",
-    "补齐全局 showToast 与升级弹窗内嵌错误区（告别静默失败循环），Windows 安装脚本自动授予普通用户安装目录写入权限（users-modify），支持 C:\\Program Files 任意磁盘普通权限稳定热更新"
+    "修复左下角账号菜单中「检查更新」偶尔短暂显示默认占位版本号 v1.0.0 的问题：移除静态假版本占位，改为页面加载时立即读取本地 /api/system/version 零延迟展示真实版本号（离线亦可准确显示）"
   ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
