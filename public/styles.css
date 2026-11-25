@@ -11604,6 +11604,8 @@ tbody tr.context-active-row {
 }
 
 .browse-sort-group {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -11615,23 +11617,55 @@ tbody tr.context-active-row {
   max-width: 100%;
 }
 
+.browse-segmented-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.34);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 140ms ease;
+  will-change: transform, width;
+}
+
+.browse-segmented-pill.ready {
+  opacity: 1;
+}
+
+.browse-segmented-pill.no-anim {
+  transition: none !important;
+}
+
 .browse-sort-label {
+  position: relative;
+  z-index: 1;
   font-size: 12px;
   font-weight: 700;
   color: #64748b;
-  padding: 0 6px 0 9px;
+  padding: 0 5px 0 8px;
   white-space: nowrap;
   user-select: none;
 }
 
 .browse-sort-btn {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
   height: 30px;
   min-height: 30px;
-  padding: 0 11px;
+  padding: 0 9px;
   border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
@@ -11641,23 +11675,59 @@ tbody tr.context-active-row {
   cursor: pointer;
   white-space: nowrap;
   box-shadow: none;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  transition: color 180ms ease, background-color 180ms ease;
+  will-change: auto;
 }
 
-.browse-sort-btn:hover {
+.browse-sort-btn:hover:not(.active) {
   color: #1d4ed8;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .browse-sort-btn.active {
-  background: #ffffff;
-  border-color: rgba(37, 99, 235, 0.36);
+  background: transparent;
+  border-color: transparent;
   color: #1d4ed8;
-  font-weight: 700;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.browse-sort-btn:hover,
+.browse-sort-btn:active,
+.browse-view-btn:hover,
+.browse-view-btn:active {
+  transform: none !important;
+  filter: none !important;
+}
+
+.browse-sort-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  opacity: 0.3;
+  transform: rotate(0deg);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, color 180ms ease;
+}
+
+.browse-sort-btn:hover .browse-sort-arrow {
+  opacity: 0.6;
+}
+
+.browse-sort-btn.active .browse-sort-arrow {
+  opacity: 1;
+  color: #1d4ed8;
+}
+
+.browse-sort-btn.active[data-dir="asc"] .browse-sort-arrow {
+  transform: rotate(180deg);
 }
 
 .browse-view-group {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -11669,6 +11739,8 @@ tbody tr.context-active-row {
 }
 
 .browse-view-btn {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11683,19 +11755,20 @@ tbody tr.context-active-row {
   color: #64748b;
   cursor: pointer;
   box-shadow: none;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  transition: color 180ms ease, background-color 180ms ease;
+  will-change: auto;
 }
 
-.browse-view-btn:hover {
+.browse-view-btn:hover:not(.active) {
   color: #1d4ed8;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .browse-view-btn.active {
-  background: #ffffff;
-  border-color: rgba(37, 99, 235, 0.34);
+  background: transparent;
+  border-color: transparent;
   color: #1d4ed8;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+  box-shadow: none;
 }
 
 .browse-tools-divider {
@@ -11803,11 +11876,23 @@ tbody tr.context-active-row {
     gap: 1px;
   }
 
+  .browse-segmented-pill {
+    top: 2px;
+    bottom: 2px;
+  }
+
   .browse-sort-btn {
     height: 26px;
     min-height: 26px;
-    padding: 0 8px;
+    padding: 0 7px;
+    gap: 2px;
     font-size: 11.5px;
+  }
+
+  .browse-sort-arrow {
+    width: 9px;
+    height: 9px;
+    flex-basis: 9px;
   }
 
   .browse-view-group {
@@ -11882,6 +11967,11 @@ tbody tr.context-active-row {
   border-color: #2563eb;
   background: #f0f6ff;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.file-grid-card.context-active-row {
+  border-color: rgba(37, 99, 235, 0.65);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18), 0 8px 20px rgba(37, 99, 235, 0.1);
 }
 
 .file-grid-card.drop-target-row {
@@ -12038,10 +12128,46 @@ body.selection-active .file-grid-select-wrap {
 }
 
 .file-grid-card:hover .file-grid-actions,
-.file-grid-card:focus-within .file-grid-actions {
+.file-grid-card:focus-within .file-grid-actions,
+.file-grid-actions.has-active-menu {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+.file-grid-actions .row-actions-menu-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.file-grid-actions .row-action-icon-btn.more-action-btn {
+  width: 26px !important;
+  min-width: 26px !important;
+  max-width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(203, 218, 238, 0.72) !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.file-grid-actions .row-action-icon-btn.more-action-btn:hover,
+.file-grid-actions .row-action-icon-btn.more-action-btn[aria-expanded="true"] {
+  background: #eff6ff !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+  color: #1d4ed8 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.file-grid-action-btn:hover,
+.file-grid-action-btn:active {
+  transform: none !important;
+  filter: none !important;
 }
 
 .file-grid-action-btn {

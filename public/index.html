@@ -1028,12 +1028,23 @@
             <div class="search-row">
               <div id="browseToolsGroup" class="browse-tools-group" aria-label="排序与视图">
                 <div id="browseSortGroup" class="browse-sort-group" role="group" aria-label="文件排序">
+                  <span id="browseSortPill" class="browse-segmented-pill" aria-hidden="true"></span>
                   <span class="browse-sort-label">排序</span>
-                  <button type="button" class="browse-sort-btn" data-sort="name" title="按名称排序（文件夹与压缩包优先）">名称</button>
-                  <button type="button" class="browse-sort-btn active" data-sort="modifiedAt" title="按修改时间排序（文件夹与压缩包优先）">修改时间 ↓</button>
-                  <button type="button" class="browse-sort-btn" data-sort="size" title="按大小排序（文件夹与压缩包优先）">大小</button>
+                  <button type="button" class="browse-sort-btn" data-sort="name" data-dir="asc" title="按名称排序（文件夹与压缩包优先）">
+                    <span class="browse-sort-text">名称</span>
+                    <span class="browse-sort-arrow" aria-hidden="true"><svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7M3 6.8L6 9.8l3-3"/></svg></span>
+                  </button>
+                  <button type="button" class="browse-sort-btn active" data-sort="modifiedAt" data-dir="desc" title="按修改时间排序（文件夹与压缩包优先）" aria-pressed="true">
+                    <span class="browse-sort-text">修改时间</span>
+                    <span class="browse-sort-arrow" aria-hidden="true"><svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7M3 6.8L6 9.8l3-3"/></svg></span>
+                  </button>
+                  <button type="button" class="browse-sort-btn" data-sort="size" data-dir="desc" title="按大小排序（文件夹与压缩包优先）">
+                    <span class="browse-sort-text">大小</span>
+                    <span class="browse-sort-arrow" aria-hidden="true"><svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5v7M3 6.8L6 9.8l3-3"/></svg></span>
+                  </button>
                 </div>
                 <div id="browseViewGroup" class="browse-view-group" role="group" aria-label="视图切换">
+                  <span id="browseViewPill" class="browse-segmented-pill" aria-hidden="true"></span>
                   <button type="button" class="browse-view-btn active" data-view="list" title="列表视图" aria-label="列表视图" aria-pressed="true">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
                   </button>
@@ -1075,16 +1086,6 @@
             </div>
             <div id="searchTools" class="search-tools hidden">
               <div id="searchCategoryTabs" class="search-tabs" aria-label="搜索结果分类"></div>
-              <label class="search-sort">
-                <span>排序</span>
-                <select id="searchSort" title="搜索结果排序">
-                  <option value="relevance">最相关</option>
-                  <option value="modifiedDesc">最近修改</option>
-                  <option value="sizeDesc">文件大小</option>
-                  <option value="type">文件类型</option>
-                  <option value="name">名称</option>
-                </select>
-              </label>
             </div>
             <p class="search-hint">
               提示：可搜名称、路径、类型、日期和大小。

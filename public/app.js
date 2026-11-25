@@ -4719,7 +4719,7 @@ function closeRowActionMenus(exceptMenu = null) {
     if (exceptMenu && exceptMenu.id === menuId) return;
     button.setAttribute("aria-expanded", "false");
   });
-  document.querySelectorAll(".row-actions.has-active-menu").forEach((el) => {
+  document.querySelectorAll(".row-actions.has-active-menu, .file-grid-actions.has-active-menu").forEach((el) => {
     if (exceptMenu && el.querySelector(`[aria-controls='${exceptMenu.id}']`)) return;
     el.classList.remove("has-active-menu");
   });
@@ -4809,7 +4809,7 @@ function moreActionsMenu(items = []) {
     hoverBounds = null;
     document.removeEventListener("pointermove", handlePointerMove);
     trigger.setAttribute("aria-expanded", "false");
-    wrapper.closest(".row-actions")?.classList.remove("has-active-menu");
+    wrapper.closest(".row-actions, .file-grid-actions")?.classList.remove("has-active-menu");
   }
 
   function isInsideHoverBounds(event) {
@@ -4835,7 +4835,7 @@ function moreActionsMenu(items = []) {
     hoverBounds = positionRowActionMenu(trigger, menu, bridge);
     if (!useClickMode) document.addEventListener("pointermove", handlePointerMove);
     trigger.setAttribute("aria-expanded", "true");
-    wrapper.closest(".row-actions")?.classList.add("has-active-menu");
+    wrapper.closest(".row-actions, .file-grid-actions")?.classList.add("has-active-menu");
     openedByPointerAt = Date.now();
   }
 
@@ -5311,7 +5311,7 @@ function updateSearchVisibleItems(options = {}) {
     ? [...rawItems]
     : rawItems.filter((item) => searchItemCategory(item) === state.searchCategory);
   state.searchSort = searchSort?.value || state.searchSort || "relevance";
-  state.items = filtered.sort(compareSearchItems);
+  state.items = sortBrowseItems(filtered);
   renderSearchCategoryTabs();
   const visiblePaths = new Set(state.items.map((item) => item.path));
   for (const selectedPath of [...state.selectedPaths]) {
@@ -9940,24 +9940,51 @@ function sortBrowseItems(items = []) {
   return list;
 }
 
-function syncBrowseSortUi() {
-  const labels = { name: "名称", modifiedAt: "修改时间", size: "大小" };
-  const arrow = state.sortDir === "asc" ? "↑" : "↓";
+function positionBrowseSegmentedPill(groupId, pillId, activeBtn, { instant = false } = {}) {
+  const group = document.getElementById(groupId);
+  const pill = document.getElementById(pillId);
+  if (!group || !pill || !activeBtn) return;
+  const x = activeBtn.offsetLeft;
+  const w = activeBtn.offsetWidth;
+  if (w <= 0) return;
+  const isFirstReady = !pill.classList.contains("ready");
+  if (instant || isFirstReady) {
+    pill.classList.add("no-anim");
+    pill.style.width = `${w}px`;
+    pill.style.transform = `translate3d(${x}px, 0, 0)`;
+    pill.classList.add("ready");
+    void pill.offsetWidth;
+    pill.classList.remove("no-anim");
+    return;
+  }
+  pill.style.width = `${w}px`;
+  pill.style.transform = `translate3d(${x}px, 0, 0)`;
+}
+
+function syncBrowseSortUi({ instant = false } = {}) {
+  let activeBtn = null;
   document.querySelectorAll("#browseSortGroup .browse-sort-btn").forEach((btn) => {
     const key = btn.dataset.sort || "";
     const active = key === state.sortBy;
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-pressed", active ? "true" : "false");
-    btn.textContent = active ? `${labels[key] || key} ${arrow}` : (labels[key] || key);
+    if (active) {
+      btn.dataset.dir = state.sortDir === "asc" ? "asc" : "desc";
+      activeBtn = btn;
+    }
   });
+  positionBrowseSegmentedPill("browseSortGroup", "browseSortPill", activeBtn, { instant });
 }
 
-function syncBrowseViewUi() {
+function syncBrowseViewUi({ instant = false } = {}) {
+  let activeBtn = null;
   document.querySelectorAll("#browseViewGroup .browse-view-btn").forEach((btn) => {
     const active = (btn.dataset.view || "list") === state.viewMode;
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-pressed", active ? "true" : "false");
+    if (active) activeBtn = btn;
   });
+  positionBrowseSegmentedPill("browseViewGroup", "browseViewPill", activeBtn, { instant });
 }
 
 function applyBrowseSort(sortKey) {
@@ -10106,17 +10133,27 @@ function renderGridCards(options = {}) {
     });
     actionsBar.append(delBtn);
 
-    const moreBtn = document.createElement("button");
-    moreBtn.type = "button";
-    moreBtn.className = "file-grid-action-btn";
-    moreBtn.title = "更多操作";
-    moreBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
-    moreBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const r = moreBtn.getBoundingClientRect();
-      openContextMenu({ preventDefault() {}, stopPropagation() {}, clientX: r.left, clientY: r.bottom + 4 }, item, card);
-    });
-    actionsBar.append(moreBtn);
+    const gridMoreOptions = [
+      {
+        label: item.starred ? "☆ 取消星标" : "⭐ 设为星标",
+        handler: () => toggleStarItem(item),
+      },
+      { label: "重命名", handler: () => renameItem(item) },
+      { label: "复制", handler: () => copyItem(item) },
+      { label: "移动", handler: () => moveItem(item) },
+      { label: "🔗 分享", handler: () => openShareModal(item) },
+    ];
+    if (isDir) {
+      gridMoreOptions.unshift({
+        label: item.locked ? "🔑 密码管理" : "🔒 加密文件夹",
+        handler: async () => {
+          await runAction(() => openFolderPasswordSettings(item));
+        },
+      });
+    } else if (fileExt(item.name) === "zip") {
+      gridMoreOptions.unshift({ label: "📦 查看压缩包内容", handler: () => openZipArchiveModal(item) });
+    }
+    actionsBar.append(moreActionsMenu(gridMoreOptions));
     thumb.append(actionsBar);
 
     // Card info footer (complete 2-line filename + tooltip + compact size/time)
@@ -10160,7 +10197,9 @@ function renderGridCards(options = {}) {
     });
 
     card.addEventListener("contextmenu", (event) => {
-      openContextMenu(event, item, card);
+      event.preventDefault();
+      event.stopPropagation();
+      handleRowContextMenu(event, card);
     });
 
     card.addEventListener("dragstart", (event) => {
@@ -10183,9 +10222,13 @@ function renderGridCards(options = {}) {
       card.addEventListener("drop", async (event) => {
         card.classList.remove("drop-target-row");
         const sourcePath = state.draggedItemPath || event.dataTransfer.getData("application/x-drive-path");
-        if (!sourcePath || sourcePath === item.path) return;
+        if (!sourcePath || sourcePath === item.path || event.dataTransfer.files.length) return;
         event.preventDefault();
-        await moveItemDirect(sourcePath, item.path);
+        const sourceItem = state.items.find((entry) => entry.path === sourcePath);
+        const sourceName = sourceItem ? itemName(sourceItem) : sourcePath.split("/").filter(Boolean).pop() || "选中项目";
+        const ok = await showConfirmDialog("移动项目", `确认将“${sourceName}”移动到“${itemName(item)}”吗？`);
+        if (!ok) return;
+        await moveItemToFolder(sourcePath, item.path);
       });
     }
 
@@ -10206,8 +10249,24 @@ document.querySelectorAll("#browseViewGroup .browse-view-btn").forEach((btn) => 
   });
 });
 
-syncBrowseSortUi();
-syncBrowseViewUi();
+function refreshBrowseSegmentedPillsInstant() {
+  syncBrowseSortUi({ instant: true });
+  syncBrowseViewUi({ instant: true });
+}
+
+if (typeof ResizeObserver === "function") {
+  const pillRo = new ResizeObserver(() => {
+    refreshBrowseSegmentedPillsInstant();
+  });
+  const sortGrpEl = document.getElementById("browseSortGroup");
+  const viewGrpEl = document.getElementById("browseViewGroup");
+  if (sortGrpEl) pillRo.observe(sortGrpEl);
+  if (viewGrpEl) pillRo.observe(viewGrpEl);
+}
+window.addEventListener("resize", refreshBrowseSegmentedPillsInstant);
+requestAnimationFrame(refreshBrowseSegmentedPillsInstant);
+syncBrowseSortUi({ instant: true });
+syncBrowseViewUi({ instant: true });
 
 // --- 1. 回收站逻辑 ---
 function exitTrashMode() {
