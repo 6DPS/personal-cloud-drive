@@ -58,6 +58,7 @@ const state = {
   aiConversations: new Map(),
   trashMode: false,
   starredMode: false,
+  categoryMode: "",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -432,7 +433,7 @@ function setStatus(message) {
 
 function syncAiGlobalBtnUi() {
   if (!aiGlobalSearchBtn) return;
-  const isFolder = Boolean(state.path) && !state.trashMode;
+  const isFolder = Boolean(state.path) && !state.trashMode && !state.starredMode && !state.categoryMode;
   const textSpan = aiGlobalSearchBtn.querySelector("span");
   if (isFolder) {
     const folderName = displayFolder(state.path || "") || "当前文件夹";
@@ -4481,6 +4482,7 @@ function renderBreadcrumb() {
   root.addEventListener("click", () => {
     exitTrashMode();
     exitStarredMode();
+    exitCategoryMode();
     loadFolder("");
   });
   breadcrumb.append(root);
@@ -4504,6 +4506,17 @@ function renderBreadcrumb() {
     starredLabel.style.fontWeight = "600";
     starredLabel.textContent = "⭐ 我的星标";
     breadcrumb.append(slash, starredLabel);
+    return;
+  }
+
+  if (state.categoryMode) {
+    const slash = document.createElement("span");
+    slash.textContent = "/";
+    const catLabel = document.createElement("span");
+    catLabel.className = "breadcrumb-current";
+    catLabel.style.fontWeight = "600";
+    catLabel.textContent = `快捷分类：${QUICK_CATEGORY_LABELS[state.categoryMode] || state.categoryMode}`;
+    breadcrumb.append(slash, catLabel);
     return;
   }
 
@@ -4870,7 +4883,7 @@ function clearSelection() {
   state.lastAnchorKey = "";
   updateSelectionUi();
   syncSelectionRows();
-  if (!state.trashMode && !state.starredMode) void flushPendingRealtimeRefresh();
+  if (!state.trashMode && !state.starredMode && !state.categoryMode) void flushPendingRealtimeRefresh();
 }
 
 function updateSelectionUi() {
@@ -5358,6 +5371,7 @@ async function executeOpenItem(item) {
     const ok = await ensureFolderReady(item.path, itemName(item));
     if (ok) {
       if (state.starredMode) exitStarredMode();
+      if (state.categoryMode) exitCategoryMode();
       loadFolder(item.path);
     }
   } else if (fileExt(item.name) === "zip") {
@@ -5382,6 +5396,10 @@ function renderRows(options = {}) {
   } else if (state.starredMode) {
     if (emptyTitle) emptyTitle.textContent = "暂无星标内容";
     if (emptyText) emptyText.textContent = "可以将重要的文件或文件夹设为星标，以便在此快速查找。";
+  } else if (state.categoryMode) {
+    const catTitle = QUICK_CATEGORY_LABELS[state.categoryMode] || "该分类";
+    if (emptyTitle) emptyTitle.textContent = `全盘暂无${catTitle}文件`;
+    if (emptyText) emptyText.textContent = "上传对应类型的文件后，会自动聚合显示在这里。";
   } else if (state.searchActive) {
     if (emptyTitle) emptyTitle.textContent = "没有找到匹配结果";
     if (emptyText) emptyText.textContent = "可以换一个文件名、路径、类型、日期或大小关键词再试。";
@@ -5585,6 +5603,7 @@ function renderRows(options = {}) {
         const ok = await ensureFolderReady(item.path, itemName(item));
         if (ok) {
           if (state.starredMode) exitStarredMode();
+          if (state.categoryMode) exitCategoryMode();
           loadFolder(item.path);
         }
       } else if (fileExt(item.name) === "zip") {
@@ -5596,11 +5615,11 @@ function renderRows(options = {}) {
 
     nameWrap.append(nameBtn, starBtn);
     nameCell.append(icon, nameWrap);
-    if (state.searchActive || state.starredMode) {
+    if (state.searchActive || state.starredMode || state.categoryMode) {
       const meta = document.createElement("div");
       meta.className = "match-meta";
       const folderText = item.folderPath ? `位置：${item.folderPath}` : "位置：全部文件";
-      if (state.starredMode) {
+      if (state.starredMode || state.categoryMode) {
         meta.textContent = folderText;
       } else {
         appendHighlightedText(meta, `${item.matchReason || "匹配"} · ${folderText}`, state.searchTokens);
@@ -6236,6 +6255,13 @@ async function loadFolder(path = state.path, options = {}) {
     }
     exitStarredMode();
   }
+  if (state.categoryMode) {
+    if (options.silent || options.preserveCategory) {
+      return loadCategory(state.categoryMode, options);
+    }
+    exitCategoryMode();
+  }
+  syncSidebarCategoryUi();
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
   let cachedRendered = false;
   if (cached) {
@@ -6293,6 +6319,7 @@ function applySearchData(data) {
   if (aiDrawer && !aiDrawer.classList.contains("hidden")) renderAiDrawer();
   if (clearSearchBtn) clearSearchBtn.classList.remove("hidden");
   if (searchTools) searchTools.classList.remove("hidden");
+  syncSidebarCategoryUi();
   if (searchSummary) {
     const scopeText = `当前目录：${displayFolder(data.path || "")}`;
     const limitText = data.truncated ? "，结果较多已截断" : "";
@@ -6305,6 +6332,7 @@ function applySearchData(data) {
 async function performSearch() {
   exitTrashMode();
   exitStarredMode();
+  exitCategoryMode();
   const query = searchInput?.value.trim() || "";
   if (!query) {
     setStatus("请输入搜索关键词，可以搜文件名、文件夹名、路径、类型、日期或大小。");
@@ -6345,6 +6373,7 @@ async function clearSearch() {
 async function refreshCurrentFolder() {
   if (driveView.classList.contains("hidden")) return;
   void refreshStarredCount();
+  void refreshCategoryCounts();
   if (state.trashMode) {
     if (Date.now() < state.realtimeRefreshSuppressUntil) return;
     if (isUiInteractionActive()) {
@@ -6364,6 +6393,17 @@ async function refreshCurrentFolder() {
     }
     try {
       await loadStarred({ silent: true });
+    } catch {}
+    return;
+  }
+  if (state.categoryMode) {
+    if (Date.now() < state.realtimeRefreshSuppressUntil) return;
+    if (isUiInteractionActive()) {
+      state.pendingRealtimeRefresh = true;
+      return;
+    }
+    try {
+      await loadCategory(state.categoryMode, { silent: true });
     } catch {}
     return;
   }
@@ -6429,10 +6469,13 @@ async function runAction(fn) {
     suppressNextRealtimeRefresh();
     if (state.starredMode) {
       await loadStarred({ silent: true });
+    } else if (state.categoryMode) {
+      await loadCategory(state.categoryMode, { silent: true });
     } else {
       await loadFolder(state.path, { replaceHistory: true, forceRefresh: true });
     }
     refreshStarredCount();
+    void refreshCategoryCounts();
     scheduleStorageUsageRefresh({ force: true });
   } catch (error) {
     await showErrorDialog(error.message);
@@ -8005,6 +8048,7 @@ async function enterDrive(user = state.currentUser) {
   state.avatarVersion = Date.now();
   exitTrashMode();
   exitStarredMode();
+  exitCategoryMode();
   syncAdminUi();
   loginView.classList.add("hidden");
   driveView.classList.remove("hidden");
@@ -8023,6 +8067,7 @@ async function enterDrive(user = state.currentUser) {
   const params = new URLSearchParams(window.location.search);
   await loadFolder(params.get("path") || "", { replaceHistory: true });
   void refreshStarredCount();
+  void refreshCategoryCounts();
   await refreshStorageUsage();
   await refreshAccessInfo();
   await refreshHealthStatus();
@@ -8752,6 +8797,7 @@ function clearUserSessionAndNavigateToLogin(prefilledUsername = "", successNotic
   }
   exitTrashMode();
   exitStarredMode();
+  exitCategoryMode();
   clearSelection();
   state.unlockedFolders.clear();
   clearFolderCaches();
@@ -8800,6 +8846,11 @@ backBtn.addEventListener("click", () => {
   }
   if (state.starredMode) {
     exitStarredMode();
+    loadFolder(state.path || "");
+    return;
+  }
+  if (state.categoryMode) {
+    exitCategoryMode();
     loadFolder(state.path || "");
     return;
   }
@@ -9115,12 +9166,17 @@ searchSort?.addEventListener("change", () => {
 });
 
 $("#refreshBtn").addEventListener("click", () => {
+  void refreshCategoryCounts();
   if (state.trashMode) {
     loadTrash();
     return;
   }
   if (state.starredMode) {
     loadStarred();
+    return;
+  }
+  if (state.categoryMode) {
+    loadCategory(state.categoryMode);
     return;
   }
   if (state.searchActive) {
@@ -9501,7 +9557,9 @@ function exitStarredMode() {
 
 async function loadStarred(options = {}) {
   exitTrashMode();
+  exitCategoryMode();
   state.starredMode = true;
+  syncSidebarCategoryUi();
   state.searchActive = false;
   if (!options?.preserveSelection) {
     state.selectedPaths.clear();
@@ -9609,6 +9667,141 @@ async function refreshStarredCount() {
     }
   } catch {}
 }
+// --- 0.5 左侧快捷分类（全盘只读筛选）---
+const QUICK_CATEGORY_LABELS = {
+  all: "全部文件",
+  document: "文档",
+  image: "图片",
+  video: "视频",
+  audio: "音频",
+  archive: "压缩包",
+};
+
+function syncSidebarCategoryUi() {
+  const buttons = document.querySelectorAll("#sidebarCategorySection .sidebar-cat-btn");
+  if (!buttons.length) return;
+  const activeKey = state.categoryMode
+    ? state.categoryMode
+    : (!state.starredMode && !state.trashMode && !state.searchActive ? "all" : "");
+  buttons.forEach((btn) => {
+    const key = btn.dataset.category || "";
+    btn.classList.toggle("active", Boolean(activeKey) && key === activeKey);
+  });
+}
+
+function applyCategoryCounts(counts = {}) {
+  const map = {
+    catCountAll: counts.all,
+    catCountDocument: counts.document,
+    catCountImage: counts.image,
+    catCountVideo: counts.video,
+    catCountAudio: counts.audio,
+    catCountArchive: counts.archive,
+  };
+  for (const [id, val] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el && Number.isFinite(Number(val))) {
+      el.textContent = String(Number(val));
+    }
+  }
+}
+
+async function refreshCategoryCounts() {
+  try {
+    const res = await api("/api/categories", { cache: "no-store" });
+    if (res && res.counts) applyCategoryCounts(res.counts);
+  } catch {}
+}
+
+function exitCategoryMode() {
+  if (!state.categoryMode) {
+    syncSidebarCategoryUi();
+    return;
+  }
+  state.categoryMode = "";
+  state.selectedPaths.clear();
+  state.selectionMode = false;
+  updateSelectionUi();
+  syncSelectionRows();
+  syncAiGlobalBtnUi();
+  syncSidebarCategoryUi();
+  const uploadBtn = $("#uploadBtn");
+  const newFolderBtn = $("#newFolderBtn");
+  const selectModeBtn = $("#selectModeBtn");
+  if (uploadBtn) uploadBtn.classList.remove("hidden");
+  if (newFolderBtn) newFolderBtn.classList.remove("hidden");
+  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+}
+
+async function loadCategory(category, options = {}) {
+  const cat = String(category || "").trim().toLowerCase();
+  if (!cat || cat === "all") {
+    exitTrashMode();
+    exitStarredMode();
+    exitCategoryMode();
+    await loadFolder("", { forceRefresh: true });
+    return;
+  }
+  exitTrashMode();
+  exitStarredMode();
+  state.categoryMode = cat;
+  state.searchActive = false;
+  if (clearSearchBtn) clearSearchBtn.classList.add("hidden");
+  if (searchTools) searchTools.classList.add("hidden");
+  if (searchSummary) {
+    searchSummary.classList.add("hidden");
+    searchSummary.textContent = "";
+  }
+  if (!options?.preserveSelection) {
+    state.selectedPaths.clear();
+    state.selectionMode = false;
+    state.lastAnchorKey = "";
+  }
+  updateSelectionUi();
+  syncAiGlobalBtnUi();
+  syncSidebarCategoryUi();
+
+  const uploadBtn = $("#uploadBtn");
+  const newFolderBtn = $("#newFolderBtn");
+  const selectModeBtn = $("#selectModeBtn");
+  if (uploadBtn) uploadBtn.classList.add("hidden");
+  if (newFolderBtn) newFolderBtn.classList.add("hidden");
+  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+
+  const label = QUICK_CATEGORY_LABELS[cat] || cat;
+  if (currentFolderLabel) currentFolderLabel.textContent = `快捷分类：${label}`;
+  backBtn.disabled = false;
+  renderBreadcrumb();
+  if (!options?.silent) setStatus(`正在加载全盘${label}文件...`);
+
+  try {
+    const res = await api(`/api/categories?type=${encodeURIComponent(cat)}`, { cache: "no-store" });
+    if (state.categoryMode !== cat) return;
+    if (res && res.counts) applyCategoryCounts(res.counts);
+    state.items = Array.isArray(res?.items) ? res.items : [];
+    renderRows({ noAnimation: true });
+    if (!options?.silent) {
+      const limitTip = res?.truncated ? "（结果较多已截断）" : "";
+      setStatus(`全盘${label}共有 ${state.items.length} 个文件${limitTip}。`);
+    }
+  } catch (err) {
+    if (!options?.silent) setStatus(`加载${label}分类失败: ${err.message}`);
+  }
+}
+
+document.querySelectorAll("#sidebarCategorySection .sidebar-cat-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const cat = btn.dataset.category || "all";
+    if (cat === "all") {
+      exitTrashMode();
+      exitStarredMode();
+      exitCategoryMode();
+      void loadFolder("", { forceRefresh: true });
+      return;
+    }
+    void loadCategory(cat);
+  });
+});
 
 // --- 1. 回收站逻辑 ---
 function exitTrashMode() {
@@ -9635,7 +9828,9 @@ function exitTrashMode() {
 
 async function loadTrash(options = {}) {
   exitStarredMode();
+  exitCategoryMode();
   state.trashMode = true;
+  syncSidebarCategoryUi();
   state.searchActive = false;
   if (!options?.preserveSelection) {
     state.selectedPaths.clear();

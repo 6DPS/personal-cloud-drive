@@ -6088,6 +6088,119 @@ app.post("/api/move", requireAuth, async (req, res, next) => {
 // ==========================================
 // 星标收藏 API
 // ==========================================
+const QUICK_CATEGORY_EXTS = {
+  document: new Set([
+    ".pdf", ".doc", ".docx", ".wps", ".dot", ".dotx", ".odt", ".rtf",
+    ".ppt", ".pptx", ".pot", ".potx", ".pps", ".ppsx", ".odp",
+    ".xls", ".xlsx", ".xlsm", ".xltx", ".csv", ".tsv", ".ods",
+    ".txt", ".md", ".markdown", ".json", ".xml", ".yaml", ".yml",
+    ".log", ".tex", ".bib", ".py", ".js", ".jsx", ".ts", ".tsx",
+    ".html", ".css", ".c", ".cpp", ".h", ".java", ".m", ".sh", ".bat", ".sql",
+  ]),
+  image: new Set([
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico",
+    ".tif", ".tiff", ".heic", ".heif", ".avif", ".eps", ".psd",
+  ]),
+  video: new Set([
+    ".mp4", ".mov", ".mkv", ".webm", ".avi", ".flv", ".wmv", ".m4v", ".3gp", ".ts", ".mpeg", ".mpg",
+  ]),
+  audio: new Set([
+    ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".mid", ".midi",
+  ]),
+  archive: new Set([
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".iso", ".cab",
+  ]),
+};
+
+function classifyQuickCategory(fileName = "") {
+  const ext = path.extname(String(fileName || "")).toLowerCase();
+  if (!ext) return "other";
+  if (QUICK_CATEGORY_EXTS.document.has(ext)) return "document";
+  if (QUICK_CATEGORY_EXTS.image.has(ext)) return "image";
+  if (QUICK_CATEGORY_EXTS.video.has(ext)) return "video";
+  if (QUICK_CATEGORY_EXTS.audio.has(ext)) return "audio";
+  if (QUICK_CATEGORY_EXTS.archive.has(ext)) return "archive";
+  return "other";
+}
+
+app.get("/api/categories", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const rawType = String(req.query.type || "").trim().toLowerCase();
+    const validTypes = new Set(["document", "image", "video", "audio", "archive"]);
+    const filterType = validTypes.has(rawType) ? rawType : "";
+    const starredStore = getStarredStore(userId);
+    const counts = { all: 0, document: 0, image: 0, video: 0, audio: 0, archive: 0 };
+    const items = [];
+    let scanned = 0;
+    let truncated = false;
+
+    async function visit(baseRel = "") {
+      if (truncated) return;
+      const dir = resolveDrivePathForUser(userId, baseRel);
+      let entries = [];
+      try {
+        entries = await fsp.readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (truncated) return;
+        if (isSkippedDriveEntry(entry)) continue;
+        scanned += 1;
+        if (scanned > SEARCH_MAX_ENTRIES) {
+          truncated = true;
+          return;
+        }
+        const rel = webPath(baseRel, entry.name);
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const lockedSelf = findLockedFolderForRequest(req, rel, true);
+          if (!lockedSelf) {
+            await visit(rel);
+          }
+          continue;
+        }
+        if (!entry.isFile()) continue;
+        const lockedParent = findLockedFolderForRequest(req, parentWebPath(rel), true);
+        if (lockedParent) continue;
+
+        const cat = classifyQuickCategory(entry.name);
+        counts.all += 1;
+        if (Object.prototype.hasOwnProperty.call(counts, cat)) {
+          counts[cat] += 1;
+        }
+        if (filterType && cat === filterType && items.length < SEARCH_MAX_RESULTS) {
+          const stat = await fsp.stat(fullPath).catch(() => null);
+          if (!stat || !stat.isFile()) continue;
+          items.push({
+            name: entry.name,
+            displayName: readableName(entry.name),
+            path: rel,
+            displayPath: displayWebPath(rel),
+            type: "file",
+            isDirectory: false,
+            locked: false,
+            unlocked: false,
+            size: stat.size,
+            modifiedAt: stat.mtime.toISOString(),
+            folderPath: parentWebPath(rel),
+            starred: starredStore.has(rel),
+            category: cat,
+          });
+        }
+      }
+    }
+
+    await visit("");
+    if (filterType) {
+      items.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime() || a.name.localeCompare(b.name, "zh-Hans-CN"));
+    }
+    res.json({ ok: true, type: filterType || "all", counts, items, scanned, truncated });
+  } catch (error) {
+    next(error);
+  }
+});
 app.get("/api/starred", requireAuth, async (req, res, next) => {
   try {
     const userId = req.user.id;
