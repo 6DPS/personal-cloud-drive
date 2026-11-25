@@ -11575,3 +11575,550 @@ tbody tr.context-active-row {
     font-size: 12px;
   }
 }
+
+/* ==============================================================================
+   Plan 2b 弹性工作栏（左排序+视图切换 + 中间弹性搜索框）容器查询自适应防溢出
+   ============================================================================== */
+.search-panel {
+  container-type: inline-size;
+  container-name: searchpanel;
+  padding: 7px 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.search-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.browse-tools-group {
+  order: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.browse-sort-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #f3f7fc;
+  border: 1px solid rgba(196, 212, 234, 0.78);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.browse-sort-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 0 6px 0 9px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.browse-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.browse-sort-btn:hover {
+  color: #1d4ed8;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.browse-sort-btn.active {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.36);
+  color: #1d4ed8;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.browse-view-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #f3f7fc;
+  border: 1px solid rgba(196, 212, 234, 0.78);
+  flex-shrink: 0;
+}
+
+.browse-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.browse-view-btn:hover {
+  color: #1d4ed8;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.browse-view-btn.active {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.34);
+  color: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+}
+
+.browse-tools-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(196, 212, 234, 0.78);
+  flex: 0 0 1px;
+  margin: 0 2px;
+}
+
+.search-row .search-box {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+/* 基于自身容器宽度实时自适应：无论拖拽 AI 抽屉到多宽或缩放窗口，按钮永远零溢出 */
+@container searchpanel (max-width: 860px) {
+  .search-row {
+    flex-wrap: wrap;
+    row-gap: 7px;
+  }
+
+  .browse-tools-group {
+    order: 6;
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .browse-tools-divider {
+    display: none;
+  }
+}
+
+@container searchpanel (max-width: 560px) {
+  .search-row {
+    gap: 6px;
+  }
+
+  .search-row .search-box {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .search-row .search-box input {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    font-size: 12.5px;
+    padding: 0 12px;
+  }
+
+  .search-row #searchBtn {
+    min-height: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0 11px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .search-row #clearSearchBtn {
+    min-height: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .search-row .ai-mode-toggle {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 78px;
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .search-row .ai-global-search:not(.hidden) {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 90px;
+    max-width: none;
+    min-height: 32px;
+    height: 32px;
+    max-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .browse-tools-group {
+    gap: 5px;
+  }
+
+  .browse-sort-label {
+    display: none;
+  }
+
+  .browse-sort-group {
+    padding: 2px;
+    gap: 1px;
+  }
+
+  .browse-sort-btn {
+    height: 26px;
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 11.5px;
+  }
+
+  .browse-view-group {
+    padding: 2px;
+  }
+
+  .browse-view-btn {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+  }
+}
+
+@container searchpanel (max-width: 360px) {
+  .browse-sort-btn {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+}
+
+/* ==============================================================================
+   缩略图网格视图（完整显示不裁切 + 自适应列数 + 完整文件名与快捷操作）
+   ============================================================================== */
+.file-panel.grid-view-active table {
+  display: none !important;
+}
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 14px;
+  padding: 14px 16px 22px;
+  align-content: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.file-grid.hidden {
+  display: none !important;
+}
+
+.drive-shell.ai-drawer-docked.ai-content-tight .file-grid {
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 10px;
+  padding: 10px 10px 16px;
+}
+
+.file-grid-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(210, 223, 240, 0.92);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.04);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
+}
+
+.file-grid-card:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
+}
+
+.file-grid-card.selected-row {
+  border-color: #2563eb;
+  background: #f0f6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.file-grid-card.drop-target-row {
+  border-color: #0d9488;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+}
+
+.file-grid-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 226, 242, 0.72);
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4fc 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.file-grid-thumb.has-image {
+  background: #f4f7fb;
+}
+
+/* 关键：使用 object-fit: contain 确保科研配图、图表坐标轴与照片 100% 完整展示，绝不裁切 */
+.file-grid-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  padding: 4px;
+  box-sizing: border-box;
+  display: block;
+  transition: transform 200ms ease;
+}
+
+.file-grid-card:hover .file-grid-thumb-img {
+  transform: scale(1.03);
+}
+
+.file-grid-thumb .file-icon {
+  width: 62px !important;
+  height: 50px !important;
+  flex: 0 0 auto !important;
+  font-size: 14px !important;
+  border-radius: 14px !important;
+}
+
+.file-grid-thumb .file-icon.folder,
+.file-grid-thumb .file-icon.archive {
+  width: 36px !important;
+  height: 28px !important;
+  flex: 0 0 36px !important;
+  font-size: 0 !important;
+  border-radius: 7px 7px 6px 6px !important;
+  transform: scale(1.85);
+  transform-origin: center;
+}
+
+.file-grid-ext-badge {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.66);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+/* 图片缩略图不叠加角标，避免遮挡科研图表右下角图例或照片细节 */
+.file-grid-thumb.has-image .file-grid-ext-badge {
+  display: none;
+}
+
+.file-grid-select-wrap {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.file-grid-card:hover .file-grid-select-wrap,
+.file-grid-card.selected-row .file-grid-select-wrap,
+body.selection-active .file-grid-select-wrap {
+  opacity: 1;
+}
+
+.file-grid-star-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(210, 223, 240, 0.85);
+  background: rgba(255, 255, 255, 0.92);
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: opacity 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.file-grid-star-btn.starred {
+  opacity: 1;
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: #fffbeb;
+}
+
+.file-grid-card:hover .file-grid-star-btn {
+  opacity: 1;
+}
+
+.file-grid-star-btn:hover {
+  transform: scale(1.08);
+  color: #f59e0b;
+}
+
+.file-grid-actions {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(203, 218, 238, 0.85);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.file-grid-card:hover .file-grid-actions,
+.file-grid-card:focus-within .file-grid-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.file-grid-action-btn {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(203, 218, 238, 0.72);
+  background: #ffffff;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.file-grid-action-btn:hover {
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #1d4ed8;
+}
+
+.file-grid-action-btn.ai-btn {
+  color: #0d9488;
+  border-color: rgba(20, 187, 176, 0.4);
+  background: #f0fdfa;
+}
+
+.file-grid-action-btn.ai-btn:hover {
+  background: linear-gradient(135deg, #16b9df, #14bbb0);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.file-grid-action-btn.danger-btn:hover {
+  background: #fef2f2;
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #dc2626;
+}
+
+.file-grid-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.file-grid-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.4;
+  min-height: 2.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.file-grid-meta {
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+    gap: 10px;
+    padding: 10px 10px 16px;
+  }
+}

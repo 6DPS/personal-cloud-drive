@@ -60,6 +60,9 @@ const state = {
   starredMode: false,
   categoryMode: "",
   folderRawItems: [],
+  sortBy: "modifiedAt",
+  sortDir: "desc",
+  viewMode: "list",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -81,6 +84,13 @@ const AI_STOP_SQUARE_SVG = '<svg class="stop-icon" viewBox="0 0 24 24" width="13
 const starredNavBtn = $("#starredNavBtn");
 const sidebarStarredCount = $("#sidebarStarredCount");
 const bulkStarBtn = $("#bulkStarBtn");
+const fileGrid = $("#fileGrid");
+const browseToolsGroup = $("#browseToolsGroup");
+const BROWSE_VIEW_MODE_KEY = "dpsir_drive_view_mode";
+try {
+  const savedView = localStorage.getItem(BROWSE_VIEW_MODE_KEY);
+  if (savedView === "grid" || savedView === "list") state.viewMode = savedView;
+} catch {}
 const recycleBinBtn = $("#recycleBinBtn");
 const mySharesBtn = $("#mySharesBtn");
 
@@ -5014,6 +5024,14 @@ function syncSelectionRows() {
     const checkbox = row.querySelector(".row-select");
     if (checkbox) checkbox.checked = selected;
   }
+  if (fileGrid) {
+    for (const card of fileGrid.querySelectorAll(".file-grid-card[data-path]")) {
+      const selected = state.selectedPaths.has(card.dataset.path);
+      card.classList.toggle("selected-row", selected);
+      const checkbox = card.querySelector(".row-select");
+      if (checkbox) checkbox.checked = selected;
+    }
+  }
   if (headerSelectAll) {
     const total = state.items.length;
     const count = state.selectedPaths.size;
@@ -5468,6 +5486,10 @@ function renderRows(options = {}) {
   document.querySelectorAll(".row-action-menu").forEach((menu) => menu.remove());
   document.querySelectorAll(".row-action-menu-bridge").forEach((bridge) => bridge.remove());
   fileRows.innerHTML = "";
+  if (fileGrid) fileGrid.innerHTML = "";
+  const useGridView = state.viewMode === "grid" && !state.trashMode;
+  if (dropZone) dropZone.classList.toggle("grid-view-active", useGridView);
+  if (fileGrid) fileGrid.classList.toggle("hidden", !useGridView || state.items.length === 0);
   emptyState.classList.toggle("hidden", state.items.length > 0);
   const emptyTitle = emptyState.querySelector("strong");
   const emptyText = emptyState.querySelector("span");
@@ -5496,6 +5518,12 @@ function renderRows(options = {}) {
   const files = statSource.length - folders;
   folderCount.textContent = folders;
   fileCount.textContent = files;
+
+  if (useGridView && fileGrid) {
+    renderGridCards(options);
+    syncSelectionRows();
+    return;
+  }
 
   if (state.trashMode) {
     const fragment = document.createDocumentFragment();
@@ -6280,7 +6308,7 @@ function applyFolderData(data, options = {}) {
   state.path = data.path;
   state.folderRawItems = Array.isArray(data.items) ? data.items : [];
   applyCategoryCounts(computeFolderCategoryCounts(state.folderRawItems));
-  state.items = filterItemsByQuickCategory(state.folderRawItems, state.categoryMode);
+  state.items = sortBrowseItems(filterItemsByQuickCategory(state.folderRawItems, state.categoryMode));
   for (const item of state.items) {
     if (item.type !== "folder" || !item.locked) continue;
     if (item.unlocked) state.unlockedFolders.add(item.path);
@@ -9663,10 +9691,10 @@ async function loadStarred(options = {}) {
 
   try {
     const res = await api("/api/starred");
-    state.items = (res.items || []).map((item) => ({
+    state.items = sortBrowseItems((res.items || []).map((item) => ({
       ...item,
       starred: true,
-    }));
+    })));
     const badge = $("#sidebarStarredCount");
     if (badge) {
       badge.textContent = state.items.length;
@@ -9850,7 +9878,7 @@ async function applyCurrentFolderCategory(category) {
   state.selectionMode = false;
   state.lastAnchorKey = "";
   updateSelectionUi();
-  state.items = filterItemsByQuickCategory(state.folderRawItems, state.categoryMode);
+  state.items = sortBrowseItems(filterItemsByQuickCategory(state.folderRawItems, state.categoryMode));
   syncSidebarCategoryUi();
   syncAiGlobalBtnUi();
   backBtn.disabled = !state.path && !state.categoryMode;
@@ -9879,6 +9907,307 @@ document.querySelectorAll("#sidebarCategorySection .sidebar-cat-btn").forEach((b
     void applyCurrentFolderCategory(cat);
   });
 });
+// --- 0.6 工作栏排序（文件夹 -> 压缩包 -> 单独文件，默认修改时间降序）与缩略图网格视图 ---
+function browseSortGroup(item) {
+  if (!item) return 2;
+  if (item.type === "folder" || item.isDirectory) return 0;
+  if (classifyQuickCategory(item) === "archive") return 1;
+  return 2;
+}
+
+function sortBrowseItems(items = []) {
+  const list = Array.isArray(items) ? [...items] : [];
+  const dir = state.sortDir === "asc" ? 1 : -1;
+  const by = state.sortBy || "modifiedAt";
+  list.sort((a, b) => {
+    const ga = browseSortGroup(a);
+    const gb = browseSortGroup(b);
+    if (ga !== gb) return ga - gb;
+    if (by === "modifiedAt") {
+      const ta = a.modifiedAt ? Date.parse(a.modifiedAt) || 0 : 0;
+      const tb = b.modifiedAt ? Date.parse(b.modifiedAt) || 0 : 0;
+      if (ta !== tb) return (ta - tb) * dir;
+    } else if (by === "size") {
+      const sa = Number.isFinite(Number(a.size)) ? Number(a.size) : -1;
+      const sb = Number.isFinite(Number(b.size)) ? Number(b.size) : -1;
+      if (sa !== sb) return (sa - sb) * dir;
+    } else if (by === "name") {
+      const cmp = itemName(a).localeCompare(itemName(b), "zh-Hans-CN", { numeric: true });
+      if (cmp !== 0) return cmp * dir;
+    }
+    return itemName(a).localeCompare(itemName(b), "zh-Hans-CN", { numeric: true });
+  });
+  return list;
+}
+
+function syncBrowseSortUi() {
+  const labels = { name: "名称", modifiedAt: "修改时间", size: "大小" };
+  const arrow = state.sortDir === "asc" ? "↑" : "↓";
+  document.querySelectorAll("#browseSortGroup .browse-sort-btn").forEach((btn) => {
+    const key = btn.dataset.sort || "";
+    const active = key === state.sortBy;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.textContent = active ? `${labels[key] || key} ${arrow}` : (labels[key] || key);
+  });
+}
+
+function syncBrowseViewUi() {
+  document.querySelectorAll("#browseViewGroup .browse-view-btn").forEach((btn) => {
+    const active = (btn.dataset.view || "list") === state.viewMode;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function applyBrowseSort(sortKey) {
+  const key = ["name", "modifiedAt", "size"].includes(sortKey) ? sortKey : "modifiedAt";
+  if (state.sortBy === key) {
+    state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+  } else {
+    state.sortBy = key;
+    state.sortDir = key === "name" ? "asc" : "desc";
+  }
+  syncBrowseSortUi();
+  if (state.trashMode) return;
+  if (state.searchActive || state.starredMode) {
+    state.items = sortBrowseItems(state.items);
+  } else {
+    state.items = sortBrowseItems(filterItemsByQuickCategory(state.folderRawItems, state.categoryMode));
+  }
+  renderRows({ noAnimation: true });
+}
+
+function setBrowseViewMode(mode) {
+  const next = mode === "grid" ? "grid" : "list";
+  if (state.viewMode === next) return;
+  state.viewMode = next;
+  try { localStorage.setItem(BROWSE_VIEW_MODE_KEY, next); } catch {}
+  syncBrowseViewUi();
+  if (!state.trashMode) {
+    renderRows({ noAnimation: true });
+  }
+}
+
+const THUMB_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico", "avif"]);
+
+function isThumbRenderableImage(item) {
+  if (!item || item.type === "folder" || item.isDirectory) return false;
+  return THUMB_IMAGE_EXTS.has(fileExt(item.name));
+}
+
+function renderGridCards(options = {}) {
+  if (!fileGrid) return;
+  const fragment = document.createDocumentFragment();
+  state.items.forEach((item) => {
+    const isDir = item.type === "folder" || item.isDirectory;
+    const card = document.createElement("div");
+    card.className = "file-grid-card";
+    card.setAttribute("role", "listitem");
+    card.dataset.path = item.path;
+    card.draggable = true;
+    if (state.selectedPaths.has(item.path)) card.classList.add("selected-row");
+
+    const thumb = document.createElement("div");
+    thumb.className = "file-grid-thumb";
+
+    // Selection checkbox
+    const selectWrap = document.createElement("div");
+    selectWrap.className = "file-grid-select-wrap";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "row-select";
+    checkbox.checked = state.selectedPaths.has(item.path);
+    checkbox.setAttribute("aria-label", `选择 ${itemName(item)}`);
+    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("change", () => {
+      state.selectionMode = true;
+      toggleItemSelection(item, checkbox.checked);
+      state.lastAnchorKey = itemKeyOf(item);
+    });
+    selectWrap.append(checkbox);
+    thumb.append(selectWrap);
+
+    // Star button
+    const starBtn = document.createElement("button");
+    starBtn.type = "button";
+    starBtn.className = `file-grid-star-btn${item.starred ? " starred" : ""}`;
+    starBtn.title = item.starred ? "取消星标" : "设为星标";
+    starBtn.setAttribute("aria-label", starBtn.title);
+    starBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="${item.starred ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`;
+    starBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void toggleStarItem(item);
+    });
+    thumb.append(starBtn);
+
+    // Thumbnail visual (complete uncropped image or crisp proportional icon)
+    if (isThumbRenderableImage(item)) {
+      thumb.classList.add("has-image");
+      const img = document.createElement("img");
+      img.className = "file-grid-thumb-img";
+      img.alt = itemName(item);
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.src = authUrl(`/api/preview?path=${encodeURIComponent(item.path)}`);
+      img.addEventListener("error", () => {
+        img.remove();
+        thumb.classList.remove("has-image");
+        thumb.append(renderFileIcon(item));
+      }, { once: true });
+      thumb.append(img);
+    } else {
+      thumb.append(renderFileIcon(item));
+    }
+
+    const ext = isDir ? "" : fileExt(item.name).toUpperCase();
+    if (ext && ext.length <= 5) {
+      const extBadge = document.createElement("span");
+      extBadge.className = "file-grid-ext-badge";
+      extBadge.textContent = ext;
+      thumb.append(extBadge);
+    }
+
+    // Hover quick actions bar
+    const actionsBar = document.createElement("div");
+    actionsBar.className = "file-grid-actions";
+    if (state.aiModeEnabled) {
+      const aiBtn = document.createElement("button");
+      aiBtn.type = "button";
+      aiBtn.className = "file-grid-action-btn ai-btn";
+      aiBtn.title = `与“${itemName(item)}”进行 AI 对话`;
+      aiBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+      aiBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openAiChatPlaceholder(item);
+      });
+      actionsBar.append(aiBtn);
+    }
+
+    const dlBtn = document.createElement("button");
+    dlBtn.type = "button";
+    dlBtn.className = "file-grid-action-btn";
+    dlBtn.title = isDir ? "下载文件夹 (打包为 ZIP)" : "下载文件";
+    dlBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.6 2.1A2 2 0 0 0 4.5 21h15a2 2 0 0 0 1.9-1.9L22 17"/></svg>`;
+    dlBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      downloadFile(item);
+    });
+    actionsBar.append(dlBtn);
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "file-grid-action-btn danger-btn";
+    delBtn.title = "删除";
+    delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>`;
+    delBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteItem(item);
+    });
+    actionsBar.append(delBtn);
+
+    const moreBtn = document.createElement("button");
+    moreBtn.type = "button";
+    moreBtn.className = "file-grid-action-btn";
+    moreBtn.title = "更多操作";
+    moreBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
+    moreBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const r = moreBtn.getBoundingClientRect();
+      openContextMenu({ preventDefault() {}, stopPropagation() {}, clientX: r.left, clientY: r.bottom + 4 }, item, card);
+    });
+    actionsBar.append(moreBtn);
+    thumb.append(actionsBar);
+
+    // Card info footer (complete 2-line filename + tooltip + compact size/time)
+    const info = document.createElement("div");
+    info.className = "file-grid-info";
+    const nameEl = document.createElement("div");
+    nameEl.className = "file-grid-name";
+    nameEl.textContent = itemName(item);
+    nameEl.title = itemName(item);
+
+    const metaEl = document.createElement("div");
+    metaEl.className = "file-grid-meta";
+    const shortTime = formatTime(item.modifiedAt);
+    metaEl.textContent = isDir ? `文件夹 · ${shortTime}` : `${formatSize(item.size)} · ${shortTime}`;
+    if (state.starredMode && item.folderPath) {
+      metaEl.textContent = `位置：${item.folderPath}`;
+    }
+    info.append(nameEl, metaEl);
+
+    card.append(thumb, info);
+
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button") || event.target.closest("input")) return;
+      if (event.shiftKey) {
+        event.preventDefault();
+        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        handleToggleSelection(item);
+        return;
+      }
+      if (state.selectionMode) {
+        toggleItemSelection(item, !state.selectedPaths.has(itemKeyOf(item)));
+        state.lastAnchorKey = itemKeyOf(item);
+        return;
+      }
+      state.lastAnchorKey = itemKeyOf(item);
+      void executeOpenItem(item);
+    });
+
+    card.addEventListener("contextmenu", (event) => {
+      openContextMenu(event, item, card);
+    });
+
+    card.addEventListener("dragstart", (event) => {
+      state.draggedItemPath = item.path;
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-drive-path", item.path);
+      event.dataTransfer.setData("text/plain", itemName(item));
+    });
+    card.addEventListener("dragend", () => {
+      state.draggedItemPath = "";
+      fileGrid.querySelectorAll(".drop-target-row").forEach((el) => el.classList.remove("drop-target-row"));
+    });
+    if (isDir) {
+      card.addEventListener("dragover", (event) => {
+        if (!state.draggedItemPath || state.draggedItemPath === item.path) return;
+        event.preventDefault();
+        card.classList.add("drop-target-row");
+      });
+      card.addEventListener("dragleave", () => card.classList.remove("drop-target-row"));
+      card.addEventListener("drop", async (event) => {
+        card.classList.remove("drop-target-row");
+        const sourcePath = state.draggedItemPath || event.dataTransfer.getData("application/x-drive-path");
+        if (!sourcePath || sourcePath === item.path) return;
+        event.preventDefault();
+        await moveItemDirect(sourcePath, item.path);
+      });
+    }
+
+    fragment.append(card);
+  });
+  fileGrid.append(fragment);
+}
+
+document.querySelectorAll("#browseSortGroup .browse-sort-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    applyBrowseSort(btn.dataset.sort || "modifiedAt");
+  });
+});
+
+document.querySelectorAll("#browseViewGroup .browse-view-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setBrowseViewMode(btn.dataset.view || "list");
+  });
+});
+
+syncBrowseSortUi();
+syncBrowseViewUi();
 
 // --- 1. 回收站逻辑 ---
 function exitTrashMode() {

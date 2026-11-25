@@ -1026,6 +1026,23 @@
 
           <section class="search-panel" aria-label="关键词搜索">
             <div class="search-row">
+              <div id="browseToolsGroup" class="browse-tools-group" aria-label="排序与视图">
+                <div id="browseSortGroup" class="browse-sort-group" role="group" aria-label="文件排序">
+                  <span class="browse-sort-label">排序</span>
+                  <button type="button" class="browse-sort-btn" data-sort="name" title="按名称排序（文件夹与压缩包优先）">名称</button>
+                  <button type="button" class="browse-sort-btn active" data-sort="modifiedAt" title="按修改时间排序（文件夹与压缩包优先）">修改时间 ↓</button>
+                  <button type="button" class="browse-sort-btn" data-sort="size" title="按大小排序（文件夹与压缩包优先）">大小</button>
+                </div>
+                <div id="browseViewGroup" class="browse-view-group" role="group" aria-label="视图切换">
+                  <button type="button" class="browse-view-btn active" data-view="list" title="列表视图" aria-label="列表视图" aria-pressed="true">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
+                  </button>
+                  <button type="button" class="browse-view-btn" data-view="grid" title="缩略图网格视图" aria-label="缩略图网格视图" aria-pressed="false">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="2.2" y="2.2" width="4.6" height="4.6" rx="1"/><rect x="9.2" y="2.2" width="4.6" height="4.6" rx="1"/><rect x="2.2" y="9.2" width="4.6" height="4.6" rx="1"/><rect x="9.2" y="9.2" width="4.6" height="4.6" rx="1"/></svg>
+                  </button>
+                </div>
+                <span class="browse-tools-divider" aria-hidden="true"></span>
+              </div>
               <label class="search-box">
                 <span>关键词搜索</span>
                 <input
@@ -1118,6 +1135,7 @@
               </thead>
               <tbody id="fileRows"></tbody>
             </table>
+            <div id="fileGrid" class="file-grid hidden" role="list" aria-label="缩略图网格视图"></div>
             <div id="emptyState" class="empty hidden">
               <strong>这个文件夹还是空的</strong>
               <span>点击上传文件，或把文件拖到这里</span>
