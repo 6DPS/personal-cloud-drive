@@ -11491,6 +11491,46 @@ const cancelUpdateBtn = $("#cancelUpdateBtn");
 const closeUpdateLatestBtn = $("#closeUpdateLatestBtn");
 const updateApplyingTitle = $("#updateApplyingTitle");
 const updateApplyingDesc = $("#updateApplyingDesc");
+const updateErrorBox = $("#updateErrorBox");
+
+function showToast(message, type = "info") {
+  const text = String(message || "").trim();
+  if (!text) return;
+  let host = document.getElementById("globalToastHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "globalToastHost";
+    host.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:20000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;max-width:min(92vw,520px);";
+    document.body.append(host);
+  }
+  const toast = document.createElement("div");
+  const isErr = type === "error";
+  const isOk = type === "success";
+  toast.style.cssText = `pointer-events:auto;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.45;box-shadow:0 10px 28px rgba(15,23,42,0.16);border:1px solid ${isErr ? "#fecaca" : isOk ? "#bbf7d0" : "#cbd5e1"};background:${isErr ? "#fef2f2" : isOk ? "#f0fdf4" : "#ffffff"};color:${isErr ? "#b91c1c" : isOk ? "#15803d" : "#1e293b"};transition:opacity 200ms ease,transform 200ms ease;opacity:0;transform:translateY(-6px);`;
+  toast.textContent = text;
+  host.append(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+  });
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-6px)";
+    setTimeout(() => toast.remove(), 220);
+  }, isErr ? 5500 : 3200);
+}
+
+function setUpdateModalError(message = "") {
+  if (!updateErrorBox) return;
+  const text = String(message || "").trim();
+  if (!text) {
+    updateErrorBox.textContent = "";
+    updateErrorBox.classList.add("hidden");
+  } else {
+    updateErrorBox.textContent = text;
+    updateErrorBox.classList.remove("hidden");
+  }
+}
 
 function openSystemUpdateModal() {
   closeUserAccountPopover();
@@ -11513,6 +11553,7 @@ function showUpdateView(viewName) {
 }
 
 async function triggerCheckUpdate() {
+  setUpdateModalError("");
   showUpdateView("checking");
   try {
     const headers = typeof authHeaders === "function" ? authHeaders() : {};
@@ -11549,14 +11590,14 @@ async function triggerCheckUpdate() {
 
 let isApplyingSystemUpdate = false;
 
-async function waitForServerReadyAndReload(previousBootId = "") {
+async function waitForServerReadyAndReload(previousBootId = "", expectedVersion = "") {
   if (updateApplyingTitle) updateApplyingTitle.textContent = "升级成功！正在等待新版本服务重启就绪...";
   if (updateApplyingDesc) updateApplyingDesc.textContent = "守护进程正在平滑拉起新版服务（约 4～6 秒），就绪后将自动刷新...";
 
   // 先等待 1.8 秒，确保旧进程已执行 1.2s 延迟退出，避免探针误连旧进程
   await new Promise((r) => setTimeout(r, 1800));
 
-  const deadline = Date.now() + 25000;
+  const deadline = Date.now() + 40000;
   let sawOffline = false;
 
   while (Date.now() < deadline) {
@@ -11571,7 +11612,8 @@ async function waitForServerReadyAndReload(previousBootId = "") {
       if (res.ok) {
         const info = await res.json().catch(() => null);
         const bootChanged = Boolean(previousBootId && info?.bootId && info.bootId !== previousBootId);
-        if (bootChanged || sawOffline || !previousBootId) {
+        const verMatched = Boolean(expectedVersion && info?.version === expectedVersion);
+        if (bootChanged || verMatched || sawOffline || !previousBootId) {
           if (updateApplyingTitle) updateApplyingTitle.textContent = "新版服务已就绪，正在刷新页面...";
           window.location.reload();
           return;
@@ -11590,6 +11632,7 @@ async function handleApplyUpdate() {
   if (isApplyingSystemUpdate) return;
   isApplyingSystemUpdate = true;
   if (confirmApplyUpdateBtn) confirmApplyUpdateBtn.disabled = true;
+  setUpdateModalError("");
 
   showUpdateView("applying");
   if (updateApplyingTitle) updateApplyingTitle.textContent = "正在极速下载更新补丁包...";
@@ -11607,19 +11650,21 @@ async function handleApplyUpdate() {
   try {
     const headers = typeof authHeaders === "function" ? authHeaders() : {};
     const res = await fetch("/api/system/apply-update", { method: "POST", headers });
-    const data = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+    const data = await res.json().catch(() => ({ ok: false, error: `升级接口返回异常 (HTTP ${res.status})` }));
     if (!res.ok || !data.ok) {
       isApplyingSystemUpdate = false;
       if (confirmApplyUpdateBtn) confirmApplyUpdateBtn.disabled = false;
-      if (typeof showToast === "function") showToast(data.error || "在线升级失败", "error");
+      const errMsg = data.error || `在线升级失败 (HTTP ${res.status})`;
+      setUpdateModalError(`升级未能完成：${errMsg}`);
+      showToast(errMsg, "error");
       showUpdateView("available");
       return;
     }
 
-    await waitForServerReadyAndReload(previousBootId);
+    await waitForServerReadyAndReload(previousBootId, String(data.version || ""));
   } catch (err) {
     // 平滑重启过程中连接断开属于正常现象，转为轮询等待新版就绪后刷新
-    await waitForServerReadyAndReload(previousBootId);
+    await waitForServerReadyAndReload(previousBootId, "");
   }
 }
 

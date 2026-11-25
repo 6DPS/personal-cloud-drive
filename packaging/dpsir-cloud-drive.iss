@@ -4,7 +4,7 @@
 ; ==============================================================================
 
 #define MyAppName "DPSir 智云盘"
-#define MyAppVersion "1.1.16"
+#define MyAppVersion "1.1.17"
 #define MyAppPublisher "DPSir Studio"
 #define MyAppExeName "DPSir-ZhiYunPan.exe"
 #define MyIconFile "app-icon.ico"
@@ -20,7 +20,7 @@ DefaultDirName={autopf}\DPSir 智云盘
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist
-OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.1.16
+OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.1.17
 SetupIconFile={#MyIconFile}
 WizardSmallImageFile=wizard-small.bmp
 Compression=lzma2/ultra64
@@ -45,6 +45,13 @@ Type: files; Name: "{userstartup}\{#MyAppName}.lnk"
 Type: files; Name: "{userstartup}\{#MyAppName}后台服务.lnk"
 Type: files; Name: "{autostartup}\{#MyAppName}.lnk"
 Type: files; Name: "{autostartup}\{#MyAppName}后台服务.lnk"
+
+[Dirs]
+; 放行普通用户对安装目录与核心代码目录的写入权限，确保即使默认装在 C:\Program Files 也能普通权限一键 OTA 热更新
+Name: "{app}"; Permissions: users-modify
+Name: "{app}\public"; Permissions: users-modify
+Name: "{app}\scripts"; Permissions: users-modify
+Name: "{app}\logs"; Permissions: users-modify
 
 [Files]
 ; 原生桌面客户端引擎及运行库 (独立原生 EXE，彻底消除 Edge 图标问题)

@@ -11,6 +11,7 @@ const path = require("path");
 const https = require("https");
 const http = require("http");
 const os = require("os");
+const { spawn } = require("child_process");
 const JSZip = require("jszip");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -22,7 +23,6 @@ const REPO_NAME = "personal-cloud-drive";
 const MIRROR_PREFIXES = [
   "https://ghfast.top/",
   "https://gh-proxy.com/",
-  "https://ghproxy.net/",
   "", // 直接官方通道（作为兜底）
 ];
 
@@ -282,10 +282,11 @@ async function checkUpdate() {
 async function atomicReplaceFile(targetPath, contentBuffer) {
   await fsp.mkdir(path.dirname(targetPath), { recursive: true });
   const tmpPath = `${targetPath}.ota.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2, 8)}.tmp`;
+  const delays = [120, 240, 400, 600, 900, 1200];
   try {
     await fsp.writeFile(tmpPath, contentBuffer);
     let lastErr = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < delays.length; attempt += 1) {
       try {
         await fsp.rename(tmpPath, targetPath);
         lastErr = null;
@@ -293,24 +294,79 @@ async function atomicReplaceFile(targetPath, contentBuffer) {
       } catch (err) {
         lastErr = err;
         if (err?.code === "EPERM" || err?.code === "EBUSY" || err?.code === "EACCES") {
-          await new Promise((r) => setTimeout(r, 120 * (attempt + 1)));
+          try { await fsp.chmod(targetPath, 0o666); } catch {}
+          await new Promise((r) => setTimeout(r, delays[attempt]));
           continue;
         }
         throw err;
       }
     }
-    if (lastErr) throw lastErr;
+    if (lastErr) {
+      // Windows 杀软短时锁 rename 时，尝试直接原地覆写作为最后兜底
+      if (lastErr?.code === "EPERM" || lastErr?.code === "EBUSY" || lastErr?.code === "EACCES") {
+        try {
+          try { await fsp.chmod(targetPath, 0o666); } catch {}
+          await fsp.writeFile(targetPath, contentBuffer);
+          await fsp.rm(tmpPath, { force: true }).catch(() => {});
+          return;
+        } catch (directErr) {
+          throw directErr;
+        }
+      }
+      throw lastErr;
+    }
   } catch (err) {
     await fsp.rm(tmpPath, { force: true }).catch(() => {});
     throw err;
   }
 }
 
+function isCoreRuntimePath(normalizedRel) {
+  if (normalizedRel === "server.js" || normalizedRel === "package.json") return true;
+  if (normalizedRel.startsWith("public/")) return true;
+  if (normalizedRel.startsWith("scripts/") && normalizedRel.endsWith(".js")) return true;
+  return false;
+}
+
+async function isFileUnchanged(targetPath, newContent) {
+  try {
+    const stat = await fsp.stat(targetPath);
+    if (!stat.isFile() || stat.size !== newContent.length) return false;
+    const existing = await fsp.readFile(targetPath);
+    return existing.equals(newContent);
+  } catch {
+    return false;
+  }
+}
+
+function wrapUpdaterWriteError(err, targetRoot, relativePath) {
+  const code = err?.code || "";
+  if (code === "EPERM" || code === "EACCES") {
+    const wrapped = new Error(
+      `安装目录（${targetRoot}）写入被拒绝（${code}，文件：${relativePath || "核心文件"}）。若程序安装在 C:\\Program Files，请右键桌面图标选择「以管理员身份运行」后再点升级，或使用最新 .exe 安装包覆盖安装一次（自动修复权限且保留全部数据）。`
+    );
+    wrapped.code = code;
+    wrapped.cause = err;
+    return wrapped;
+  }
+  if (code === "EBUSY") {
+    const wrapped = new Error(
+      `文件正在被杀毒软件或系统进程占用（EBUSY，文件：${relativePath || "核心文件"}），请稍候 3 秒重试。`
+    );
+    wrapped.code = code;
+    wrapped.cause = err;
+    return wrapped;
+  }
+  return err;
+}
+
 /**
  * 将已校验的压缩包事务化写入目标目录：
  * 1) 先在内存中全部解压校验；
- * 2) 逐个原子落盘并记录备份，失败自动回滚；
- * 3) package.json 强制留在所有核心文件写入完成后最后一步落盘，杜绝半更新卡死。
+ * 2) 智能字节比对：内容未变更的文件（如未改动的 exe/pdf/bat）直接跳过，避免无谓触发杀毒软件锁文件；
+ * 3) 核心运行时文件（server.js / public/* / scripts/*.js / package.json）严格原子事务写入并支持失败自动回滚；
+ * 4) 辅助文档/脚本/原生外壳尽力更新，不因单个非核心文件被占用而阻断整包升级；
+ * 5) package.json 强制留在所有核心文件写入完成后最后一步落盘，杜绝半更新卡死。
  */
 async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options = {}) {
   const PROTECTED_PREFIXES = [
@@ -328,7 +384,8 @@ async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options =
 
   const rootResolved = path.resolve(targetRoot);
   const rootWithSep = rootResolved.endsWith(path.sep) ? rootResolved : `${rootResolved}${path.sep}`;
-  const regularEntries = [];
+  const coreEntries = [];
+  const auxiliaryEntries = [];
   let packageJsonEntry = null;
   let nativeExeEntry = null;
 
@@ -363,25 +420,39 @@ async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options =
       continue;
     }
 
+    const record = { relativePath: normalizedRel, targetPath, fileContent };
     if (normalizedRel === "package.json") {
-      packageJsonEntry = { relativePath: normalizedRel, targetPath, fileContent };
+      packageJsonEntry = record;
+    } else if (isCoreRuntimePath(normalizedRel)) {
+      coreEntries.push(record);
     } else {
-      regularEntries.push({ relativePath: normalizedRel, targetPath, fileContent });
+      auxiliaryEntries.push(record);
     }
   }
 
-  // Phase 2: 创建临时回滚备份目录，依次原子替换普通文件 -> 原生外壳 -> 最后写 package.json
+  // Phase 2: 事务化写入所有有变更的核心运行时文件（package.json 放最后）
   const backupDir = await fsp.mkdtemp(path.join(os.tmpdir(), "pcd-ota-backup-"));
   const appliedJournal = [];
-  const orderedEntries = packageJsonEntry
-    ? [...regularEntries, packageJsonEntry]
-    : regularEntries;
+  const orderedCoreEntries = packageJsonEntry
+    ? [...coreEntries, packageJsonEntry]
+    : coreEntries;
 
   const replaceFn = typeof options.replaceFile === "function" ? options.replaceFile : atomicReplaceFile;
+  const skipUnchanged = options.skipUnchanged !== false;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let currentRel = "";
 
   try {
     let idx = 0;
-    for (const entry of orderedEntries) {
+    for (const entry of orderedCoreEntries) {
+      currentRel = entry.relativePath;
+      if (skipUnchanged && entry.relativePath !== "package.json") {
+        if (await isFileUnchanged(entry.targetPath, entry.fileContent)) {
+          skippedCount += 1;
+          continue;
+        }
+      }
       const existed = fs.existsSync(entry.targetPath);
       let backupPath = null;
       if (existed) {
@@ -392,37 +463,10 @@ async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options =
 
       await replaceFn(entry.targetPath, entry.fileContent, entry.relativePath);
       appliedJournal.push({ targetPath: entry.targetPath, existed, backupPath });
-    }
-
-    // Phase 3: 若包含 Windows 原生外壳且处于生产部署路径，利用 Windows 重命名无锁热替换
-    if (nativeExeEntry && !options.skipNativeExeSwap) {
-      const repoTarget = path.join(rootResolved, "packaging", "native-bin", "DPSir-ZhiYunPan.exe");
-      try {
-        await atomicReplaceFile(repoTarget, nativeExeEntry.fileContent);
-      } catch {}
-
-      const candidateExePaths = [
-        path.join(rootResolved, "DPSir-ZhiYunPan.exe"),
-        "D:\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
-        "C:\\Program Files\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
-      ];
-      for (const exePath of candidateExePaths) {
-        if (fs.existsSync(exePath)) {
-          try {
-            const oldPath = exePath + ".old";
-            if (fs.existsSync(oldPath)) {
-              try { await fsp.unlink(oldPath); } catch {}
-            }
-            await fsp.rename(exePath, oldPath);
-            await fsp.writeFile(exePath, nativeExeEntry.fileContent);
-          } catch {
-            try { await fsp.writeFile(exePath, nativeExeEntry.fileContent); } catch {}
-          }
-        }
-      }
+      updatedCount += 1;
     }
   } catch (err) {
-    // 任意一步写入失败 -> 按逆序自动回滚所有已改动文件，保持原有版本完整可用
+    // 核心文件任意一步写入失败 -> 按逆序自动回滚所有已改动文件，保持原有版本完整可用
     for (let i = appliedJournal.length - 1; i >= 0; i -= 1) {
       const rec = appliedJournal[i];
       try {
@@ -436,10 +480,59 @@ async function extractZipAtomically(zip, subFolder, targetRoot = ROOT, options =
         console.error("[Updater] Rollback failed for", rec.targetPath, rollbackErr?.message);
       }
     }
-    throw err;
+    throw wrapUpdaterWriteError(err, rootResolved, currentRel);
   } finally {
     await fsp.rm(backupDir, { recursive: true, force: true }).catch(() => {});
   }
+
+  // Phase 3: 尽力更新有变更的非核心辅助文件（.pdf/.md/.bat/.vbs/maximize-window.exe 等，单文件被杀软/打开占用不影响核心升级）
+  for (const entry of auxiliaryEntries) {
+    try {
+      if (skipUnchanged && (await isFileUnchanged(entry.targetPath, entry.fileContent))) {
+        skippedCount += 1;
+        continue;
+      }
+      await replaceFn(entry.targetPath, entry.fileContent, entry.relativePath);
+      updatedCount += 1;
+    } catch (auxErr) {
+      console.warn(`[Updater] Auxiliary file skipped (${entry.relativePath}):`, auxErr?.message || auxErr);
+    }
+  }
+
+  // Phase 4: 若包含 Windows 原生外壳且内容有变更，利用 Windows 重命名无锁热替换
+  if (nativeExeEntry && !options.skipNativeExeSwap) {
+    const repoTarget = path.join(rootResolved, "packaging", "native-bin", "DPSir-ZhiYunPan.exe");
+    try {
+      if (!skipUnchanged || !(await isFileUnchanged(repoTarget, nativeExeEntry.fileContent))) {
+        await atomicReplaceFile(repoTarget, nativeExeEntry.fileContent);
+      }
+    } catch {}
+
+    const candidateExePaths = [
+      path.join(rootResolved, "DPSir-ZhiYunPan.exe"),
+      "D:\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
+      "C:\\Program Files\\DPSir 智云盘\\DPSir-ZhiYunPan.exe",
+    ];
+    for (const exePath of candidateExePaths) {
+      if (fs.existsSync(exePath)) {
+        try {
+          if (skipUnchanged && (await isFileUnchanged(exePath, nativeExeEntry.fileContent))) {
+            continue;
+          }
+          const oldPath = exePath + ".old";
+          if (fs.existsSync(oldPath)) {
+            try { await fsp.unlink(oldPath); } catch {}
+          }
+          await fsp.rename(exePath, oldPath);
+          await fsp.writeFile(exePath, nativeExeEntry.fileContent);
+        } catch {
+          try { await fsp.writeFile(exePath, nativeExeEntry.fileContent); } catch {}
+        }
+      }
+    }
+  }
+
+  return { updatedCount, skippedCount };
 }
 
 /**
@@ -522,7 +615,37 @@ async function applyUpdate(onProgress = null) {
 
     if (onProgress) onProgress("核心代码热替换完成，正在平滑重启服务...");
 
-    // 触发守护进程重启 (1.2 秒后让当前 node 正常退出，server-watchdog 会自动拉起全新代码)
+    // 检查是否存在存活的 server-watchdog 守护进程；若无守护进程（直接 node server.js 启动），安排独立延迟拉起，确保任意部署方式均能重启生效
+    const watchdogLock = path.join(ROOT, "logs", "server-watchdog.pid");
+    let watchdogAlive = false;
+    try {
+      if (fs.existsSync(watchdogLock)) {
+        const wPid = Number(fs.readFileSync(watchdogLock, "utf8").trim());
+        if (wPid && !Number.isNaN(wPid)) {
+          process.kill(wPid, 0);
+          watchdogAlive = true;
+        }
+      }
+    } catch {}
+
+    if (!watchdogAlive) {
+      try {
+        const watchdogScript = path.join(ROOT, "scripts", "server-watchdog.js");
+        const entryScript = fs.existsSync(watchdogScript) ? watchdogScript : path.join(ROOT, "server.js");
+        const relaunchCode = `setTimeout(() => { const { spawn } = require("child_process"); const c = spawn(${JSON.stringify(process.execPath)}, [${JSON.stringify(entryScript)}], { cwd: ${JSON.stringify(ROOT)}, detached: true, stdio: "ignore", windowsHide: true }); c.unref(); process.exit(0); }, 2000);`;
+        const helper = spawn(process.execPath, ["-e", relaunchCode], {
+          cwd: ROOT,
+          detached: true,
+          stdio: "ignore",
+          windowsHide: true,
+        });
+        helper.unref();
+      } catch (spawnErr) {
+        console.warn("[Updater] Fallback relaunch helper failed:", spawnErr?.message);
+      }
+    }
+
+    // 触发守护进程重启 (1.2 秒后让当前 node 正常退出，server-watchdog 或独立拉起器会自动启动全新代码)
     // 保持 updateInProgress=true 直到进程退出，杜绝重启窗口内重复触发
     setTimeout(() => {
       process.exit(0);
