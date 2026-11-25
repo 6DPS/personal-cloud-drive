@@ -7674,6 +7674,18 @@ tbody tr.drop-target-row {
   box-shadow: 0 3px 10px rgba(220, 38, 38, 0.15) !important;
 }
 
+/* 确保 .hidden / [hidden] 永远压过 !important 的 inline-flex，防止压缩包查看或图片预览误显示下载/AI按钮 */
+.modal-action-icon-btn.hidden,
+.modal-action-icon-btn[hidden],
+.row-action-icon-btn.hidden,
+.row-action-icon-btn[hidden],
+#previewDownloadLink.hidden,
+#previewDownloadLink[hidden],
+#previewAiSummarizeBtn.hidden,
+#previewAiSummarizeBtn[hidden] {
+  display: none !important;
+}
+
 .progress-track {
   background: rgba(207, 220, 238, 0.68);
 }

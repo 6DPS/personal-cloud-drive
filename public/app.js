@@ -477,6 +477,12 @@ function setAiModeEnabled(enabled, { render = true } = {}) {
   state.aiModeEnabled = Boolean(enabled);
   if (!state.aiModeEnabled) {
     closeAiDrawer();
+    closeContextMenu();
+    if (previewAiSummarizeBtn) {
+      previewAiSummarizeBtn.hidden = true;
+      previewAiSummarizeBtn.classList.add("hidden");
+      previewAiSummarizeBtn.onclick = null;
+    }
   }
   syncAiModeUi({ animate: state.aiModeEnabled });
   setStatus(state.aiModeEnabled ? "AI 模式已开启：每个项目都可以显示 AI 对话入口" : "AI 模式已关闭");
@@ -6011,8 +6017,8 @@ function buildContextMenuItems(item, isMultiSelect) {
     handler: () => executeOpenItem(item),
   });
 
-  // 2. AI 智能功能
-  if (canSummarize) {
+  // 2. AI 智能功能（严格仅在 AI 模式开启后展示）
+  if (state.aiModeEnabled && canSummarize) {
     items.push({
       type: "item",
       label: "AI 一键智能总结",
@@ -7278,24 +7284,31 @@ async function openPreview(item) {
 
   state.previewItem = item;
   previewTitle.textContent = itemName(item);
-  previewDownloadLink.href = "#";
-  previewDownloadLink.onclick = (event) => {
-    event.preventDefault();
-    downloadFile(item);
-  };
+  if (previewDownloadLink) {
+    previewDownloadLink.hidden = false;
+    previewDownloadLink.classList.remove("hidden");
+    previewDownloadLink.href = "#";
+    previewDownloadLink.onclick = (event) => {
+      event.preventDefault();
+      downloadFile(item);
+    };
+  }
   previewBody.innerHTML = "";
   clearImagePreviewControls();
   previewModal.classList.remove("hidden");
   previewModal.setAttribute("aria-hidden", "false");
 
-  // AI Document Summarize button toggle
-  const canSummarize = canSummarizeFile(item.name);
+  // AI Document Summarize button toggle（严格仅在 AI 模式开启后显示）
+  const canSummarize = state.aiModeEnabled && canSummarizeFile(item.name);
   if (previewAiSummarizeBtn) {
     if (canSummarize) {
+      previewAiSummarizeBtn.hidden = false;
       previewAiSummarizeBtn.classList.remove("hidden");
       previewAiSummarizeBtn.onclick = () => openAiDocSummaryModal(item);
     } else {
+      previewAiSummarizeBtn.hidden = true;
       previewAiSummarizeBtn.classList.add("hidden");
+      previewAiSummarizeBtn.onclick = null;
     }
   }
 
@@ -7437,8 +7450,17 @@ function closePreview() {
   previewModal.setAttribute("aria-hidden", "true");
   previewBody.innerHTML = "";
   clearImagePreviewControls();
-  if (previewAiSummarizeBtn) previewAiSummarizeBtn.classList.add("hidden");
-  if (previewDownloadLink) previewDownloadLink.classList.remove("hidden");
+  if (previewAiSummarizeBtn) {
+    previewAiSummarizeBtn.hidden = true;
+    previewAiSummarizeBtn.classList.add("hidden");
+    previewAiSummarizeBtn.onclick = null;
+  }
+  if (previewDownloadLink) {
+    previewDownloadLink.hidden = false;
+    previewDownloadLink.classList.remove("hidden");
+    previewDownloadLink.href = "#";
+    previewDownloadLink.onclick = null;
+  }
   state.previewItem = null;
   void flushPendingRealtimeRefresh();
 }
@@ -10046,7 +10068,14 @@ function renderGridCards(options = {}) {
     checkbox.className = "row-select";
     checkbox.checked = state.selectedPaths.has(item.path);
     checkbox.setAttribute("aria-label", `选择 ${itemName(item)}`);
-    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("click", (event) => {
+      if (event.shiftKey) {
+        event.preventDefault();
+        handleRangeSelection(item, { append: Boolean(event.ctrlKey || event.metaKey) });
+        return;
+      }
+      event.stopPropagation();
+    });
     checkbox.addEventListener("change", () => {
       state.selectionMode = true;
       toggleItemSelection(item, checkbox.checked);
@@ -10282,6 +10311,10 @@ function exitTrashMode() {
   if (uploadBtn) uploadBtn.classList.remove("hidden");
   if (newFolderBtn) newFolderBtn.classList.remove("hidden");
   if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+  if (browseToolsGroup) {
+    browseToolsGroup.classList.remove("hidden");
+    requestAnimationFrame(refreshBrowseSegmentedPillsInstant);
+  }
   const trashClearBtn = document.getElementById("trashClearBtn");
   if (trashClearBtn) {
     trashClearBtn.classList.add("hidden");
@@ -10311,6 +10344,7 @@ async function loadTrash(options = {}) {
   if (uploadBtn) uploadBtn.classList.add("hidden");
   if (newFolderBtn) newFolderBtn.classList.add("hidden");
   if (selectModeBtn) selectModeBtn.classList.remove("hidden");
+  if (browseToolsGroup) browseToolsGroup.classList.add("hidden");
 
   let trashClearBtn = document.getElementById("trashClearBtn");
   if (!trashClearBtn) {
@@ -10426,12 +10460,30 @@ async function previewZipEntry(item, entry) {
   const entryUrl = authUrl(`/api/archive/entry?path=${encodeURIComponent(item.path)}&entry=${encodeURIComponent(targetEntry)}`);
 
   if (!previewModal) return;
+  const requestSeq = ++state.previewRequestSeq;
+  state.previewController?.abort();
+  const controller = new AbortController();
+  state.previewController = controller;
+  state.previewItem = null;
+
   previewTitle.textContent = `[压缩包内查看] ${entry.name || targetEntry}`;
   previewBody.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);">正在加载文件内容...</div>';
-  
-  // 严格隐藏下载链接和AI总结按钮，遵守“不能单独下载文件，只能下载整个压缩包”的要求
-  if (previewDownloadLink) previewDownloadLink.classList.add("hidden");
-  if (previewAiSummarizeBtn) previewAiSummarizeBtn.classList.add("hidden");
+
+  // 严格隐藏并置空下载按钮与 AI 总结按钮，防止残留上一个预览文件状态，仅允许查看、禁止单独下载压缩包内单文件
+  if (previewDownloadLink) {
+    previewDownloadLink.hidden = true;
+    previewDownloadLink.classList.add("hidden");
+    previewDownloadLink.href = "#";
+    previewDownloadLink.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+  }
+  if (previewAiSummarizeBtn) {
+    previewAiSummarizeBtn.hidden = true;
+    previewAiSummarizeBtn.classList.add("hidden");
+    previewAiSummarizeBtn.onclick = null;
+  }
   clearImagePreviewControls();
   previewModal.classList.remove("hidden");
   previewModal.setAttribute("aria-hidden", "false");
@@ -10443,7 +10495,7 @@ async function previewZipEntry(item, entry) {
     if (isImg) {
       const img = document.createElement("img");
       img.src = entryUrl;
-      img.alt = entry.name;
+      img.alt = entry.name || targetEntry;
       img.style.maxWidth = "100%";
       img.style.maxHeight = "70vh";
       img.style.objectFit = "contain";
@@ -10454,16 +10506,17 @@ async function previewZipEntry(item, entry) {
     } else if (isPdf) {
       const iframe = document.createElement("iframe");
       iframe.src = entryUrl;
-      iframe.title = entry.name;
+      iframe.title = entry.name || targetEntry;
       iframe.style.width = "100%";
       iframe.style.height = "70vh";
       iframe.style.border = "none";
       previewBody.innerHTML = "";
       previewBody.append(iframe);
     } else {
-      const res = await fetch(entryUrl);
+      const res = await fetch(entryUrl, { signal: controller.signal });
       if (!res.ok) throw new Error(`加载失败 HTTP ${res.status}`);
       const text = await res.text();
+      if (requestSeq !== state.previewRequestSeq || controller.signal.aborted) return;
       const pre = document.createElement("pre");
       pre.style.padding = "16px";
       pre.style.overflow = "auto";
@@ -10482,7 +10535,8 @@ async function previewZipEntry(item, entry) {
       previewBody.append(pre);
     }
   } catch (err) {
-    previewBody.innerHTML = `<div style="padding:24px;text-align:center;color:var(--danger, #ff4d4f);">无法预览该文件内容: ${escapeHtml(err.message)}</div>`;
+    if (isAbortError(err) || controller.signal.aborted || requestSeq !== state.previewRequestSeq) return;
+    previewBody.innerHTML = `<div style="padding:24px;text-align:center;color:var(--danger, #ff4d4f);">无法预览该文件内容（压缩包不支持单文件下载，请下载完整压缩包）：${escapeHtml(err.message)}</div>`;
   }
 }
 
