@@ -4915,15 +4915,24 @@ app.get("/api/user/avatar", (req, res) => {
   if (targetUserId !== user.id && user.role !== "admin") {
     return res.status(403).json({ error: "无权访问其他用户的头像" });
   }
-  const avatarPath = userAvatarFile(targetUserId);
+  let avatarPath;
+  try {
+    avatarPath = userAvatarFile(targetUserId);
+  } catch (err) {
+    return res.status(err?.status || 400).json({ error: err?.message || "无效的用户标识" });
+  }
   if (!fs.existsSync(avatarPath)) {
     return res.status(404).json({ error: "未设置自定义头像" });
   }
   res.setHeader("Content-Type", "image/png");
+  res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   const stream = fs.createReadStream(avatarPath);
+  res.on("close", () => {
+    if (!stream.destroyed) stream.destroy();
+  });
   stream.on("error", () => {
     if (!res.headersSent) res.status(500).json({ error: "读取头像失败" });
   });
@@ -6096,6 +6105,10 @@ app.get("/api/starred", requireAuth, async (req, res, next) => {
     let dirty = false;
 
     for (const [relPath, meta] of Array.from(store.entries())) {
+      const parentRel = parentWebPath(relPath);
+      if (parentRel && findLockedFolderForRequest(req, parentRel, true)) {
+        continue;
+      }
       const target = resolveDrivePathForUser(userId, relPath);
       const stat = await fsp.stat(target).catch(() => null);
       if (!stat) {
@@ -6142,6 +6155,8 @@ app.post("/api/starred/toggle", requireAuth, async (req, res, next) => {
     const userId = req.user.id;
     const rel = normalizeRelative(req.body.path || "");
     rejectHiddenDrivePath(rel);
+    const parentRel = parentWebPath(rel);
+    if (parentRel) ensureFolderAccess(req, parentRel, true);
     const target = resolveDrivePathForUser(userId, rel);
     const stat = await fsp.stat(target).catch(() => null);
     if (!stat) {
@@ -6177,6 +6192,8 @@ app.post("/api/starred/batch", requireAuth, async (req, res, next) => {
     for (const rawPath of paths) {
       const rel = normalizeRelative(rawPath || "");
       if (isHiddenDrivePath(rel)) continue;
+      const parentRel = parentWebPath(rel);
+      if (parentRel && findLockedFolderForRequest(req, parentRel, true)) continue;
       const target = resolveDrivePathForUser(userId, rel);
       const stat = await fsp.stat(target).catch(() => null);
       if (!stat) continue;
@@ -6885,7 +6902,10 @@ app.all(["/api/public-share/:id/download", "/api/public-share/:id/preview"], pub
 app.get("/s/:id", (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   res.setHeader("Pragma", "no-cache");
-  const shareId = req.params.id;
+  const shareId = String(req.params.id || "");
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(shareId)) {
+    return res.status(400).type("text/plain; charset=utf-8").send("无效的分享链接标识");
+  }
   const html = '<!DOCTYPE html>' +
 '<html lang="zh-CN">' +
 '<head>' +
@@ -6920,7 +6940,7 @@ app.get("/s/:id", (req, res) => {
 '    <div id="content"><div style="color: #94a3b8;">正在加载分享信息...</div></div>' +
 '  </div>' +
 '  <script>' +
-'    const shareId = ' + JSON.stringify(shareId) + ';' +
+'    const shareId = ' + JSON.stringify(shareId).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') + ';' +
 '    const container = document.getElementById("content");' +
 '    function esc(s) {' +
 '      return String(s || "").replace(/[&<>"\']/g, function(m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;", "\'": "&#39;" }[m]; });' +

@@ -66,6 +66,10 @@ const $ = (selector) => document.querySelector(selector);
 const SESSION_TOKEN_KEY = "pcd.sessionToken";
 const AI_MODE_KEY = "pcd.aiModeEnabled";
 let aiDrawerCloseTimer = null;
+let aiDrawerOpenRaf = 0;
+let aiDrawerFocusTimer = null;
+let aiDrawerPersistTimer = null;
+let aiDrawerAnimTimer = null;
 let aiPromptPressTimer = null;
 let aiModeRenderFrame = 0;
 let aiModeRenderTimer = 0;
@@ -926,12 +930,12 @@ function renderAiHistoryPanel() {
           ${isCurrent ? '<span class="ai-history-card-badge current">当前</span>' : ""}
         </div>
         <div class="ai-history-card-actions">
-          <button class="ai-history-card-edit-btn" type="button" title="修改会话名称" aria-label="修改会话名称" data-edit-id="${session.id}">
+          <button class="ai-history-card-edit-btn" type="button" title="修改会话名称" aria-label="修改会话名称" data-edit-id="${escapeHtml(session.id)}">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M12.5 3.5l4 4L6 18H2v-4L12.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <button class="ai-history-card-del-btn" type="button" title="删除此条记录" aria-label="删除此条记录" data-del-id="${session.id}">
+          <button class="ai-history-card-del-btn" type="button" title="删除此条记录" aria-label="删除此条记录" data-del-id="${escapeHtml(session.id)}">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M4 6h12M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2m2 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6h10z" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -939,7 +943,7 @@ function renderAiHistoryPanel() {
         </div>
       </div>
       <div class="ai-history-card-meta">
-        <span class="ai-history-card-time">${timeStr}</span>
+        <span class="ai-history-card-time">${escapeHtml(timeStr)}</span>
         <span class="ai-history-card-scope">${escapeHtml(scopeBadgeLabel)}</span>
         <span class="ai-history-card-turns">${turnCount} 轮问答</span>
       </div>
@@ -1139,10 +1143,23 @@ function pulseAiSendButton() {
   }, 170);
 }
 
-function openAiDrawer(mode = "global", item = null, options = {}) {
+function cancelAiDrawerPendingTimers() {
   window.clearTimeout(aiDrawerCloseTimer);
+  window.clearTimeout(aiDrawerFocusTimer);
+  window.clearTimeout(aiDrawerPersistTimer);
+  window.clearTimeout(aiDrawerAnimTimer);
+  if (aiDrawerOpenRaf) {
+    window.cancelAnimationFrame(aiDrawerOpenRaf);
+    aiDrawerOpenRaf = 0;
+  }
+}
+
+function openAiDrawer(mode = "global", item = null, options = {}) {
+  cancelAiDrawerPendingTimers();
   closeAiHistoryPanel();
   closeRowActionMenus();
+  const wasHidden = !aiDrawer || aiDrawer.classList.contains("hidden");
+  const wasClosing = Boolean(aiDrawer?.classList.contains("closing"));
   const previous = options.returnToCurrent ? aiDrawerSnapshot() : null;
   state.aiDrawer.mode = mode === "item" ? "item" : "global";
   state.aiDrawer.item = state.aiDrawer.mode === "item" ? item : null;
@@ -1157,19 +1174,73 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   state.aiDrawer.messages = loadAiConversation(state.aiDrawer.mode, state.aiDrawer.item, state.aiDrawer.key);
   state.aiDrawer.returnTo = previous?.mode === "global" ? previous : null;
   renderAiDrawer();
-  driveView?.classList.add("ai-drawer-docked");
-  document.body.classList.add("ai-drawer-open");
-  restoreSavedAiDrawerWidth();
-  aiDrawer?.classList.remove("closing");
-  aiDrawer?.classList.remove("hidden");
-  aiDrawer?.setAttribute("aria-hidden", "false");
   syncAiPromptSendState();
 
-  // Schedule auto-resize and focus AFTER the 300ms GPU animation completes smoothly!
-  window.setTimeout(() => {
+  const launchDockedSlide = () => {
+    aiDrawer?.classList.remove("ai-drawer-preopen");
+    document.body.classList.add("ai-drawer-animating");
+    driveView?.classList.add("ai-drawer-docked");
+    document.body.classList.add("ai-drawer-open");
+    restoreSavedAiDrawerWidth();
+    aiDrawerAnimTimer = window.setTimeout(() => {
+      document.body.classList.remove("ai-drawer-animating");
+    }, 300);
+  };
+
+  if (isDesktopAiDockViewport()) {
+    // Prepare saved --ai-dock-width before un-hiding so GPU layer rasterizes at exact final width
+    let saved = NaN;
+    try {
+      saved = Number(localStorage.getItem(AI_DRAWER_WIDTH_STORAGE_KEY));
+    } catch {}
+    if (Number.isFinite(saved) && saved > 0) {
+      const { minWidth, maxWidth } = getAiDrawerWidthBounds();
+      const clamped = Math.round(Math.min(maxWidth, Math.max(minWidth, saved)));
+      document.documentElement.style.setProperty("--ai-dock-width", `${clamped}px`);
+    } else {
+      document.documentElement.style.removeProperty("--ai-dock-width");
+    }
+
+    if (wasHidden) {
+      // Mount off-screen on frame 0 so Markdown/KaTeX layout finishes before GPU slide begins
+      aiDrawer?.classList.remove("closing");
+      aiDrawer?.classList.add("ai-drawer-preopen");
+      aiDrawer?.classList.remove("hidden");
+      aiDrawer?.setAttribute("aria-hidden", "false");
+      aiDrawerOpenRaf = window.requestAnimationFrame(() => {
+        aiDrawerOpenRaf = window.requestAnimationFrame(() => {
+          aiDrawerOpenRaf = 0;
+          launchDockedSlide();
+        });
+      });
+    } else if (wasClosing) {
+      // Mid-close reversal: reverse smoothly from current pixel position with zero jump
+      aiDrawer?.classList.remove("closing");
+      aiDrawer?.setAttribute("aria-hidden", "false");
+      launchDockedSlide();
+    } else {
+      // Already open: update scope/content cleanly without re-animating
+      aiDrawer?.classList.remove("closing", "ai-drawer-preopen", "hidden");
+      aiDrawer?.setAttribute("aria-hidden", "false");
+      driveView?.classList.add("ai-drawer-docked");
+      document.body.classList.add("ai-drawer-open");
+      restoreSavedAiDrawerWidth();
+    }
+  } else {
+    aiDrawer?.classList.remove("closing", "ai-drawer-preopen", "hidden");
+    aiDrawer?.setAttribute("aria-hidden", "false");
+    driveView?.classList.add("ai-drawer-docked");
+    document.body.classList.add("ai-drawer-open");
+    restoreSavedAiDrawerWidth();
+  }
+
+  // Schedule auto-resize and focus AFTER the 280ms GPU slide completes smoothly
+  const focusDelay = (!wasHidden && !wasClosing) ? 80 : 310;
+  aiDrawerFocusTimer = window.setTimeout(() => {
+    if (!document.body.classList.contains("ai-drawer-open")) return;
     autoResizeAiPromptInput();
     aiPromptInput?.focus({ preventScroll: true });
-  }, 300);
+  }, focusDelay);
 
   const currentScope = getCurrentAiScope();
   setStatus(state.aiDrawer.mode === "item" && item
@@ -1177,10 +1248,10 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
     : (currentScope.type === "folder" ? `已打开“${currentScope.label}”的 AI 文件夹对话` : "已打开 AI 全库问答"));
 
   // Defer session storage persistence until animation completes smoothly
-  window.setTimeout(() => {
+  aiDrawerPersistTimer = window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();
-  }, 400);
+  }, 380);
 }
 
 function returnToAiGlobalDrawer() {
@@ -1244,26 +1315,32 @@ function handleAiDrawerBackOrSwitch() {
 }
 
 function closeAiDrawer() {
+  cancelAiDrawerPendingTimers();
   closeAiHistoryPanel();
   closeRowActionMenus();
-  if (!aiDrawer || aiDrawer.classList.contains("hidden")) return;
+  if (!aiDrawer || aiDrawer.classList.contains("hidden")) {
+    document.body.classList.remove("ai-drawer-open", "ai-drawer-animating");
+    driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
+    return;
+  }
   aiPromptInput?.blur();
   endAiDrawerResizeDrag({ persist: false });
+  document.body.classList.add("ai-drawer-animating");
   driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
-  aiDrawer?.classList.remove("ai-drawer-narrow");
+  aiDrawer?.classList.remove("ai-drawer-narrow", "ai-drawer-preopen");
   document.body.classList.remove("ai-drawer-open");
-  window.clearTimeout(aiDrawerCloseTimer);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
-  }, 300);
+    document.body.classList.remove("ai-drawer-animating");
+  }, 310);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
-  window.setTimeout(() => {
+  aiDrawerPersistTimer = window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();
-  }, 320);
+  }, 340);
 }
 
 function aiSuggestionButton(label, prompt) {

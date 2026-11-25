@@ -4472,8 +4472,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   color: #334155;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  backdrop-filter: blur(8px);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 /* 思考指示胶囊：暖琥珀金柔和徽章，禁用点击与抬升 */
@@ -8724,9 +8723,9 @@ select:focus {
 }
 
 @media (min-width: 901px) {
-  /* 平滑流体过渡：使用统一硬件加速原生流体曲线 cubic-bezier(0.16, 1, 0.3, 1) */
+  /* 平滑流体过渡：与右侧抽屉保持完全一致的 280ms 曲线，实现同频零抖动推入/退回 */
   .content {
-    transition: margin-right 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: margin-right 280ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: margin-right;
     contain: layout style;
   }
@@ -8736,66 +8735,69 @@ select:focus {
     overflow: hidden !important;
   }
 
-  /* 抽屉打开与退出全过程中彻底隐藏遮罩与高光条，彻底消除退出时的白屏遮罩闪烁 */
-  body.ai-drawer-open .ai-drawer-shell .ai-drawer-backdrop,
-  .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer-backdrop,
-  .ai-drawer-shell.closing .ai-drawer-backdrop,
-  .ai-drawer-shell.closing ~ .ai-drawer-backdrop {
+  /* 抽屉打开与退出全过程中彻底隐藏遮罩与高光条，消除白屏遮罩闪烁 */
+  .ai-drawer-shell .ai-drawer-backdrop,
+  .ai-drawer-shell .ai-drawer-glow {
     display: none !important;
     pointer-events: none !important;
   }
 
-  body.ai-drawer-open .ai-drawer-glow,
-  .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer-glow,
-  .ai-drawer-shell.closing .ai-drawer-glow {
-    display: none !important;
-  }
-
-  /* 抽屉在桌面吸附模式下的基底几何尺寸 */
+  /* 抽屉在桌面吸附模式下的基底几何与纯 GPU 合成层（无 keyframe 重启跳变，支持中途无缝折返） */
   .ai-drawer {
     top: 8px;
     right: 8px;
     bottom: 8px;
-    width: var(--ai-dock-width);
-    height: calc(100vh - 16px);
-  }
-
-  /* 抽屉自身吸附在右侧，高度贴合，纯 GPU translate3d 流畅推入 */
-  body.ai-drawer-open .ai-drawer,
-  .drive-shell.ai-drawer-docked ~ .ai-drawer-shell .ai-drawer {
-    border-radius: 32px;
-    background: #ffffff !important;
-    border: 1px solid rgba(205, 218, 235, 0.95) !important;
-    box-shadow:
-      0 4px 20px rgba(24, 44, 76, 0.08),
-      0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockIn 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: transform, opacity;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    contain: layout paint;
-  }
-
-  /* 退出动画：无论何时关闭，抽屉均保持 docked 尺寸与圆角，向右纯 GPU 滑出屏幕 */
-  .ai-drawer-shell.closing .ai-drawer {
-    top: 8px !important;
-    right: 8px !important;
-    bottom: 8px !important;
     width: var(--ai-dock-width) !important;
-    height: calc(100vh - 16px) !important;
+    height: calc(100vh - 16px);
     border-radius: 32px !important;
     background: #ffffff !important;
     border: 1px solid rgba(205, 218, 235, 0.95) !important;
     box-shadow:
       0 4px 20px rgba(24, 44, 76, 0.08),
       0 1px 4px rgba(24, 44, 76, 0.04) !important;
-    animation: aiDrawerDockOut 300ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: none !important;
+    transform: translate3d(calc(100% + 16px), 0, 0);
+    opacity: 0;
     will-change: transform, opacity;
-    transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    contain: layout paint;
+    contain: layout style paint;
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* 首帧挂载准备态：先完成布局与 GPU 纹理上传，下一帧再启动同频滑入，杜绝首帧掉帧抖动 */
+  .ai-drawer-shell.ai-drawer-preopen .ai-drawer {
+    transition: none !important;
+    transform: translate3d(calc(100% + 16px), 0, 0) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* 打开态：纯 GPU 平滑滑入到位 */
+  body.ai-drawer-open .ai-drawer-shell:not(.ai-drawer-preopen):not(.closing) .ai-drawer,
+  .drive-shell.ai-drawer-docked ~ .ai-drawer-shell:not(.ai-drawer-preopen):not(.closing) .ai-drawer {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 退出态：从当前位置纯 GPU 平滑向右滑出，绝不闪跳或截断 */
+  .ai-drawer-shell.closing .ai-drawer {
+    transform: translate3d(calc(100% + 16px), 0, 0) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* 滑入/滑出动画窗口内暂停文件行悬停重绘与拖拽手柄命中，保障 60/120fps 顺滑 */
+  body.ai-drawer-animating .ai-drawer-resize-handle {
+    pointer-events: none !important;
+    opacity: 0;
+  }
+
+  body.ai-drawer-animating .file-panel tbody tr {
+    transition: none !important;
   }
 
   /* 抽屉打开时顶部与搜索栏自适应防拥挤 */
