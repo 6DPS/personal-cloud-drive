@@ -59,6 +59,7 @@ const state = {
   trashMode: false,
   starredMode: false,
   categoryMode: "",
+  folderRawItems: [],
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -67,6 +68,7 @@ const AI_MODE_KEY = "pcd.aiModeEnabled";
 let aiDrawerCloseTimer = null;
 let aiPromptPressTimer = null;
 let aiModeRenderFrame = 0;
+let aiModeRenderTimer = 0;
 const AI_PENDING_CONTEXT_DELAY_MS = 1800;
 const AI_PENDING_LONG_DELAY_MS = 8000;
 const AI_SEND_ARROW_SVG = '<svg class="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
@@ -433,7 +435,7 @@ function setStatus(message) {
 
 function syncAiGlobalBtnUi() {
   if (!aiGlobalSearchBtn) return;
-  const isFolder = Boolean(state.path) && !state.trashMode && !state.starredMode && !state.categoryMode;
+  const isFolder = Boolean(state.path) && !state.trashMode && !state.starredMode;
   const textSpan = aiGlobalSearchBtn.querySelector("span");
   if (isFolder) {
     const folderName = displayFolder(state.path || "") || "当前文件夹";
@@ -455,14 +457,6 @@ function syncAiModeUi(options = {}) {
   aiModeToggleBtn.title = state.aiModeEnabled ? "关闭后隐藏每行的 AI 对话入口" : "开启后每个文件和文件夹都会显示 AI 对话入口";
   aiGlobalSearchBtn?.classList.toggle("hidden", !state.aiModeEnabled);
   syncAiGlobalBtnUi();
-  if (state.aiModeEnabled && aiGlobalSearchBtn && options.animate) {
-    aiGlobalSearchBtn.classList.remove("ai-animate-in");
-    void aiGlobalSearchBtn.offsetWidth;
-    aiGlobalSearchBtn.classList.add("ai-animate-in");
-    aiGlobalSearchBtn.addEventListener("animationend", () => {
-      aiGlobalSearchBtn.classList.remove("ai-animate-in");
-    }, { once: true });
-  }
 }
 
 function setAiModeEnabled(enabled, { render = true } = {}) {
@@ -474,9 +468,13 @@ function setAiModeEnabled(enabled, { render = true } = {}) {
   setStatus(state.aiModeEnabled ? "AI 模式已开启：每个项目都可以显示 AI 对话入口" : "AI 模式已关闭");
   if (render) {
     cancelAnimationFrame(aiModeRenderFrame);
-    aiModeRenderFrame = requestAnimationFrame(() => {
-      renderRows({ noAnimation: false, animateAi: state.aiModeEnabled });
-    });
+    window.clearTimeout(aiModeRenderTimer);
+    aiModeRenderTimer = window.setTimeout(() => {
+      aiModeRenderTimer = 0;
+      aiModeRenderFrame = requestAnimationFrame(() => {
+        renderRows({ noAnimation: false, animateAi: state.aiModeEnabled });
+      });
+    }, 215);
   }
 }
 
@@ -4509,17 +4507,6 @@ function renderBreadcrumb() {
     return;
   }
 
-  if (state.categoryMode) {
-    const slash = document.createElement("span");
-    slash.textContent = "/";
-    const catLabel = document.createElement("span");
-    catLabel.className = "breadcrumb-current";
-    catLabel.style.fontWeight = "600";
-    catLabel.textContent = `快捷分类：${QUICK_CATEGORY_LABELS[state.categoryMode] || state.categoryMode}`;
-    breadcrumb.append(slash, catLabel);
-    return;
-  }
-
   let current = "";
   for (const part of state.path.split("/").filter(Boolean)) {
     const slash = document.createElement("span");
@@ -4527,10 +4514,27 @@ function renderBreadcrumb() {
     breadcrumb.append(slash);
 
     current = joinPath(current, part);
+    const targetPath = current;
     const button = document.createElement("button");
     button.textContent = part;
-    button.addEventListener("click", () => loadFolder(current));
+    button.addEventListener("click", () => {
+      if (state.categoryMode && targetPath === state.path) {
+        applyCurrentFolderCategory("");
+        return;
+      }
+      loadFolder(targetPath);
+    });
     breadcrumb.append(button);
+  }
+
+  if (state.categoryMode) {
+    const slash = document.createElement("span");
+    slash.textContent = "/";
+    const catLabel = document.createElement("span");
+    catLabel.className = "breadcrumb-current";
+    catLabel.style.fontWeight = "600";
+    catLabel.textContent = QUICK_CATEGORY_LABELS[state.categoryMode] || state.categoryMode;
+    breadcrumb.append(slash, catLabel);
   }
 }
 
@@ -5398,8 +5402,8 @@ function renderRows(options = {}) {
     if (emptyText) emptyText.textContent = "可以将重要的文件或文件夹设为星标，以便在此快速查找。";
   } else if (state.categoryMode) {
     const catTitle = QUICK_CATEGORY_LABELS[state.categoryMode] || "该分类";
-    if (emptyTitle) emptyTitle.textContent = `全盘暂无${catTitle}文件`;
-    if (emptyText) emptyText.textContent = "上传对应类型的文件后，会自动聚合显示在这里。";
+    if (emptyTitle) emptyTitle.textContent = `当前目录暂无${catTitle}文件`;
+    if (emptyText) emptyText.textContent = "可进入其他子文件夹查看，或点击左侧「全部」恢复当前目录所有项目。";
   } else if (state.searchActive) {
     if (emptyTitle) emptyTitle.textContent = "没有找到匹配结果";
     if (emptyText) emptyText.textContent = "可以换一个文件名、路径、类型、日期或大小关键词再试。";
@@ -5408,8 +5412,11 @@ function renderRows(options = {}) {
     if (emptyText) emptyText.textContent = "点击上传文件，或把文件拖到这里";
   }
 
-  const folders = state.items.filter((item) => item.type === "folder" || item.isDirectory).length;
-  const files = state.items.length - folders;
+  const statSource = (!state.trashMode && !state.starredMode && !state.searchActive && Array.isArray(state.folderRawItems) && state.folderRawItems.length)
+    ? state.folderRawItems
+    : state.items;
+  const folders = statSource.filter((item) => item.type === "folder" || item.isDirectory).length;
+  const files = statSource.length - folders;
   folderCount.textContent = folders;
   fileCount.textContent = files;
 
@@ -5615,11 +5622,11 @@ function renderRows(options = {}) {
 
     nameWrap.append(nameBtn, starBtn);
     nameCell.append(icon, nameWrap);
-    if (state.searchActive || state.starredMode || state.categoryMode) {
+    if (state.searchActive || state.starredMode) {
       const meta = document.createElement("div");
       meta.className = "match-meta";
       const folderText = item.folderPath ? `位置：${item.folderPath}` : "位置：全部文件";
-      if (state.starredMode || state.categoryMode) {
+      if (state.starredMode) {
         meta.textContent = folderText;
       } else {
         appendHighlightedText(meta, `${item.matchReason || "匹配"} · ${folderText}`, state.searchTokens);
@@ -6182,7 +6189,7 @@ function applyFolderData(data, options = {}) {
     saveAiConversation();
   }
 
-  const itemsIdentical = !pathChanged && areFolderItemsEqual(state.items, data.items);
+  const itemsIdentical = !pathChanged && areFolderItemsEqual(state.folderRawItems, data.items);
   if (itemsIdentical && options.silent) {
     storageRoot.textContent = compactStoragePath(data.storageRoot);
     storageRoot.title = data.storageRoot;
@@ -6190,8 +6197,13 @@ function applyFolderData(data, options = {}) {
     return;
   }
 
+  if (pathChanged && !options.preserveCategory) {
+    state.categoryMode = "";
+  }
   state.path = data.path;
-  state.items = data.items;
+  state.folderRawItems = Array.isArray(data.items) ? data.items : [];
+  applyCategoryCounts(computeFolderCategoryCounts(state.folderRawItems));
+  state.items = filterItemsByQuickCategory(state.folderRawItems, state.categoryMode);
   for (const item of state.items) {
     if (item.type !== "folder" || !item.locked) continue;
     if (item.unlocked) state.unlockedFolders.add(item.path);
@@ -6215,7 +6227,8 @@ function applyFolderData(data, options = {}) {
   if (currentFolderLabel) currentFolderLabel.textContent = displayFolder(state.path);
   updateSearchScopeLabel();
   syncAiGlobalBtnUi();
-  backBtn.disabled = !state.path;
+  syncSidebarCategoryUi();
+  backBtn.disabled = !state.path && !state.categoryMode;
   renderBreadcrumb();
   updateSelectionUi();
   const shouldAnimateAi = Boolean(state.aiModeEnabled && (options.animateAi ?? (pathChanged && !options.noAnimation && !options.silent)));
@@ -6235,7 +6248,14 @@ function applyFolderData(data, options = {}) {
       }
     }
   }
-  if (!options.silent) setStatus(`已加载 ${state.items.length} 个项目，上传将保存到当前目录。`);
+  if (!options.silent) {
+    if (state.categoryMode) {
+      const catLabel = QUICK_CATEGORY_LABELS[state.categoryMode] || state.categoryMode;
+      setStatus(`当前目录「${displayFolder(state.path)}」下${catLabel}共有 ${state.items.length} 个文件。`);
+    } else {
+      setStatus(`已加载 ${state.items.length} 个项目，上传将保存到当前目录。`);
+    }
+  }
   if (!options.skipHistory) updateLocation(state.path, options.replaceHistory);
 }
 
@@ -6255,11 +6275,8 @@ async function loadFolder(path = state.path, options = {}) {
     }
     exitStarredMode();
   }
-  if (state.categoryMode) {
-    if (options.silent || options.preserveCategory) {
-      return loadCategory(state.categoryMode, options);
-    }
-    exitCategoryMode();
+  if (state.categoryMode && path !== state.path && !options.preserveCategory) {
+    state.categoryMode = "";
   }
   syncSidebarCategoryUi();
   const cached = !options.forceRefresh ? getCachedFolder(path) : null;
@@ -6373,7 +6390,6 @@ async function clearSearch() {
 async function refreshCurrentFolder() {
   if (driveView.classList.contains("hidden")) return;
   void refreshStarredCount();
-  void refreshCategoryCounts();
   if (state.trashMode) {
     if (Date.now() < state.realtimeRefreshSuppressUntil) return;
     if (isUiInteractionActive()) {
@@ -6396,17 +6412,7 @@ async function refreshCurrentFolder() {
     } catch {}
     return;
   }
-  if (state.categoryMode) {
-    if (Date.now() < state.realtimeRefreshSuppressUntil) return;
-    if (isUiInteractionActive()) {
-      state.pendingRealtimeRefresh = true;
-      return;
-    }
-    try {
-      await loadCategory(state.categoryMode, { silent: true });
-    } catch {}
-    return;
-  }
+
   if (state.searchActive) return;
   if (Date.now() < state.realtimeRefreshSuppressUntil) return;
   if (isUiInteractionActive()) {
@@ -6469,13 +6475,10 @@ async function runAction(fn) {
     suppressNextRealtimeRefresh();
     if (state.starredMode) {
       await loadStarred({ silent: true });
-    } else if (state.categoryMode) {
-      await loadCategory(state.categoryMode, { silent: true });
     } else {
-      await loadFolder(state.path, { replaceHistory: true, forceRefresh: true });
+      await loadFolder(state.path, { replaceHistory: true, forceRefresh: true, preserveCategory: Boolean(state.categoryMode) });
     }
     refreshStarredCount();
-    void refreshCategoryCounts();
     scheduleStorageUsageRefresh({ force: true });
   } catch (error) {
     await showErrorDialog(error.message);
@@ -8067,7 +8070,6 @@ async function enterDrive(user = state.currentUser) {
   const params = new URLSearchParams(window.location.search);
   await loadFolder(params.get("path") || "", { replaceHistory: true });
   void refreshStarredCount();
-  void refreshCategoryCounts();
   await refreshStorageUsage();
   await refreshAccessInfo();
   await refreshHealthStatus();
@@ -8850,8 +8852,7 @@ backBtn.addEventListener("click", () => {
     return;
   }
   if (state.categoryMode) {
-    exitCategoryMode();
-    loadFolder(state.path || "");
+    applyCurrentFolderCategory("");
     return;
   }
   loadFolder(parentPath(state.path));
@@ -9166,7 +9167,6 @@ searchSort?.addEventListener("change", () => {
 });
 
 $("#refreshBtn").addEventListener("click", () => {
-  void refreshCategoryCounts();
   if (state.trashMode) {
     loadTrash();
     return;
@@ -9176,7 +9176,7 @@ $("#refreshBtn").addEventListener("click", () => {
     return;
   }
   if (state.categoryMode) {
-    loadCategory(state.categoryMode);
+    loadFolder(state.path, { forceRefresh: true, preserveCategory: true });
     return;
   }
   if (state.searchActive) {
@@ -9667,7 +9667,7 @@ async function refreshStarredCount() {
     }
   } catch {}
 }
-// --- 0.5 左侧快捷分类（全盘只读筛选）---
+// --- 0.5 左侧快捷分类（当前目录零延迟筛选）---
 const QUICK_CATEGORY_LABELS = {
   all: "全部文件",
   document: "文档",
@@ -9676,6 +9676,41 @@ const QUICK_CATEGORY_LABELS = {
   audio: "音频",
   archive: "压缩包",
 };
+
+const QUICK_CATEGORY_EXTS = {
+  document: new Set(["pdf", "doc", "docx", "wps", "dot", "dotx", "odt", "rtf", "ppt", "pptx", "pot", "potx", "pps", "ppsx", "odp", "xls", "xlsx", "xlsm", "xltx", "csv", "tsv", "ods", "txt", "md", "markdown", "json", "xml", "yaml", "yml", "log", "tex", "bib", "py", "js", "jsx", "ts", "tsx", "html", "css", "c", "cpp", "h", "java", "m", "sh", "bat", "sql"]),
+  image: new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico", "tif", "tiff", "heic", "heif", "avif", "eps", "psd"]),
+  video: new Set(["mp4", "mov", "mkv", "webm", "avi", "flv", "wmv", "m4v", "3gp", "ts", "mpeg", "mpg"]),
+  audio: new Set(["mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "mid", "midi"]),
+  archive: new Set(["zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "iso", "cab"]),
+};
+
+function classifyQuickCategory(item) {
+  if (!item || item.type === "folder" || item.isDirectory) return "folder";
+  const ext = fileExt(item.name);
+  if (!ext) return "other";
+  if (QUICK_CATEGORY_EXTS.document.has(ext)) return "document";
+  if (QUICK_CATEGORY_EXTS.image.has(ext)) return "image";
+  if (QUICK_CATEGORY_EXTS.video.has(ext)) return "video";
+  if (QUICK_CATEGORY_EXTS.audio.has(ext)) return "audio";
+  if (QUICK_CATEGORY_EXTS.archive.has(ext)) return "archive";
+  return "other";
+}
+
+function computeFolderCategoryCounts(items = []) {
+  const counts = { all: items.length, document: 0, image: 0, video: 0, audio: 0, archive: 0 };
+  for (const item of items) {
+    const cat = classifyQuickCategory(item);
+    if (Object.prototype.hasOwnProperty.call(counts, cat)) counts[cat] += 1;
+  }
+  return counts;
+}
+
+function filterItemsByQuickCategory(items = [], category = "") {
+  const cat = String(category || "").trim().toLowerCase();
+  if (!cat || cat === "all") return items;
+  return items.filter((item) => classifyQuickCategory(item) === cat);
+}
 
 function syncSidebarCategoryUi() {
   const buttons = document.querySelectorAll("#sidebarCategorySection .sidebar-cat-btn");
@@ -9706,86 +9741,49 @@ function applyCategoryCounts(counts = {}) {
   }
 }
 
-async function refreshCategoryCounts() {
-  try {
-    const res = await api("/api/categories", { cache: "no-store" });
-    if (res && res.counts) applyCategoryCounts(res.counts);
-  } catch {}
-}
-
 function exitCategoryMode() {
   if (!state.categoryMode) {
     syncSidebarCategoryUi();
     return;
   }
   state.categoryMode = "";
-  state.selectedPaths.clear();
-  state.selectionMode = false;
-  updateSelectionUi();
-  syncSelectionRows();
-  syncAiGlobalBtnUi();
   syncSidebarCategoryUi();
-  const uploadBtn = $("#uploadBtn");
-  const newFolderBtn = $("#newFolderBtn");
-  const selectModeBtn = $("#selectModeBtn");
-  if (uploadBtn) uploadBtn.classList.remove("hidden");
-  if (newFolderBtn) newFolderBtn.classList.remove("hidden");
-  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
 }
 
-async function loadCategory(category, options = {}) {
-  const cat = String(category || "").trim().toLowerCase();
-  if (!cat || cat === "all") {
+async function applyCurrentFolderCategory(category) {
+  const rawCat = String(category || "").trim().toLowerCase();
+  const nextCat = (!rawCat || rawCat === "all") ? "" : rawCat;
+  const leavingSpecialMode = state.trashMode || state.starredMode || state.searchActive;
+  if (leavingSpecialMode) {
     exitTrashMode();
     exitStarredMode();
-    exitCategoryMode();
-    await loadFolder("", { forceRefresh: true });
+    state.searchActive = false;
+    if (clearSearchBtn) clearSearchBtn.classList.add("hidden");
+    if (searchTools) searchTools.classList.add("hidden");
+    if (searchSummary) {
+      searchSummary.classList.add("hidden");
+      searchSummary.textContent = "";
+    }
+    state.categoryMode = nextCat;
+    await loadFolder(state.path || "", { forceRefresh: true, preserveCategory: Boolean(nextCat), noAnimation: true });
     return;
   }
-  exitTrashMode();
-  exitStarredMode();
-  state.categoryMode = cat;
-  state.searchActive = false;
-  if (clearSearchBtn) clearSearchBtn.classList.add("hidden");
-  if (searchTools) searchTools.classList.add("hidden");
-  if (searchSummary) {
-    searchSummary.classList.add("hidden");
-    searchSummary.textContent = "";
-  }
-  if (!options?.preserveSelection) {
-    state.selectedPaths.clear();
-    state.selectionMode = false;
-    state.lastAnchorKey = "";
-  }
+  state.categoryMode = nextCat;
+  state.selectedPaths.clear();
+  state.selectionMode = false;
+  state.lastAnchorKey = "";
   updateSelectionUi();
-  syncAiGlobalBtnUi();
+  state.items = filterItemsByQuickCategory(state.folderRawItems, state.categoryMode);
   syncSidebarCategoryUi();
-
-  const uploadBtn = $("#uploadBtn");
-  const newFolderBtn = $("#newFolderBtn");
-  const selectModeBtn = $("#selectModeBtn");
-  if (uploadBtn) uploadBtn.classList.add("hidden");
-  if (newFolderBtn) newFolderBtn.classList.add("hidden");
-  if (selectModeBtn) selectModeBtn.classList.remove("hidden");
-
-  const label = QUICK_CATEGORY_LABELS[cat] || cat;
-  if (currentFolderLabel) currentFolderLabel.textContent = `快捷分类：${label}`;
-  backBtn.disabled = false;
+  syncAiGlobalBtnUi();
+  backBtn.disabled = !state.path && !state.categoryMode;
   renderBreadcrumb();
-  if (!options?.silent) setStatus(`正在加载全盘${label}文件...`);
-
-  try {
-    const res = await api(`/api/categories?type=${encodeURIComponent(cat)}`, { cache: "no-store" });
-    if (state.categoryMode !== cat) return;
-    if (res && res.counts) applyCategoryCounts(res.counts);
-    state.items = Array.isArray(res?.items) ? res.items : [];
-    renderRows({ noAnimation: true });
-    if (!options?.silent) {
-      const limitTip = res?.truncated ? "（结果较多已截断）" : "";
-      setStatus(`全盘${label}共有 ${state.items.length} 个文件${limitTip}。`);
-    }
-  } catch (err) {
-    if (!options?.silent) setStatus(`加载${label}分类失败: ${err.message}`);
+  renderRows({ noAnimation: true });
+  if (state.categoryMode) {
+    const label = QUICK_CATEGORY_LABELS[state.categoryMode] || state.categoryMode;
+    setStatus(`当前目录「${displayFolder(state.path)}」下${label}共有 ${state.items.length} 个文件。`);
+  } else {
+    setStatus(`已显示当前目录全部 ${state.items.length} 个项目，上传将保存到当前目录。`);
   }
 }
 
@@ -9793,13 +9791,15 @@ document.querySelectorAll("#sidebarCategorySection .sidebar-cat-btn").forEach((b
   btn.addEventListener("click", () => {
     const cat = btn.dataset.category || "all";
     if (cat === "all") {
-      exitTrashMode();
-      exitStarredMode();
-      exitCategoryMode();
-      void loadFolder("", { forceRefresh: true });
+      void applyCurrentFolderCategory("");
       return;
     }
-    void loadCategory(cat);
+    // 再次点击已选中的分类可快速取消筛选回到全部
+    if (state.categoryMode === cat && !state.trashMode && !state.starredMode && !state.searchActive) {
+      void applyCurrentFolderCategory("");
+      return;
+    }
+    void applyCurrentFolderCategory(cat);
   });
 });
 
