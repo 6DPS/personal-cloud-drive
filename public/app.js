@@ -5487,6 +5487,9 @@ async function executeOpenItem(item) {
 }
 
 function renderRows(options = {}) {
+  if (!options.fromViewSwitch && typeof clearBrowseViewSwitchAnim === "function") {
+    clearBrowseViewSwitchAnim();
+  }
   closeContextMenu();
   closeRowActionMenus();
   document.querySelectorAll(".row-action-menu").forEach((menu) => menu.remove());
@@ -10027,15 +10030,69 @@ function applyBrowseSort(sortKey) {
   renderRows({ noAnimation: true });
 }
 
+let browseViewSwitchTimer = 0;
+let browseViewCleanupTimer = 0;
+let browseViewSwitchRaf = 0;
+
+function clearBrowseViewSwitchAnim() {
+  if (browseViewSwitchTimer) {
+    window.clearTimeout(browseViewSwitchTimer);
+    browseViewSwitchTimer = 0;
+  }
+  if (browseViewCleanupTimer) {
+    window.clearTimeout(browseViewCleanupTimer);
+    browseViewCleanupTimer = 0;
+  }
+  if (browseViewSwitchRaf) {
+    cancelAnimationFrame(browseViewSwitchRaf);
+    browseViewSwitchRaf = 0;
+  }
+  const tableEl = dropZone?.querySelector("table");
+  for (const el of [tableEl, fileGrid]) {
+    if (!el) continue;
+    el.classList.remove("view-switch-out", "view-switch-enter", "view-switch-enter-active");
+  }
+}
+
 function setBrowseViewMode(mode) {
   const next = mode === "grid" ? "grid" : "list";
   if (state.viewMode === next) return;
+  const prev = state.viewMode;
   state.viewMode = next;
   try { localStorage.setItem(BROWSE_VIEW_MODE_KEY, next); } catch {}
   syncBrowseViewUi();
-  if (!state.trashMode) {
-    renderRows({ noAnimation: true });
+  if (state.trashMode) return;
+
+  clearBrowseViewSwitchAnim();
+
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const tableEl = dropZone?.querySelector("table");
+  const outgoingEl = prev === "grid" ? fileGrid : tableEl;
+  const incomingEl = next === "grid" ? fileGrid : tableEl;
+
+  if (reduceMotion || !outgoingEl || !incomingEl || state.items.length === 0) {
+    renderRows({ noAnimation: true, fromViewSwitch: true });
+    return;
   }
+
+  outgoingEl.classList.add("view-switch-out");
+  browseViewSwitchTimer = window.setTimeout(() => {
+    browseViewSwitchTimer = 0;
+    outgoingEl.classList.remove("view-switch-out");
+    renderRows({ noAnimation: true, fromViewSwitch: true });
+    if (dropZone) dropZone.scrollTop = 0;
+    incomingEl.classList.add("view-switch-enter");
+    void incomingEl.offsetWidth;
+    browseViewSwitchRaf = requestAnimationFrame(() => {
+      browseViewSwitchRaf = 0;
+      incomingEl.classList.remove("view-switch-enter");
+      incomingEl.classList.add("view-switch-enter-active");
+      browseViewCleanupTimer = window.setTimeout(() => {
+        browseViewCleanupTimer = 0;
+        incomingEl.classList.remove("view-switch-enter-active");
+      }, 220);
+    });
+  }, 85);
 }
 
 const THUMB_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico", "avif"]);

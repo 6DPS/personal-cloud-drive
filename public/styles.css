@@ -11933,6 +11933,52 @@ tbody tr.context-active-row {
   display: none !important;
 }
 
+/* 列表 ↔ 缩略图网格 柔和 GPU 过渡（方案 A：淡出微缩 + 舒展浮现，结束后清空 transform 不影响 sticky 表头） */
+.file-panel table.view-switch-out,
+.file-grid.view-switch-out {
+  opacity: 0;
+  transform: scale(0.988) translateY(4px);
+  transform-origin: center top;
+  transition:
+    opacity 85ms cubic-bezier(0.4, 0, 1, 1),
+    transform 85ms cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+
+.file-panel table.view-switch-enter,
+.file-grid.view-switch-enter {
+  opacity: 0;
+  transform: scale(0.988) translateY(6px);
+  transform-origin: center top;
+  transition: none !important;
+  will-change: opacity, transform;
+}
+
+.file-panel table.view-switch-enter-active,
+.file-grid.view-switch-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transform-origin: center top;
+  transition:
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-panel table.view-switch-out,
+  .file-grid.view-switch-out,
+  .file-panel table.view-switch-enter,
+  .file-grid.view-switch-enter,
+  .file-panel table.view-switch-enter-active,
+  .file-grid.view-switch-enter-active {
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
