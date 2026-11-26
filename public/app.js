@@ -6488,8 +6488,10 @@ function applyFolderData(data, options = {}) {
 
   const itemsIdentical = !pathChanged && areFolderItemsEqual(state.folderRawItems, data.items);
   if (itemsIdentical && options.silent) {
-    storageRoot.textContent = compactStoragePath(data.storageRoot);
-    storageRoot.title = data.storageRoot;
+    if (storageRoot) {
+      storageRoot.textContent = compactStoragePath(data.storageRoot);
+      storageRoot.title = data.storageRoot;
+    }
     scheduleStorageUsageRefresh();
     return;
   }
@@ -6519,8 +6521,10 @@ function applyFolderData(data, options = {}) {
     if (!visiblePaths.has(selectedPath)) state.selectedPaths.delete(selectedPath);
   }
   if (!state.selectedPaths.size) state.selectionMode = false;
-  storageRoot.textContent = compactStoragePath(data.storageRoot);
-  storageRoot.title = data.storageRoot;
+  if (storageRoot) {
+    storageRoot.textContent = compactStoragePath(data.storageRoot);
+    storageRoot.title = data.storageRoot;
+  }
   if (currentFolderLabel) currentFolderLabel.textContent = displayFolder(state.path);
   updateSearchScopeLabel();
   syncAiGlobalBtnUi();

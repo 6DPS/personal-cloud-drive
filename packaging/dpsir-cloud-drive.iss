@@ -4,7 +4,7 @@
 ; ==============================================================================
 
 #define MyAppName "DPSir 智云盘"
-#define MyAppVersion "1.3.6"
+#define MyAppVersion "1.3.7"
 #define MyAppPublisher "DPSir Studio"
 #define MyAppExeName "DPSir-ZhiYunPan.exe"
 #define MyIconFile "app-icon.ico"
@@ -20,7 +20,7 @@ DefaultDirName={autopf}\DPSir 智云盘
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist
-OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.3.6
+OutputBaseFilename=DPSir-ZhiYunPan-Setup-v1.3.7
 SetupIconFile={#MyIconFile}
 WizardSmallImageFile=wizard-small.bmp
 Compression=lzma2/ultra64
@@ -75,7 +75,7 @@ Source: "..\scripts\disable-autostart.vbs"; DestDir: "{app}"; DestName: "关闭�
 
 ; 依赖与静态资源库
 Source: "..\node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\public\*"; DestDir: "{app}\public"; Excludes: "preview-dark-mode.html"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs createallsubdirs
 
