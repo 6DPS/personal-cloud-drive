@@ -1277,11 +1277,13 @@ function animateFileGridForDrawerTransition(targetDocked, firstSnap, prevMarginR
     // 2. Synchronously snap .content to its true CSS final margin-right for 1 microsecond to read exactFinalWidth
     contentEl.style.transition = "none";
     contentEl.style.removeProperty("margin-right");
-    const exactFinalWidth = panelEl.clientWidth;
+    const panelChromeX = Math.max(0, panelEl.offsetWidth - panelEl.clientWidth);
+    const exactRectW = panelEl.getBoundingClientRect().width;
+    const exactFinalWidth = exactRectW > panelChromeX ? (exactRectW - panelChromeX) : panelEl.clientWidth;
 
-    // 3. Lock .file-grid to exactFinalWidth so it performs 0 reflows during .content's 320ms slide
+    // 3. Lock .file-grid to exactFinalWidth (subpixel-exact for 125%/150% Windows DPI)
     if (exactFinalWidth >= 240) {
-      fileGrid.style.width = `${exactFinalWidth}px`;
+      fileGrid.style.width = `${exactFinalWidth.toFixed(2)}px`;
     }
 
     // 4. Measure LAST card positions at exactFinalWidth and prepare INVERT transforms
@@ -1368,7 +1370,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
     aiDrawerAnimTimer = window.setTimeout(() => {
       document.body.classList.remove("ai-drawer-animating");
       unlockFileGridAfterDrawerTransition();
-    }, 350);
+    }, 360);
   };
 
   if (isDesktopAiDockViewport()) {
@@ -1528,12 +1530,12 @@ function closeAiDrawer() {
     aiDrawer.classList.remove("closing");
     document.body.classList.remove("ai-drawer-animating");
     unlockFileGridAfterDrawerTransition();
-  }, 350);
-  setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
+    setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
+  }, 360);
   aiDrawerPersistTimer = window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();
-  }, 340);
+  }, 430);
 }
 
 function aiSuggestionButton(label, prompt) {

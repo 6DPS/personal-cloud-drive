@@ -8812,6 +8812,13 @@ select:focus {
     transition: none !important;
   }
 
+  body.ai-drawer-animating #statusLine {
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
   body.ai-drawer-animating .file-grid-card:not(.grid-flip-playing),
   body.ai-drawer-resizing .file-grid-card:not(.grid-flip-drag) {
     transition: none !important;
