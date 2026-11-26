@@ -11966,23 +11966,6 @@ tbody tr.context-active-row {
   will-change: opacity, transform;
 }
 
-/* 方案 A + 轻微 B 融合版：切到网格时仅对首屏前 18 张卡片施加极轻错峰落位（纯 GPU，结束后自动清除样式） */
-@keyframes gridCardStaggerIn {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0) scale(0.972);
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-.file-grid-card.grid-card-stagger-in {
-  animation: gridCardStaggerIn 220ms cubic-bezier(0.22, 1, 0.36, 1) var(--stagger-delay, 0ms) both;
-  will-change: opacity, transform;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .file-panel table.view-switch-out,
   .file-grid.view-switch-out,
@@ -11991,11 +11974,6 @@ tbody tr.context-active-row {
   .file-panel table.view-switch-enter-active,
   .file-grid.view-switch-enter-active {
     transition: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
-  .file-grid-card.grid-card-stagger-in {
-    animation: none !important;
     transform: none !important;
     opacity: 1 !important;
   }
