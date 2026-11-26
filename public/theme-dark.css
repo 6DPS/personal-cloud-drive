@@ -113,11 +113,12 @@ html[data-theme="dark"] .selection-bar {
   border-color: rgba(10, 132, 255, 0.35) !important;
 }
 
-html[data-theme="dark"] .brand-row .brand-mark {
-  border-radius: 22px !important;
-  box-shadow:
-    0 10px 26px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+html[data-theme="dark"] .brand-row .brand-mark,
+html[data-theme="dark"] .login-panel .brand-mark {
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.48)) !important;
 }
 
 /* 文字色阶 */
@@ -453,10 +454,13 @@ html[data-theme="dark"] .browse-tools-divider {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 
+html[data-theme="dark"] input:not([type]),
 html[data-theme="dark"] input[type="search"],
 html[data-theme="dark"] input[type="text"],
 html[data-theme="dark"] input[type="password"],
 html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="url"],
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea {
   background: #161618 !important;
@@ -794,16 +798,81 @@ html[data-theme="dark"] .ai-suggestions button:hover {
 }
 
 html[data-theme="dark"] .ai-model-pill.active,
-html[data-theme="dark"] #aiModelReasonerBtn.active {
+html[data-theme="dark"] #aiModelReasonerBtn,
+html[data-theme="dark"] #aiModelReasonerBtn.active,
+html[data-theme="dark"] .ai-model-pill.ai-web-search-toggle[aria-pressed="true"],
+html[data-theme="dark"] #aiWebSearchToggleBtn.ai-model-pill[aria-pressed="true"],
+html[data-theme="dark"] #aiWebSearchToggleBtn.ai-model-pill.active,
+html[data-theme="dark"] .ai-web-search-toggle.active {
   background: rgba(255, 214, 10, 0.16) !important;
-  border-color: rgba(255, 214, 10, 0.42) !important;
+  border: 1px solid rgba(255, 214, 10, 0.42) !important;
   color: #ffd60a !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 10px rgba(255, 214, 10, 0.14) !important;
 }
 
-html[data-theme="dark"] .ai-web-search-toggle.active {
+html[data-theme="dark"] .ai-model-pill.ai-web-search-toggle[aria-pressed="true"]:hover,
+html[data-theme="dark"] #aiWebSearchToggleBtn.ai-model-pill[aria-pressed="true"]:hover,
+html[data-theme="dark"] #aiWebSearchToggleBtn.ai-model-pill.active:hover {
+  background: rgba(255, 214, 10, 0.24) !important;
+  border-color: rgba(255, 214, 10, 0.58) !important;
+  color: #ffe55c !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 14px rgba(255, 214, 10, 0.2) !important;
+}
+
+html[data-theme="dark"] #aiWebSearchToggleBtn.ai-model-pill:not([aria-pressed="true"]):hover,
+html[data-theme="dark"] .ai-model-pill.ai-web-search-toggle:not([aria-pressed="true"]):hover {
+  background: rgba(255, 214, 10, 0.1) !important;
+  border-color: rgba(255, 214, 10, 0.34) !important;
+  color: #ffd60a !important;
+  box-shadow: 0 2px 10px rgba(255, 214, 10, 0.12) !important;
+}
+
+html[data-theme="dark"] .ai-drawer-header h2 .title-text {
+  background: linear-gradient(90deg, #64d2ff, #2dd4bf 55%, #ffd60a) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+html[data-theme="dark"] .ai-drawer-close-btn,
+html[data-theme="dark"] .ai-drawer-header-btn,
+html[data-theme="dark"] .modal .icon-button,
+html[data-theme="dark"] .modal .small-icon,
+html[data-theme="dark"] .modal-close-btn,
+html[data-theme="dark"] #closePreviewBtn,
+html[data-theme="dark"] #closeZipArchiveBtn {
+  background: #2c2c2f !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #e5e5ea !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 3px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .modal .icon-button:hover,
+html[data-theme="dark"] .modal .small-icon:hover,
+html[data-theme="dark"] .modal-close-btn:hover,
+html[data-theme="dark"] #closePreviewBtn:hover,
+html[data-theme="dark"] #closeZipArchiveBtn:hover,
+html[data-theme="dark"] .ai-drawer-close-btn:hover {
+  background: rgba(255, 69, 58, 0.22) !important;
+  border-color: rgba(255, 69, 58, 0.48) !important;
+  color: #ff6961 !important;
+  box-shadow: 0 4px 14px rgba(255, 69, 58, 0.22) !important;
+}
+
+html[data-theme="dark"] #aiNewChatBtn:hover {
+  background: rgba(20, 187, 176, 0.2) !important;
+  border-color: rgba(45, 212, 191, 0.48) !important;
+  color: #5eead4 !important;
+  box-shadow: 0 4px 14px rgba(20, 187, 176, 0.22) !important;
+}
+
+html[data-theme="dark"] #aiHistoryBtn:hover,
+html[data-theme="dark"] #aiHistoryBtn.active,
+html[data-theme="dark"] #aiHistoryBtn.active:hover {
   background: rgba(10, 132, 255, 0.22) !important;
-  border-color: rgba(10, 132, 255, 0.5) !important;
+  border-color: rgba(10, 132, 255, 0.52) !important;
   color: #64d2ff !important;
+  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.22) !important;
 }
 
 html[data-theme="dark"] .model-badge {
@@ -1043,4 +1112,927 @@ html[data-theme="dark"] .sheet-table th {
 
 html[data-theme="dark"] .sheet-table th {
   background: #28282c !important;
+}
+
+
+/* ==============================================================================
+   10. AI 对话内部提示、思考过程折叠盒、消息操作按钮、代码块、表格与历史卡片
+   ============================================================================== */
+html[data-theme="dark"] .ai-drawer-backdrop {
+  background: rgba(0, 0, 0, 0.36) !important;
+}
+
+html[data-theme="dark"] .ai-context-icon {
+  background: rgba(10, 132, 255, 0.16) !important;
+  border: 1px solid rgba(10, 132, 255, 0.3) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-message.assistant {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  color: #f5f5f7 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-message.pending,
+html[data-theme="dark"] .ai-message.initial-greeting {
+  background: rgba(37, 37, 42, 0.92) !important;
+  border-color: rgba(45, 212, 191, 0.28) !important;
+  color: rgba(235, 235, 245, 0.84) !important;
+}
+
+html[data-theme="dark"] .ai-message-meta {
+  color: rgba(235, 235, 245, 0.68) !important;
+}
+
+/* 联网搜索状态徽章（默认 / 已使用 / 错误） */
+html[data-theme="dark"] .ai-web-search-badge {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: rgba(235, 235, 245, 0.88) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-web-search-badge.used {
+  background: rgba(20, 187, 176, 0.18) !important;
+  border: 1px solid rgba(45, 212, 191, 0.44) !important;
+  color: #5eead4 !important;
+  box-shadow: 0 2px 10px rgba(20, 187, 176, 0.14) !important;
+}
+
+html[data-theme="dark"] .ai-web-search-badge.error {
+  background: rgba(255, 69, 58, 0.16) !important;
+  border: 1px solid rgba(255, 69, 58, 0.42) !important;
+  color: #ff8a80 !important;
+}
+
+html[data-theme="dark"] .ai-web-sources {
+  background: #1c1c1f !important;
+  border-color: rgba(45, 212, 191, 0.28) !important;
+}
+
+html[data-theme="dark"] .ai-web-sources summary {
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .ai-web-sources li {
+  color: rgba(235, 235, 245, 0.72) !important;
+}
+
+html[data-theme="dark"] .ai-web-sources a {
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-web-source-state {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(235, 235, 245, 0.78) !important;
+}
+
+html[data-theme="dark"] .ai-web-source-state.read {
+  background: rgba(20, 187, 176, 0.2) !important;
+  color: #5eead4 !important;
+}
+
+/* 深度思考过程折叠卡片 */
+html[data-theme="dark"] .ai-thought-box,
+html[data-theme="dark"] .ai-markdown details {
+  background: #1b1c1f !important;
+  border: 1px solid rgba(45, 212, 191, 0.3) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-thought-box[open] {
+  background: #1b1c1f !important;
+  border-color: rgba(45, 212, 191, 0.45) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32) !important;
+}
+
+html[data-theme="dark"] .ai-thought-summary {
+  background: rgba(20, 187, 176, 0.12) !important;
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .ai-thought-summary:hover {
+  background: rgba(20, 187, 176, 0.2) !important;
+}
+
+html[data-theme="dark"] .ai-thought-title {
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .ai-thought-chevron {
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .ai-thought-badge {
+  background: #2c2c30 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .ai-thought-box[open] .ai-thought-badge {
+  background: rgba(20, 187, 176, 0.22) !important;
+  border-color: rgba(45, 212, 191, 0.4) !important;
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .ai-thought-body {
+  background: #161619 !important;
+  color: rgba(235, 235, 245, 0.8) !important;
+  border-top-color: rgba(45, 212, 191, 0.24) !important;
+}
+
+/* AI 消息底部操作按钮（复制全文 / 重新生成） */
+html[data-theme="dark"] .ai-message-actions {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .ai-msg-action-btn {
+  background: #2c2c30 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e5e5ea !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-msg-action-btn:hover {
+  background: #38383d !important;
+  border-color: rgba(45, 212, 191, 0.48) !important;
+  color: #5eead4 !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32) !important;
+}
+
+html[data-theme="dark"] .ai-msg-action-btn.regen-btn:hover {
+  border-color: rgba(10, 132, 255, 0.52) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-msg-action-btn.copied {
+  background: rgba(48, 209, 88, 0.18) !important;
+  border-color: rgba(48, 209, 88, 0.48) !important;
+  color: #30d158 !important;
+}
+
+/* AI 代码块、表格、引用与搜索结果卡片 */
+html[data-theme="dark"] .ai-code-block-wrapper {
+  background: #141416 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-code-header {
+  background: #222226 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(235, 235, 245, 0.72) !important;
+}
+
+html[data-theme="dark"] .ai-code-copy-btn {
+  background: #2f2f34 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .ai-code-copy-btn:hover {
+  background: #3d3d44 !important;
+  border-color: rgba(10, 132, 255, 0.5) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-markdown pre {
+  background: #141416 !important;
+  color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .ai-markdown table {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .ai-markdown th {
+  background: #28282c !important;
+  color: #f5f5f7 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme="dark"] .ai-markdown td {
+  color: rgba(235, 235, 245, 0.86) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .ai-markdown tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+html[data-theme="dark"] .ai-markdown tr:hover td {
+  background: rgba(10, 132, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .ai-markdown blockquote {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-left-color: #0a84ff !important;
+  color: rgba(235, 235, 245, 0.78) !important;
+}
+
+html[data-theme="dark"] .ai-result-card {
+  background: #1e1e21 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .ai-result-actions button {
+  background: #2c2c30 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .ai-result-actions button:hover {
+  background: #3a3a40 !important;
+  border-color: rgba(10, 132, 255, 0.5) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-result-actions .ai-result-primary {
+  background: linear-gradient(90deg, #16b9df 0%, #14bbb0 52%, #0a84ff 100%) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .ai-history-count {
+  background: rgba(10, 132, 255, 0.18) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .ai-history-card {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .ai-history-card:hover {
+  background: #2e2e33 !important;
+  border-color: rgba(10, 132, 255, 0.45) !important;
+}
+
+html[data-theme="dark"] .ai-history-title-input {
+  background: #161618 !important;
+  border-color: rgba(10, 132, 255, 0.5) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .ai-history-card-scope {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(235, 235, 245, 0.72) !important;
+}
+
+/* ==============================================================================
+   11. 全部模态弹窗深度覆盖（用户配额 / 注册密钥 / 上传位置选择 / 安全 / 头像 / 冲突 / 分享 / 通用对话框）
+   ============================================================================== */
+
+/* 11.1 用户账号与配额步进器 (#userQuotasModal) */
+html[data-theme="dark"] .quota-select-inline {
+  background: #161618 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .quota-stepper {
+  background: #161618 !important;
+  border-color: rgba(10, 132, 255, 0.55) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .quota-stepper-input {
+  background: transparent !important;
+  color: #f5f5f7 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .quota-stepper-unit {
+  color: rgba(235, 235, 245, 0.72) !important;
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .quota-stepper-arrows {
+  background: #252528 !important;
+  border-left-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .quota-stepper-arrow {
+  background: #252528 !important;
+  color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .quota-stepper-arrow.up {
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .quota-stepper-arrow:hover {
+  background: rgba(10, 132, 255, 0.26) !important;
+  color: #64d2ff !important;
+}
+
+/* 11.2 注册密钥管理 (#registrationKeysModal) */
+html[data-theme="dark"] .registration-key-create,
+html[data-theme="dark"] .registration-key-result,
+html[data-theme="dark"] .registration-key-empty {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .registration-key-create strong,
+html[data-theme="dark"] .registration-key-list-header strong {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .registration-key-create p,
+html[data-theme="dark"] .registration-key-result span,
+html[data-theme="dark"] .registration-key-empty,
+html[data-theme="dark"] .registration-key-quota-row {
+  color: rgba(235, 235, 245, 0.68) !important;
+}
+
+html[data-theme="dark"] .registration-key-result strong {
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .registration-key-status.unused {
+  background: rgba(48, 209, 88, 0.18) !important;
+  border-color: rgba(48, 209, 88, 0.36) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="dark"] .registration-key-status.expired {
+  background: rgba(255, 214, 10, 0.16) !important;
+  border-color: rgba(255, 214, 10, 0.36) !important;
+  color: #ffd60a !important;
+}
+
+html[data-theme="dark"] .registration-key-status.disabled {
+  background: rgba(255, 69, 58, 0.16) !important;
+  border-color: rgba(255, 69, 58, 0.36) !important;
+  color: #ff6961 !important;
+}
+
+/* 11.3 上传位置与批量移动下拉选择器 (#uploadModal / #bulkMoveModal) */
+html[data-theme="dark"] .folder-combobox-button {
+  background: #161618 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .folder-combobox-button:hover {
+  border-color: rgba(10, 132, 255, 0.5) !important;
+}
+
+html[data-theme="dark"] .folder-combobox-label {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .folder-combobox-arrow {
+  background: #2c2c30 !important;
+}
+
+html[data-theme="dark"] .folder-combobox-arrow::before {
+  border-right-color: #e5e5ea !important;
+  border-bottom-color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .folder-combobox-button[aria-expanded="true"] .folder-combobox-arrow {
+  background: rgba(10, 132, 255, 0.26) !important;
+}
+
+html[data-theme="dark"] .folder-combobox-menu {
+  background: rgba(34, 34, 38, 0.98) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65) !important;
+}
+
+html[data-theme="dark"] .folder-combobox-option {
+  color: #f5f5f7 !important;
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .folder-combobox-option:hover,
+html[data-theme="dark"] .folder-combobox-option:focus-visible {
+  background: rgba(255, 255, 255, 0.09) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .folder-combobox-option.selected {
+  background: rgba(10, 132, 255, 0.24) !important;
+  color: #64d2ff !important;
+}
+
+/* 11.4 通用对话框 / OTA 更新 / 文件夹锁 / 开机自启 / AI 总结卡片 */
+html[data-theme="dark"] .dialog-modal-card,
+html[data-theme="dark"] .update-modal-card,
+html[data-theme="dark"] .user-avatar-card,
+html[data-theme="dark"] .user-security-card,
+html[data-theme="dark"] .admin-reset-user-card,
+html[data-theme="dark"] .conflict-modal-card,
+html[data-theme="dark"] .ai-summary-card {
+  background: rgba(28, 28, 30, 0.97) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  color: #f5f5f7 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 24px 64px rgba(0, 0, 0, 0.62) !important;
+}
+
+html[data-theme="dark"] .dialog-modal-card h2 {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .dialog-modal-card .modal-description {
+  color: rgba(235, 235, 245, 0.72) !important;
+}
+
+/* 11.5 头像设置弹窗 (#userAvatarModal) */
+html[data-theme="dark"] .avatar-action-btn.select-img {
+  background: rgba(10, 132, 255, 0.2) !important;
+  border-color: rgba(10, 132, 255, 0.42) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .avatar-action-btn.reset-default {
+  background: #2c2c30 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .avatar-action-btn.reset-default:hover {
+  background: rgba(255, 69, 58, 0.18) !important;
+  border-color: rgba(255, 69, 58, 0.42) !important;
+  color: #ff6961 !important;
+}
+
+/* 11.6 密码与安全 / 恢复密钥 / 注销账号弹窗 (#userSecurityModal) */
+html[data-theme="dark"] .security-segmented-control {
+  background: #161618 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .sec-segment-btn {
+  color: rgba(235, 235, 245, 0.62) !important;
+}
+
+html[data-theme="dark"] .sec-segment-btn:hover {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .sec-segment-btn.active {
+  background: #3a3a3e !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .sec-segment-btn.sec-tab-danger-btn:hover,
+html[data-theme="dark"] .sec-segment-btn.active.danger-active {
+  color: #ff6961 !important;
+}
+
+html[data-theme="dark"] .sec-account-badge-val {
+  background: rgba(10, 132, 255, 0.18) !important;
+  border-color: rgba(10, 132, 255, 0.36) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .recovery-hero-card {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .recovery-hero-icon-wrap {
+  background: rgba(10, 132, 255, 0.18) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .sec-active-tag {
+  background: rgba(48, 209, 88, 0.18) !important;
+  border-color: rgba(48, 209, 88, 0.36) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="dark"] .recovery-key-display-box,
+html[data-theme="dark"] .recovery-guide-box {
+  background: #161618 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .copy-key-pill-btn {
+  background: rgba(10, 132, 255, 0.2) !important;
+  border-color: rgba(10, 132, 255, 0.4) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .download-pill-btn {
+  background: rgba(20, 187, 176, 0.18) !important;
+  border-color: rgba(45, 212, 191, 0.4) !important;
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] .deregister-warning-card {
+  background: rgba(255, 69, 58, 0.14) !important;
+  border-color: rgba(255, 69, 58, 0.34) !important;
+  color: #ffb3ae !important;
+}
+
+html[data-theme="dark"] .deregister-checkbox-wrap {
+  background: rgba(255, 69, 58, 0.12) !important;
+  border-color: rgba(255, 69, 58, 0.28) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .deregister-checkbox-wrap:hover {
+  background: rgba(255, 69, 58, 0.2) !important;
+}
+
+html[data-theme="dark"] .tiny-icon:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 11.7 管理员重置用户密码弹窗 (#adminResetUserModal) */
+html[data-theme="dark"] .admin-reset-target-badge {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme="dark"] .admin-reset-target-badge .sec-badge-avatar,
+html[data-theme="dark"] .admin-reset-target-badge .sec-badge-name {
+  background: rgba(10, 132, 255, 0.18) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .admin-reset-target-badge .sec-badge-role {
+  background: #2c2c30 !important;
+  color: rgba(235, 235, 245, 0.8) !important;
+}
+
+html[data-theme="dark"] .admin-reset-input {
+  background: #161618 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .admin-reset-divider span {
+  background: #1c1c1e !important;
+  color: rgba(235, 235, 245, 0.56) !important;
+}
+
+/* 11.8 上传同名冲突弹窗 (#uploadConflictModal) */
+html[data-theme="dark"] .conflict-board {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .conflict-nav-arrow {
+  background: #2c2c30 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .conflict-nav-arrow:disabled {
+  background: #1c1c1e !important;
+  color: rgba(235, 235, 245, 0.28) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .conflict-action-card .action-card-icon {
+  background: #2f2f34 !important;
+  color: #e5e5ea !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.replace-action {
+  background: rgba(10, 132, 255, 0.14) !important;
+  border-color: rgba(10, 132, 255, 0.34) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.replace-action:hover {
+  background: rgba(10, 132, 255, 0.24) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.keep-both-action {
+  background: rgba(20, 187, 176, 0.14) !important;
+  border-color: rgba(45, 212, 191, 0.34) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.keep-both-action:hover {
+  background: rgba(20, 187, 176, 0.24) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.skip-action {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .conflict-action-card.skip-action:hover {
+  background: #323236 !important;
+}
+
+html[data-theme="dark"] .cancel-all-btn {
+  background: rgba(255, 69, 58, 0.16) !important;
+  border-color: rgba(255, 69, 58, 0.4) !important;
+  color: #ff6961 !important;
+}
+
+/* 11.9 外链分享与我的分享弹窗 (#shareModal / #mySharesModal) */
+html[data-theme="dark"] .share-link-group,
+html[data-theme="dark"] .my-share-card {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .share-link-badge.public {
+  background: rgba(10, 132, 255, 0.2) !important;
+  border-color: rgba(10, 132, 255, 0.4) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .share-link-badge.lan {
+  background: rgba(48, 209, 88, 0.18) !important;
+  border-color: rgba(48, 209, 88, 0.38) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="dark"] .share-link-hint,
+html[data-theme="dark"] .my-share-info small,
+html[data-theme="dark"] .share-batch-item-meta {
+  color: rgba(235, 235, 245, 0.64) !important;
+}
+
+html[data-theme="dark"] .my-share-info strong,
+html[data-theme="dark"] .share-batch-item-name {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .share-url-input {
+  background: #161618 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .share-copy-all-btn {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .share-copy-all-btn:hover {
+  background: #323236 !important;
+  border-color: rgba(10, 132, 255, 0.55) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .share-batch-item {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .share-batch-item:hover {
+  background: #303035 !important;
+}
+
+/* 11.10 表格 / PPT 幻灯片预览与侧栏/主区补充元素 */
+html[data-theme="dark"] .spreadsheet-preview,
+html[data-theme="dark"] .sheet-table-wrap {
+  background: #161618 !important;
+}
+
+html[data-theme="dark"] .sheet-tabs {
+  background: #222226 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .sheet-tabs button {
+  background: #2c2c30 !important;
+  color: rgba(235, 235, 245, 0.78) !important;
+}
+
+html[data-theme="dark"] .sheet-row-index {
+  background: #222226 !important;
+  color: rgba(235, 235, 245, 0.56) !important;
+}
+
+html[data-theme="dark"] .slide-card {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .slide-lines p {
+  background: #1c1c1f !important;
+  color: rgba(235, 235, 245, 0.86) !important;
+}
+
+html[data-theme="dark"] .zip-entry-row.is-folder:hover {
+  background: rgba(10, 132, 255, 0.16) !important;
+}
+
+html[data-theme="dark"] .sidebar-tool-tile,
+html[data-theme="dark"] .sidebar-starred-btn,
+html[data-theme="dark"] .back-nav-btn,
+html[data-theme="dark"] .search-scope-label {
+  background: #2c2c2e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+html[data-theme="dark"] .sidebar-tool-tile:hover,
+html[data-theme="dark"] .back-nav-btn:hover:not(:disabled) {
+  background: #3a3a3e !important;
+  border-color: rgba(10, 132, 255, 0.45) !important;
+}
+
+html[data-theme="dark"] .sidebar-starred-btn:hover {
+  background: rgba(255, 214, 10, 0.14) !important;
+  border-color: rgba(255, 214, 10, 0.4) !important;
+}
+
+html[data-theme="dark"] .back-nav-btn:disabled {
+  background: #222224 !important;
+  color: rgba(235, 235, 245, 0.28) !important;
+}
+
+html[data-theme="dark"] .sidebar-user-dock.popover-open {
+  background: #2e2e32 !important;
+  border-color: rgba(10, 132, 255, 0.45) !important;
+}
+
+html[data-theme="dark"] .user-dock-role.role-user,
+html[data-theme="dark"] .popover-role-tag.role-user {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(235, 235, 245, 0.8) !important;
+}
+
+html[data-theme="dark"] .sidebar-logout-btn {
+  background: rgba(255, 69, 58, 0.16) !important;
+  border-color: rgba(255, 69, 58, 0.36) !important;
+  color: #ff6961 !important;
+}
+
+html[data-theme="dark"] .access-status-badge.status-lan {
+  background: rgba(48, 209, 88, 0.16) !important;
+  border-color: rgba(48, 209, 88, 0.36) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="dark"] .access-status-badge.status-local {
+  background: rgba(10, 132, 255, 0.18) !important;
+  border-color: rgba(10, 132, 255, 0.38) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .health-box {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .health-box.ok {
+  background: rgba(48, 209, 88, 0.14) !important;
+  border-color: rgba(48, 209, 88, 0.34) !important;
+}
+
+html[data-theme="dark"] .health-box.warn {
+  background: rgba(255, 214, 10, 0.14) !important;
+  border-color: rgba(255, 214, 10, 0.34) !important;
+}
+
+html[data-theme="dark"] .drop-overlay {
+  background: rgba(20, 24, 32, 0.94) !important;
+  border-color: rgba(10, 132, 255, 0.55) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .desktop-context-menu {
+  background: rgba(38, 38, 42, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .row-action-icon-btn.restore-action-btn:hover {
+  background: rgba(48, 209, 88, 0.2) !important;
+  border-color: rgba(48, 209, 88, 0.48) !important;
+  color: #30d158 !important;
+}
+
+html[data-theme="dark"] .row-action-icon-btn.lock-action-btn.is-unlocked:hover,
+html[data-theme="dark"] .modal-action-icon-btn.download-action-btn:hover {
+  background: #3a3a40 !important;
+  border-color: rgba(10, 132, 255, 0.5) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .file-grid-actions .row-action-icon-btn.more-action-btn[aria-expanded="true"] {
+  background: rgba(10, 132, 255, 0.24) !important;
+  border-color: rgba(10, 132, 255, 0.55) !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .row-select,
+html[data-theme="dark"] .deregister-checkbox-label input[type="checkbox"],
+html[data-theme="dark"] .conflict-apply-all-label input[type="checkbox"] {
+  background: #2c2c2f !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+html[data-theme="dark"] .row-select:checked,
+html[data-theme="dark"] .deregister-checkbox-label input[type="checkbox"]:checked,
+html[data-theme="dark"] .conflict-apply-all-label input[type="checkbox"]:checked {
+  background: #0a84ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23ffffff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.2L5 8.7L9.6 3.5'/%3E%3C/svg%3E") center / 11px 11px no-repeat !important;
+  border-color: #0a84ff !important;
+}
+
+
+/* 11.11 安全恢复密钥细节文字 & 开机自启弹窗内联样式深色覆盖 */
+html[data-theme="dark"] .recovery-key-display-box *,
+html[data-theme="dark"] .recovery-key-code,
+html[data-theme="dark"] #secRecoveryKeyValue {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .recovery-guide-item,
+html[data-theme="dark"] .recovery-guide-item span {
+  color: rgba(235, 235, 245, 0.8) !important;
+}
+
+html[data-theme="dark"] .recovery-regen-title {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .recovery-regen-tip {
+  color: rgba(235, 235, 245, 0.6) !important;
+}
+
+html[data-theme="dark"] .recovery-regen-bar {
+  border-top-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .deregister-warning-list,
+html[data-theme="dark"] .deregister-warning-list li {
+  color: rgba(255, 214, 210, 0.9) !important;
+}
+
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="#f8fafc"],
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="rgb(248, 250, 252)"] {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme="dark"] #autostartModal #autostartStatusIconWrap {
+  background: #2f2f34 !important;
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] #autostartModal #autostartStatusTitle {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] #autostartModal #autostartStatusSub {
+  color: rgba(235, 235, 245, 0.64) !important;
+}
+
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="#eff6ff"],
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="rgb(239, 246, 255)"] {
+  background: rgba(10, 132, 255, 0.14) !important;
+  border-color: rgba(10, 132, 255, 0.34) !important;
+  color: rgba(215, 236, 255, 0.92) !important;
+}
+
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="border-top"] {
+  border-top-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] #autostartModal .autostart-modal-card div[style*="#475569"] {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] #autostartModal .autostart-modal-card p[style*="#64748b"] {
+  color: rgba(235, 235, 245, 0.64) !important;
+}
+
+html[data-theme="dark"] #autostartModal #stopServerNowBtn {
+  background: rgba(255, 69, 58, 0.14) !important;
+  border-color: rgba(255, 69, 58, 0.42) !important;
+  color: #ff6961 !important;
+}
+
+html[data-theme="dark"] #autostartModal #stopServerNowBtn:hover {
+  background: rgba(255, 69, 58, 0.24) !important;
+}
+
+html[data-theme="dark"] #updateAvailLatestVer {
+  color: #64d2ff !important;
 }

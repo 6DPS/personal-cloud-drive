@@ -1159,6 +1159,41 @@ function pulseAiSendButton() {
   }, 170);
 }
 
+function unlockFileGridAfterDrawerTransition() {
+  if (!fileGrid) return;
+  fileGrid.style.width = "";
+  fileGrid.classList.remove("grid-drawer-settling");
+}
+
+function lockFileGridForDrawerTransition(targetDocked) {
+  if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
+    unlockFileGridAfterDrawerTransition();
+    return;
+  }
+  const panelEl = driveView?.querySelector(".file-panel");
+  const contentEl = driveView?.querySelector(".content");
+  const sidebarEl = driveView?.querySelector(".sidebar");
+  if (!panelEl || !contentEl) return;
+
+  const csContent = window.getComputedStyle(contentEl);
+  const currentMarginRight = parseFloat(csContent.marginRight) || 0;
+  const fullClientWidth = Math.max(320, Math.round(panelEl.offsetWidth - 2 + currentMarginRight));
+
+  let targetWidth = fullClientWidth;
+  if (targetDocked) {
+    const rawVar = getComputedStyle(document.documentElement).getPropertyValue("--ai-dock-width").trim();
+    const aiPanel = aiDrawer?.querySelector(".ai-drawer");
+    const dockWidth = parseFloat(rawVar) || Math.round(aiPanel?.getBoundingClientRect().width || 580);
+    const scrollbarReserve = panelEl.offsetWidth - panelEl.clientWidth <= 2 ? 6 : 0;
+    targetWidth = Math.max(300, Math.round(fullClientWidth - (dockWidth + 8) - scrollbarReserve));
+  }
+
+  fileGrid.style.width = `${targetWidth}px`;
+  fileGrid.classList.remove("grid-drawer-settling");
+  void fileGrid.offsetWidth;
+  fileGrid.classList.add("grid-drawer-settling");
+}
+
 function cancelAiDrawerPendingTimers() {
   window.clearTimeout(aiDrawerCloseTimer);
   window.clearTimeout(aiDrawerFocusTimer);
@@ -1198,8 +1233,10 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
     driveView?.classList.add("ai-drawer-docked");
     document.body.classList.add("ai-drawer-open");
     restoreSavedAiDrawerWidth();
+    lockFileGridForDrawerTransition(true);
     aiDrawerAnimTimer = window.setTimeout(() => {
       document.body.classList.remove("ai-drawer-animating");
+      unlockFileGridAfterDrawerTransition();
     }, 300);
   };
 
@@ -1345,12 +1382,14 @@ function closeAiDrawer() {
   driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
   aiDrawer?.classList.remove("ai-drawer-narrow", "ai-drawer-preopen");
   document.body.classList.remove("ai-drawer-open");
+  lockFileGridForDrawerTransition(false);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
   aiDrawerCloseTimer = window.setTimeout(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
     document.body.classList.remove("ai-drawer-animating");
+    unlockFileGridAfterDrawerTransition();
   }, 310);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
   aiDrawerPersistTimer = window.setTimeout(() => {
@@ -9126,6 +9165,7 @@ aiDrawerResizeHandle?.addEventListener("pointerdown", (event) => {
     lastWidth: startWidth,
   };
   aiDrawerPendingWidth = startWidth;
+  unlockFileGridAfterDrawerTransition();
   document.body.classList.add("ai-drawer-resizing");
   try {
     aiDrawerResizeHandle.setPointerCapture?.(event.pointerId);
@@ -9161,6 +9201,10 @@ window.addEventListener("pointercancel", () => {
 
 window.addEventListener("blur", () => {
   if (aiDrawerResizeDrag) endAiDrawerResizeDrag({ persist: true });
+});
+
+window.addEventListener("resize", () => {
+  unlockFileGridAfterDrawerTransition();
 });
 
 aiDrawerResizeHandle?.addEventListener("dblclick", (event) => {

@@ -8808,8 +8808,15 @@ select:focus {
     opacity: 0;
   }
 
-  body.ai-drawer-animating .file-panel tbody tr {
+  body.ai-drawer-animating .file-panel tbody tr,
+  body.ai-drawer-animating .file-grid-card,
+  body.ai-drawer-resizing .file-grid-card {
     transition: none !important;
+  }
+
+  body.ai-drawer-animating .file-grid-card,
+  body.ai-drawer-resizing .file-grid-card {
+    pointer-events: none !important;
   }
 
   /* 抽屉打开时顶部与搜索栏自适应防拥挤 */
@@ -11987,6 +11994,23 @@ tbody tr.context-active-row {
   align-content: start;
   width: 100%;
   box-sizing: border-box;
+  contain: layout style;
+}
+
+.file-grid.grid-drawer-settling {
+  animation: fileGridDrawerSettle 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+@keyframes fileGridDrawerSettle {
+  from {
+    opacity: 0.62;
+    transform: translate3d(0, 3px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 .file-grid.hidden {
@@ -12012,6 +12036,7 @@ tbody tr.context-active-row {
   box-shadow: 0 2px 8px rgba(30, 41, 59, 0.04);
   cursor: pointer;
   user-select: none;
+  contain: layout style paint;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease;
 }
 
