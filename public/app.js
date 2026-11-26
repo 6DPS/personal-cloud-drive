@@ -1159,22 +1159,53 @@ function pulseAiSendButton() {
   }, 170);
 }
 
-function unlockFileGridAfterDrawerTransition() {
+function clearFileGridFlipCardStyles() {
   if (!fileGrid) return;
-  fileGrid.style.width = "";
-  fileGrid.classList.remove("grid-drawer-settling");
+  const cards = fileGrid.querySelectorAll(".file-grid-card.grid-flip-invert, .file-grid-card.grid-flip-playing");
+  for (const card of cards) {
+    card.classList.remove("grid-flip-invert", "grid-flip-playing");
+    card.style.transform = "";
+    card.style.transformOrigin = "";
+  }
 }
 
-function lockFileGridForDrawerTransition(targetDocked) {
+function unlockFileGridAfterDrawerTransition() {
+  clearFileGridFlipCardStyles();
+  if (!fileGrid) return;
+  fileGrid.style.width = "";
+}
+
+function captureFileGridFirstRects() {
+  if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
+    return null;
+  }
+  const panelEl = driveView?.querySelector(".file-panel");
+  if (!panelEl) return null;
+  const cards = Array.from(fileGrid.querySelectorAll(".file-grid-card"));
+  if (!cards.length) return null;
+
+  const firstMap = new Map();
+  for (const card of cards) {
+    const r = card.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) continue;
+    firstMap.set(card, { left: r.left, top: r.top, width: r.width, height: r.height });
+  }
+  return firstMap.size ? firstMap : null;
+}
+
+function animateFileGridForDrawerTransition(targetDocked, firstMap) {
   if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
     unlockFileGridAfterDrawerTransition();
     return;
   }
   const panelEl = driveView?.querySelector(".file-panel");
   const contentEl = driveView?.querySelector(".content");
-  const sidebarEl = driveView?.querySelector(".sidebar");
   if (!panelEl || !contentEl) return;
 
+  // Clear any in-flight FLIP transforms so LAST measurement reflects exact target layout
+  clearFileGridFlipCardStyles();
+
+  // Compute target final grid width ONCE so .file-grid does 0 per-frame reflows during slide
   const csContent = window.getComputedStyle(contentEl);
   const currentMarginRight = parseFloat(csContent.marginRight) || 0;
   const fullClientWidth = Math.max(320, Math.round(panelEl.offsetWidth - 2 + currentMarginRight));
@@ -1187,11 +1218,51 @@ function lockFileGridForDrawerTransition(targetDocked) {
     const scrollbarReserve = panelEl.offsetWidth - panelEl.clientWidth <= 2 ? 6 : 0;
     targetWidth = Math.max(300, Math.round(fullClientWidth - (dockWidth + 8) - scrollbarReserve));
   }
-
   fileGrid.style.width = `${targetWidth}px`;
-  fileGrid.classList.remove("grid-drawer-settling");
+
+  if (!firstMap || firstMap.size === 0) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  // Measure LAST rects in one batch & INVERT visible/near-visible cards back to FIRST positions/sizes
+  const panelRect = panelEl.getBoundingClientRect();
+  const viewTop = panelRect.top - 260;
+  const viewBottom = panelRect.bottom + 260;
+  const animatedCards = [];
+
+  for (const [card, first] of firstMap.entries()) {
+    if (!card.isConnected) continue;
+    const last = card.getBoundingClientRect();
+    if (last.width <= 0 || last.height <= 0) continue;
+
+    const visibleBefore = first.top <= viewBottom && first.top + first.height >= viewTop;
+    const visibleAfter = last.top <= viewBottom && last.bottom >= viewTop;
+    if (!visibleBefore && !visibleAfter) continue;
+
+    const dx = first.left - last.left;
+    const dy = first.top - last.top;
+    const sx = first.width / last.width;
+    const sy = first.height / last.height;
+    const scale = Math.max(0.65, Math.min(1.5, sx));
+
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(scale - 1) < 0.004 && Math.abs(sy - 1) < 0.004) {
+      continue;
+    }
+
+    card.classList.add("grid-flip-invert");
+    card.style.transformOrigin = "top left";
+    card.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+    animatedCards.push(card);
+  }
+
+  if (!animatedCards.length) return;
+
+  // Commit inverted frame, then PLAY synchronized 320ms GPU glide & dynamic scale
   void fileGrid.offsetWidth;
-  fileGrid.classList.add("grid-drawer-settling");
+  for (const card of animatedCards) {
+    card.classList.remove("grid-flip-invert");
+    card.classList.add("grid-flip-playing");
+    card.style.transform = "translate3d(0, 0, 0) scale(1)";
+  }
 }
 
 function cancelAiDrawerPendingTimers() {
@@ -1228,16 +1299,17 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   syncAiPromptSendState();
 
   const launchDockedSlide = () => {
+    const firstMap = captureFileGridFirstRects();
     aiDrawer?.classList.remove("ai-drawer-preopen");
     document.body.classList.add("ai-drawer-animating");
     driveView?.classList.add("ai-drawer-docked");
     document.body.classList.add("ai-drawer-open");
     restoreSavedAiDrawerWidth();
-    lockFileGridForDrawerTransition(true);
+    animateFileGridForDrawerTransition(true, firstMap);
     aiDrawerAnimTimer = window.setTimeout(() => {
       document.body.classList.remove("ai-drawer-animating");
       unlockFileGridAfterDrawerTransition();
-    }, 300);
+    }, 340);
   };
 
   if (isDesktopAiDockViewport()) {
@@ -1288,7 +1360,7 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   }
 
   // Schedule auto-resize and focus AFTER the 280ms GPU slide completes smoothly
-  const focusDelay = (!wasHidden && !wasClosing) ? 80 : 310;
+  const focusDelay = (!wasHidden && !wasClosing) ? 80 : 350;
   aiDrawerFocusTimer = window.setTimeout(() => {
     if (!document.body.classList.contains("ai-drawer-open")) return;
     autoResizeAiPromptInput();
@@ -1378,11 +1450,12 @@ function closeAiDrawer() {
   }
   aiPromptInput?.blur();
   endAiDrawerResizeDrag({ persist: false });
+  const firstMap = captureFileGridFirstRects();
   document.body.classList.add("ai-drawer-animating");
   driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
   aiDrawer?.classList.remove("ai-drawer-narrow", "ai-drawer-preopen");
   document.body.classList.remove("ai-drawer-open");
-  lockFileGridForDrawerTransition(false);
+  animateFileGridForDrawerTransition(false, firstMap);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
   aiDrawerCloseTimer = window.setTimeout(() => {
@@ -1390,7 +1463,7 @@ function closeAiDrawer() {
     aiDrawer.classList.remove("closing");
     document.body.classList.remove("ai-drawer-animating");
     unlockFileGridAfterDrawerTransition();
-  }, 310);
+  }, 350);
   setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
   aiDrawerPersistTimer = window.setTimeout(() => {
     archiveCurrentAiSession();

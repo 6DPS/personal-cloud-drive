@@ -8735,9 +8735,9 @@ select:focus {
 }
 
 @media (min-width: 901px) {
-  /* 平滑流体过渡：与右侧抽屉保持完全一致的 280ms 曲线，实现同频零抖动推入/退回 */
+  /* 平滑流体过渡：与右侧抽屉、网格卡片 FLIP 保持完全一致的 320ms 曲线，实现同频零抖动推入/退回 */
   .content {
-    transition: margin-right 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: margin-right 320ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: margin-right;
     contain: layout style;
   }
@@ -8775,8 +8775,8 @@ select:focus {
     -webkit-backface-visibility: hidden;
     contain: layout style paint;
     transition:
-      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* 首帧挂载准备态：先完成布局与 GPU 纹理上传，下一帧再启动同频滑入，杜绝首帧掉帧抖动 */
@@ -8809,7 +8809,11 @@ select:focus {
   }
 
   body.ai-drawer-animating .file-panel tbody tr,
-  body.ai-drawer-animating .file-grid-card,
+  body.ai-drawer-resizing .file-grid-card {
+    transition: none !important;
+  }
+
+  body.ai-drawer-animating .file-grid-card:not(.grid-flip-playing),
   body.ai-drawer-resizing .file-grid-card {
     transition: none !important;
   }
@@ -11997,19 +12001,19 @@ tbody tr.context-active-row {
   contain: layout style;
 }
 
-.file-grid.grid-drawer-settling {
-  animation: fileGridDrawerSettle 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: opacity, transform;
+.file-grid-card.grid-flip-invert {
+  transition: none !important;
+  will-change: transform;
 }
 
-@keyframes fileGridDrawerSettle {
-  from {
-    opacity: 0.62;
-    transform: translate3d(0, 3px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
+.file-grid-card.grid-flip-playing {
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-grid-card.grid-flip-playing {
+    transition: none !important;
   }
 }
 
