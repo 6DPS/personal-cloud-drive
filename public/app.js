@@ -10052,6 +10052,12 @@ function clearBrowseViewSwitchAnim() {
     if (!el) continue;
     el.classList.remove("view-switch-out", "view-switch-enter", "view-switch-enter-active");
   }
+  if (fileGrid) {
+    fileGrid.querySelectorAll(".grid-card-stagger-in").forEach((card) => {
+      card.classList.remove("grid-card-stagger-in");
+      card.style.removeProperty("--stagger-delay");
+    });
+  }
 }
 
 function setBrowseViewMode(mode) {
@@ -10081,6 +10087,24 @@ function setBrowseViewMode(mode) {
     outgoingEl.classList.remove("view-switch-out");
     renderRows({ noAnimation: true, fromViewSwitch: true });
     if (dropZone) dropZone.scrollTop = 0;
+
+    if (next === "grid" && fileGrid) {
+      // A + 轻微 B 融合版：切到网格时对首屏前 18 张卡片施加极轻 11ms 错峰落位，其余同步就位
+      const cards = fileGrid.querySelectorAll(".file-grid-card");
+      const maxStagger = Math.min(cards.length, 18);
+      for (let i = 0; i < maxStagger; i += 1) {
+        cards[i].style.setProperty("--stagger-delay", `${i * 11}ms`);
+        cards[i].classList.add("grid-card-stagger-in");
+      }
+      const totalMs = Math.max(240, (maxStagger - 1) * 11 + 245);
+      browseViewCleanupTimer = window.setTimeout(() => {
+        browseViewCleanupTimer = 0;
+        clearBrowseViewSwitchAnim();
+      }, totalMs);
+      return;
+    }
+
+    // 切回列表：纯方案 A 整体柔和舒展浮现
     incomingEl.classList.add("view-switch-enter");
     void incomingEl.offsetWidth;
     browseViewSwitchRaf = requestAnimationFrame(() => {
