@@ -38,6 +38,9 @@ html[data-theme="dark"] *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+html[data-theme="dark"] .sidebar::-webkit-scrollbar {
+  width: 5px;
+}
 html[data-theme="dark"] *::-webkit-scrollbar-track {
   background: transparent;
 }

@@ -450,7 +450,7 @@ select {
 
 .access-box.collapsible:not(.collapsed) {
   padding: 12px 14px 14px 14px !important;
-  gap: 9px !important;
+  gap: 0 !important;
 }
 
 .access-box-header {
@@ -625,7 +625,7 @@ select {
               opacity 0.22s ease,
               margin-top 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 1;
-  margin-top: 4px;
+  margin-top: 10px;
 }
 
 .access-box.collapsible.collapsed .access-box-body {
@@ -641,11 +641,6 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.access-box.collapsible:not(.collapsed) .access-box-body-inner {
-  margin: -2px -10px -10px;
-  padding: 2px 10px 10px;
 }
 
 .access-links {
@@ -11394,6 +11389,7 @@ tbody tr.context-active-row {
    ============================================================================== */
 .sidebar {
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
   scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
 }
 

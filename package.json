@@ -1,8 +1,8 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "changelog": [
-    "精简左侧「访问来源」展开面板：移除本地物理「存储位置」路径显示与对应分隔线，界面更清爽且避免暴露服务器磁盘目录，其余功能与布局保持完全不变"
+    "彻底消除左侧「访问来源」下拉展开末端抖动：为左侧边栏启用 scrollbar-gutter: stable 固定预留 5px 滚动条槽位，避免展开超屏瞬间弹出滚动条把文字挤窄重排；同时消除折叠面板内非过渡的 gap 与负外边距跳变，全程 0px 横向偏移顺滑展开"
   ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
