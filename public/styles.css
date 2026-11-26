@@ -8808,13 +8808,12 @@ select:focus {
     opacity: 0;
   }
 
-  body.ai-drawer-animating .file-panel tbody tr,
-  body.ai-drawer-resizing .file-grid-card {
+  body.ai-drawer-animating .file-panel tbody tr {
     transition: none !important;
   }
 
   body.ai-drawer-animating .file-grid-card:not(.grid-flip-playing),
-  body.ai-drawer-resizing .file-grid-card {
+  body.ai-drawer-resizing .file-grid-card:not(.grid-flip-drag) {
     transition: none !important;
   }
 
@@ -12011,8 +12010,14 @@ tbody tr.context-active-row {
   will-change: transform;
 }
 
+.file-grid-card.grid-flip-drag {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .file-grid-card.grid-flip-playing {
+  .file-grid-card.grid-flip-playing,
+  .file-grid-card.grid-flip-drag {
     transition: none !important;
   }
 }
@@ -12021,10 +12026,13 @@ tbody tr.context-active-row {
   display: none !important;
 }
 
-.drive-shell.ai-drawer-docked.ai-content-tight .file-grid {
-  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
-  gap: 10px;
-  padding: 10px 10px 16px;
+/* 保持单调列数递减，避免拖拽跨过 620px 时出现 3 列反跳 4 小列的生硬抖动 */
+@media (max-width: 900px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+    gap: 10px;
+    padding: 10px 10px 16px;
+  }
 }
 
 .file-grid-card {

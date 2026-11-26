@@ -1159,11 +1159,15 @@ function pulseAiSendButton() {
   }, 170);
 }
 
+let gridDragFlipTimer = 0;
+
 function clearFileGridFlipCardStyles() {
+  window.clearTimeout(gridDragFlipTimer);
+  gridDragFlipTimer = 0;
   if (!fileGrid) return;
-  const cards = fileGrid.querySelectorAll(".file-grid-card.grid-flip-invert, .file-grid-card.grid-flip-playing");
+  const cards = fileGrid.querySelectorAll(".file-grid-card.grid-flip-invert, .file-grid-card.grid-flip-playing, .file-grid-card.grid-flip-drag");
   for (const card of cards) {
-    card.classList.remove("grid-flip-invert", "grid-flip-playing");
+    card.classList.remove("grid-flip-invert", "grid-flip-playing", "grid-flip-drag");
     card.style.transform = "";
     card.style.transformOrigin = "";
   }
@@ -1175,12 +1179,18 @@ function unlockFileGridAfterDrawerTransition() {
   fileGrid.style.width = "";
 }
 
+function estimateGridColumnCount(panelClientWidth) {
+  const inner = Math.max(168, (Number(panelClientWidth) || 0) - 32);
+  return Math.max(1, Math.floor((inner + 14) / (168 + 14)));
+}
+
 function captureFileGridFirstRects() {
   if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
     return null;
   }
   const panelEl = driveView?.querySelector(".file-panel");
   if (!panelEl) return null;
+  const panelRect = panelEl.getBoundingClientRect();
   const cards = Array.from(fileGrid.querySelectorAll(".file-grid-card"));
   if (!cards.length) return null;
 
@@ -1188,48 +1198,29 @@ function captureFileGridFirstRects() {
   for (const card of cards) {
     const r = card.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
-    firstMap.set(card, { left: r.left, top: r.top, width: r.width, height: r.height });
+    firstMap.set(card, {
+      relLeft: r.left - panelRect.left,
+      relTop: r.top - panelRect.top,
+      top: r.top,
+      height: r.height,
+      width: r.width,
+    });
   }
-  return firstMap.size ? firstMap : null;
+  return firstMap.size ? { firstMap, panelHeight: panelRect.height } : null;
 }
 
-function animateFileGridForDrawerTransition(targetDocked, firstMap) {
-  if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
-    unlockFileGridAfterDrawerTransition();
-    return;
-  }
+function playFileGridCardsFlip(firstSnap, playClassName) {
+  if (!fileGrid || !firstSnap || !firstSnap.firstMap || firstSnap.firstMap.size === 0) return [];
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return [];
   const panelEl = driveView?.querySelector(".file-panel");
-  const contentEl = driveView?.querySelector(".content");
-  if (!panelEl || !contentEl) return;
+  if (!panelEl) return [];
 
-  // Clear any in-flight FLIP transforms so LAST measurement reflects exact target layout
-  clearFileGridFlipCardStyles();
-
-  // Compute target final grid width ONCE so .file-grid does 0 per-frame reflows during slide
-  const csContent = window.getComputedStyle(contentEl);
-  const currentMarginRight = parseFloat(csContent.marginRight) || 0;
-  const fullClientWidth = Math.max(320, Math.round(panelEl.offsetWidth - 2 + currentMarginRight));
-
-  let targetWidth = fullClientWidth;
-  if (targetDocked) {
-    const rawVar = getComputedStyle(document.documentElement).getPropertyValue("--ai-dock-width").trim();
-    const aiPanel = aiDrawer?.querySelector(".ai-drawer");
-    const dockWidth = parseFloat(rawVar) || Math.round(aiPanel?.getBoundingClientRect().width || 580);
-    const scrollbarReserve = panelEl.offsetWidth - panelEl.clientWidth <= 2 ? 6 : 0;
-    targetWidth = Math.max(300, Math.round(fullClientWidth - (dockWidth + 8) - scrollbarReserve));
-  }
-  fileGrid.style.width = `${targetWidth}px`;
-
-  if (!firstMap || firstMap.size === 0) return;
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  // Measure LAST rects in one batch & INVERT visible/near-visible cards back to FIRST positions/sizes
-  const panelRect = panelEl.getBoundingClientRect();
-  const viewTop = panelRect.top - 260;
-  const viewBottom = panelRect.bottom + 260;
+  const lastPanelRect = panelEl.getBoundingClientRect();
+  const viewTop = lastPanelRect.top - 260;
+  const viewBottom = lastPanelRect.bottom + 260;
   const animatedCards = [];
 
-  for (const [card, first] of firstMap.entries()) {
+  for (const [card, first] of firstSnap.firstMap.entries()) {
     if (!card.isConnected) continue;
     const last = card.getBoundingClientRect();
     if (last.width <= 0 || last.height <= 0) continue;
@@ -1238,13 +1229,12 @@ function animateFileGridForDrawerTransition(targetDocked, firstMap) {
     const visibleAfter = last.top <= viewBottom && last.bottom >= viewTop;
     if (!visibleBefore && !visibleAfter) continue;
 
-    const dx = first.left - last.left;
-    const dy = first.top - last.top;
+    const dx = first.relLeft - (last.left - lastPanelRect.left);
+    const dy = first.relTop - (last.top - lastPanelRect.top);
     const sx = first.width / last.width;
-    const sy = first.height / last.height;
     const scale = Math.max(0.65, Math.min(1.5, sx));
 
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(scale - 1) < 0.004 && Math.abs(sy - 1) < 0.004) {
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(scale - 1) < 0.004) {
       continue;
     }
 
@@ -1254,15 +1244,63 @@ function animateFileGridForDrawerTransition(targetDocked, firstMap) {
     animatedCards.push(card);
   }
 
-  if (!animatedCards.length) return;
+  return animatedCards;
+}
 
-  // Commit inverted frame, then PLAY synchronized 320ms GPU glide & dynamic scale
-  void fileGrid.offsetWidth;
+function animateFileGridForDrawerTransition(targetDocked, firstSnap, prevMarginRight = 0) {
+  if (!fileGrid || fileGrid.classList.contains("hidden") || !isDesktopAiDockViewport()) {
+    unlockFileGridAfterDrawerTransition();
+    return;
+  }
+  const panelEl = driveView?.querySelector(".file-panel");
+  const contentEl = driveView?.querySelector(".content");
+  if (!panelEl || !contentEl) return;
+
+  // 1. Clear prior FLIP styles & inline width so we measure the 100% REAL final layout (0.00px error!)
+  clearFileGridFlipCardStyles();
+  fileGrid.style.width = "";
+
+  // 2. Synchronously snap .content to its true CSS final margin-right for 1 microsecond to read exactFinalWidth
+  contentEl.style.transition = "none";
+  contentEl.style.removeProperty("margin-right");
+  const exactFinalWidth = panelEl.clientWidth;
+
+  // 3. Lock .file-grid to exactFinalWidth so it performs 0 reflows during .content's 320ms slide
+  if (exactFinalWidth >= 240) {
+    fileGrid.style.width = `${exactFinalWidth}px`;
+  }
+
+  // 4. Measure LAST card positions at exactFinalWidth and prepare INVERT transforms
+  const animatedCards = playFileGridCardsFlip(firstSnap, "grid-flip-playing");
+
+  // 5. Restore .content back to prevMarginRight (no transition), flush 1 frame, then start BOTH glides together!
+  contentEl.style.setProperty("margin-right", `${prevMarginRight}px`, "important");
+  void contentEl.offsetWidth;
+
+  contentEl.style.transition = "";
+  contentEl.style.removeProperty("margin-right");
   for (const card of animatedCards) {
     card.classList.remove("grid-flip-invert");
     card.classList.add("grid-flip-playing");
     card.style.transform = "translate3d(0, 0, 0) scale(1)";
   }
+}
+
+function runLiveDragColumnFlip(firstSnap) {
+  if (!firstSnap || !fileGrid) return;
+  const animatedCards = playFileGridCardsFlip(firstSnap, "grid-flip-drag");
+  if (!animatedCards.length) return;
+  void fileGrid.offsetWidth;
+  for (const card of animatedCards) {
+    card.classList.remove("grid-flip-invert");
+    card.classList.add("grid-flip-drag");
+    card.style.transform = "translate3d(0, 0, 0) scale(1)";
+  }
+  window.clearTimeout(gridDragFlipTimer);
+  gridDragFlipTimer = window.setTimeout(() => {
+    gridDragFlipTimer = 0;
+    clearFileGridFlipCardStyles();
+  }, 240);
 }
 
 function cancelAiDrawerPendingTimers() {
@@ -1299,17 +1337,19 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
   syncAiPromptSendState();
 
   const launchDockedSlide = () => {
-    const firstMap = captureFileGridFirstRects();
+    const contentEl = driveView?.querySelector(".content");
+    const prevMarginRight = contentEl ? (parseFloat(window.getComputedStyle(contentEl).marginRight) || 0) : 0;
+    const firstSnap = captureFileGridFirstRects();
     aiDrawer?.classList.remove("ai-drawer-preopen");
     document.body.classList.add("ai-drawer-animating");
     driveView?.classList.add("ai-drawer-docked");
     document.body.classList.add("ai-drawer-open");
     restoreSavedAiDrawerWidth();
-    animateFileGridForDrawerTransition(true, firstMap);
+    animateFileGridForDrawerTransition(true, firstSnap, prevMarginRight);
     aiDrawerAnimTimer = window.setTimeout(() => {
       document.body.classList.remove("ai-drawer-animating");
       unlockFileGridAfterDrawerTransition();
-    }, 340);
+    }, 350);
   };
 
   if (isDesktopAiDockViewport()) {
@@ -1450,12 +1490,14 @@ function closeAiDrawer() {
   }
   aiPromptInput?.blur();
   endAiDrawerResizeDrag({ persist: false });
-  const firstMap = captureFileGridFirstRects();
+  const contentEl = driveView?.querySelector(".content");
+  const prevMarginRight = contentEl ? (parseFloat(window.getComputedStyle(contentEl).marginRight) || 0) : 0;
+  const firstSnap = captureFileGridFirstRects();
   document.body.classList.add("ai-drawer-animating");
   driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
   aiDrawer?.classList.remove("ai-drawer-narrow", "ai-drawer-preopen");
   document.body.classList.remove("ai-drawer-open");
-  animateFileGridForDrawerTransition(false, firstMap);
+  animateFileGridForDrawerTransition(false, firstSnap, prevMarginRight);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
   aiDrawerCloseTimer = window.setTimeout(() => {
@@ -9125,7 +9167,7 @@ function getAiDrawerWidthBounds() {
   return { minWidth, maxWidth, sidebarWidth };
 }
 
-function syncAiDockedContentDensity(explicitDrawerWidth = null) {
+function syncAiDockedContentDensity(explicitDrawerWidth = null, cachedSidebarWidth = null) {
   if (!driveView) return;
   if (!driveView.classList.contains("ai-drawer-docked") || !isDesktopAiDockViewport()) {
     driveView.classList.remove("ai-content-compact", "ai-content-tight");
@@ -9133,7 +9175,9 @@ function syncAiDockedContentDensity(explicitDrawerWidth = null) {
   }
   let contentWidth = 0;
   if (Number.isFinite(explicitDrawerWidth)) {
-    const { sidebarWidth } = getAiDrawerWidthBounds();
+    const sidebarWidth = Number.isFinite(cachedSidebarWidth)
+      ? cachedSidebarWidth
+      : getAiDrawerWidthBounds().sidebarWidth;
     contentWidth = Math.max(0, window.innerWidth - sidebarWidth - explicitDrawerWidth - 8);
   } else {
     const contentEl = driveView.querySelector(".content");
@@ -9147,9 +9191,10 @@ function syncAiDockedContentDensity(explicitDrawerWidth = null) {
   aiDrawer?.classList.toggle("ai-drawer-narrow", effectiveDrawerWidth > 0 && effectiveDrawerWidth < 430);
 }
 
-function applyAiDrawerWidth(rawWidth, { persist = false } = {}) {
+function applyAiDrawerWidth(rawWidth, { persist = false, cachedBounds = null } = {}) {
   if (!isDesktopAiDockViewport()) return null;
-  const { minWidth, maxWidth } = getAiDrawerWidthBounds();
+  const bounds = cachedBounds || getAiDrawerWidthBounds();
+  const { minWidth, maxWidth, sidebarWidth } = bounds;
   const clamped = Math.round(Math.min(maxWidth, Math.max(minWidth, Number(rawWidth) || minWidth)));
   document.documentElement.style.setProperty("--ai-dock-width", `${clamped}px`);
   if (aiDrawerResizeHandle) {
@@ -9157,7 +9202,7 @@ function applyAiDrawerWidth(rawWidth, { persist = false } = {}) {
     aiDrawerResizeHandle.setAttribute("aria-valuemax", String(maxWidth));
     aiDrawerResizeHandle.setAttribute("aria-valuenow", String(clamped));
   }
-  syncAiDockedContentDensity(clamped);
+  syncAiDockedContentDensity(clamped, sidebarWidth);
   if (persist) {
     try {
       localStorage.setItem(AI_DRAWER_WIDTH_STORAGE_KEY, String(clamped));
@@ -9231,11 +9276,18 @@ aiDrawerResizeHandle?.addEventListener("pointerdown", (event) => {
   if (!panel) return;
   event.preventDefault();
   const startWidth = Math.round(panel.getBoundingClientRect().width);
+  const bounds = getAiDrawerWidthBounds();
+  const filePanelEl = driveView?.querySelector(".file-panel");
+  const curPanelClientW = filePanelEl ? filePanelEl.clientWidth : Math.max(300, window.innerWidth - bounds.sidebarWidth - startWidth - 48);
+  const panelOverhead = Math.max(0, (window.innerWidth - bounds.sidebarWidth - startWidth - 8) - curPanelClientW);
   aiDrawerResizeDrag = {
     pointerId: event.pointerId,
     startX: event.clientX,
     startWidth,
     lastWidth: startWidth,
+    bounds,
+    panelOverhead,
+    lastColCount: estimateGridColumnCount(curPanelClientW),
   };
   aiDrawerPendingWidth = startWidth;
   unlockFileGridAfterDrawerTransition();
@@ -9255,8 +9307,20 @@ window.addEventListener("pointermove", (event) => {
   if (!aiDrawerResizeRaf) {
     aiDrawerResizeRaf = window.requestAnimationFrame(() => {
       aiDrawerResizeRaf = 0;
-      if (aiDrawerPendingWidth !== null) {
-        applyAiDrawerWidth(aiDrawerPendingWidth, { persist: false });
+      const drag = aiDrawerResizeDrag;
+      if (!drag || aiDrawerPendingWidth === null) return;
+      const clamped = Math.round(Math.min(drag.bounds.maxWidth, Math.max(drag.bounds.minWidth, Number(aiDrawerPendingWidth) || drag.bounds.minWidth)));
+      const nextPanelW = Math.max(260, window.innerWidth - drag.bounds.sidebarWidth - clamped - 8 - drag.panelOverhead);
+      const nextColCount = estimateGridColumnCount(nextPanelW);
+      const inGridMode = Boolean(fileGrid && !fileGrid.classList.contains("hidden"));
+      if (inGridMode && nextColCount !== drag.lastColCount) {
+        const firstSnap = captureFileGridFirstRects();
+        clearFileGridFlipCardStyles();
+        applyAiDrawerWidth(clamped, { persist: false, cachedBounds: drag.bounds });
+        drag.lastColCount = nextColCount;
+        runLiveDragColumnFlip(firstSnap);
+      } else {
+        applyAiDrawerWidth(clamped, { persist: false, cachedBounds: drag.bounds });
       }
     });
   }
