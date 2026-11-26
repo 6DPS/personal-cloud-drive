@@ -12306,3 +12306,66 @@ body.selection-active .file-grid-select-wrap {
     padding: 10px 10px 16px;
   }
 }
+/* 左下角账号菜单：外观三态分段切换器（浅色 / 深色 / 自动） */
+.popover-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 2px 0;
+}
+
+.popover-theme-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.popover-theme-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+}
+
+.theme-seg-btn {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.theme-seg-btn:hover,
+.theme-seg-btn:active {
+  transform: none !important;
+  filter: none !important;
+}
+
+.theme-seg-btn:hover {
+  color: #1d4ed8;
+}
+
+.theme-seg-btn.active {
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.28);
+  color: #1d4ed8;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}

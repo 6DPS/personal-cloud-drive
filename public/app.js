@@ -10575,6 +10575,7 @@ async function previewZipEntry(item, entry) {
       const text = await res.text();
       if (requestSeq !== state.previewRequestSeq || controller.signal.aborted) return;
       const pre = document.createElement("pre");
+      pre.className = "zip-entry-text-preview";
       pre.style.padding = "16px";
       pre.style.overflow = "auto";
       pre.style.maxHeight = "65vh";
@@ -11546,6 +11547,51 @@ async function syncLocalVersionLabel() {
   } catch {}
 }
 void syncLocalVersionLabel();
+// --- 外观主题管理（浅色 / Apple 深色 / 跟随系统） ---
+const THEME_PREF_KEY = "dpsir_theme_pref";
+const themeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+function getSavedThemePref() {
+  try {
+    const v = localStorage.getItem(THEME_PREF_KEY);
+    if (v === "light" || v === "dark" || v === "system") return v;
+  } catch {}
+  return "light";
+}
+
+function applyThemePreference(pref, { persist = true } = {}) {
+  const nextPref = (pref === "dark" || pref === "system") ? pref : "light";
+  if (persist) {
+    try { localStorage.setItem(THEME_PREF_KEY, nextPref); } catch {}
+  }
+  const useDark = nextPref === "dark" || (nextPref === "system" && Boolean(themeMediaQuery?.matches));
+  document.documentElement.dataset.theme = useDark ? "dark" : "light";
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) themeColorMeta.setAttribute("content", useDark ? "#121214" : "#1473e6");
+  document.querySelectorAll("#themeModeGroup .theme-seg-btn").forEach((btn) => {
+    const active = btn.dataset.themePref === nextPref;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+document.querySelectorAll("#themeModeGroup .theme-seg-btn").forEach((btn) => {
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    applyThemePreference(btn.dataset.themePref || "light", { persist: true });
+  });
+});
+
+if (themeMediaQuery) {
+  const onSystemThemeChange = () => {
+    if (getSavedThemePref() === "system") {
+      applyThemePreference("system", { persist: false });
+    }
+  };
+  if (typeof themeMediaQuery.addEventListener === "function") themeMediaQuery.addEventListener("change", onSystemThemeChange);
+  else if (typeof themeMediaQuery.addListener === "function") themeMediaQuery.addListener(onSystemThemeChange);
+}
+applyThemePreference(getSavedThemePref(), { persist: false });
 const systemUpdateModal = $("#systemUpdateModal");
 const closeSystemUpdateModalBtn = $("#closeSystemUpdateModalBtn");
 const updateCheckingView = $("#updateCheckingView");
@@ -11576,7 +11622,11 @@ function showToast(message, type = "info") {
   const toast = document.createElement("div");
   const isErr = type === "error";
   const isOk = type === "success";
-  toast.style.cssText = `pointer-events:auto;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.45;box-shadow:0 10px 28px rgba(15,23,42,0.16);border:1px solid ${isErr ? "#fecaca" : isOk ? "#bbf7d0" : "#cbd5e1"};background:${isErr ? "#fef2f2" : isOk ? "#f0fdf4" : "#ffffff"};color:${isErr ? "#b91c1c" : isOk ? "#15803d" : "#1e293b"};transition:opacity 200ms ease,transform 200ms ease;opacity:0;transform:translateY(-6px);`;
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const borderCol = isDark ? (isErr ? "rgba(255,69,58,0.45)" : isOk ? "rgba(48,209,88,0.45)" : "rgba(255,255,255,0.16)") : (isErr ? "#fecaca" : isOk ? "#bbf7d0" : "#cbd5e1");
+  const bgCol = isDark ? (isErr ? "rgba(55,22,24,0.96)" : isOk ? "rgba(20,48,30,0.96)" : "rgba(38,38,42,0.96)") : (isErr ? "#fef2f2" : isOk ? "#f0fdf4" : "#ffffff");
+  const txtCol = isDark ? (isErr ? "#ff8a80" : isOk ? "#6ee7b7" : "#f5f5f7") : (isErr ? "#b91c1c" : isOk ? "#15803d" : "#1e293b");
+  toast.style.cssText = `pointer-events:auto;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.45;box-shadow:0 10px 28px rgba(0,0,0,${isDark ? "0.52" : "0.16"});border:1px solid ${borderCol};background:${bgCol};color:${txtCol};transition:opacity 200ms ease,transform 200ms ease;opacity:0;transform:translateY(-6px);`;
   toast.textContent = text;
   host.append(toast);
   requestAnimationFrame(() => {
