@@ -1161,6 +1161,13 @@ function pulseAiSendButton() {
 
 let gridDragFlipTimer = 0;
 
+function resetContentDrawerInlineStyles() {
+  const contentEl = driveView?.querySelector(".content");
+  if (!contentEl) return;
+  contentEl.style.transition = "";
+  contentEl.style.removeProperty("margin-right");
+}
+
 function clearFileGridFlipCardStyles() {
   window.clearTimeout(gridDragFlipTimer);
   gridDragFlipTimer = 0;
@@ -1170,11 +1177,13 @@ function clearFileGridFlipCardStyles() {
     card.classList.remove("grid-flip-invert", "grid-flip-playing", "grid-flip-drag");
     card.style.transform = "";
     card.style.transformOrigin = "";
+    card.style.zIndex = "";
   }
 }
 
 function unlockFileGridAfterDrawerTransition() {
   clearFileGridFlipCardStyles();
+  resetContentDrawerInlineStyles();
   if (!fileGrid) return;
   fileGrid.style.width = "";
 }
@@ -1240,6 +1249,9 @@ function playFileGridCardsFlip(firstSnap, playClassName) {
 
     card.classList.add("grid-flip-invert");
     card.style.transformOrigin = "top left";
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      card.style.zIndex = "2";
+    }
     card.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
     animatedCards.push(card);
   }
@@ -1260,25 +1272,29 @@ function animateFileGridForDrawerTransition(targetDocked, firstSnap, prevMarginR
   clearFileGridFlipCardStyles();
   fileGrid.style.width = "";
 
-  // 2. Synchronously snap .content to its true CSS final margin-right for 1 microsecond to read exactFinalWidth
-  contentEl.style.transition = "none";
-  contentEl.style.removeProperty("margin-right");
-  const exactFinalWidth = panelEl.clientWidth;
+  let animatedCards = [];
+  try {
+    // 2. Synchronously snap .content to its true CSS final margin-right for 1 microsecond to read exactFinalWidth
+    contentEl.style.transition = "none";
+    contentEl.style.removeProperty("margin-right");
+    const exactFinalWidth = panelEl.clientWidth;
 
-  // 3. Lock .file-grid to exactFinalWidth so it performs 0 reflows during .content's 320ms slide
-  if (exactFinalWidth >= 240) {
-    fileGrid.style.width = `${exactFinalWidth}px`;
+    // 3. Lock .file-grid to exactFinalWidth so it performs 0 reflows during .content's 320ms slide
+    if (exactFinalWidth >= 240) {
+      fileGrid.style.width = `${exactFinalWidth}px`;
+    }
+
+    // 4. Measure LAST card positions at exactFinalWidth and prepare INVERT transforms
+    animatedCards = playFileGridCardsFlip(firstSnap, "grid-flip-playing");
+
+    // 5. Restore .content back to prevMarginRight (no transition), flush 1 frame, then start BOTH glides together!
+    contentEl.style.setProperty("margin-right", `${prevMarginRight}px`, "important");
+    void contentEl.offsetWidth;
+  } finally {
+    contentEl.style.transition = "";
+    contentEl.style.removeProperty("margin-right");
   }
 
-  // 4. Measure LAST card positions at exactFinalWidth and prepare INVERT transforms
-  const animatedCards = playFileGridCardsFlip(firstSnap, "grid-flip-playing");
-
-  // 5. Restore .content back to prevMarginRight (no transition), flush 1 frame, then start BOTH glides together!
-  contentEl.style.setProperty("margin-right", `${prevMarginRight}px`, "important");
-  void contentEl.offsetWidth;
-
-  contentEl.style.transition = "";
-  contentEl.style.removeProperty("margin-right");
   for (const card of animatedCards) {
     card.classList.remove("grid-flip-invert");
     card.classList.add("grid-flip-playing");
@@ -1308,10 +1324,13 @@ function cancelAiDrawerPendingTimers() {
   window.clearTimeout(aiDrawerFocusTimer);
   window.clearTimeout(aiDrawerPersistTimer);
   window.clearTimeout(aiDrawerAnimTimer);
+  window.clearTimeout(gridDragFlipTimer);
+  gridDragFlipTimer = 0;
   if (aiDrawerOpenRaf) {
     window.cancelAnimationFrame(aiDrawerOpenRaf);
     aiDrawerOpenRaf = 0;
   }
+  resetContentDrawerInlineStyles();
 }
 
 function openAiDrawer(mode = "global", item = null, options = {}) {
@@ -1483,9 +1502,13 @@ function closeAiDrawer() {
   cancelAiDrawerPendingTimers();
   closeAiHistoryPanel();
   closeRowActionMenus();
-  if (!aiDrawer || aiDrawer.classList.contains("hidden")) {
+  if (!aiDrawer || aiDrawer.classList.contains("hidden") || aiDrawer.classList.contains("ai-drawer-preopen")) {
+    aiDrawer?.classList.add("hidden");
+    aiDrawer?.classList.remove("closing", "ai-drawer-preopen", "ai-drawer-narrow");
+    aiDrawer?.setAttribute("aria-hidden", "true");
     document.body.classList.remove("ai-drawer-open", "ai-drawer-animating");
     driveView?.classList.remove("ai-drawer-docked", "ai-content-compact", "ai-content-tight");
+    unlockFileGridAfterDrawerTransition();
     return;
   }
   aiPromptInput?.blur();
@@ -5648,6 +5671,10 @@ function renderRows(options = {}) {
   closeRowActionMenus();
   document.querySelectorAll(".row-action-menu").forEach((menu) => menu.remove());
   document.querySelectorAll(".row-action-menu-bridge").forEach((bridge) => bridge.remove());
+  clearFileGridFlipCardStyles();
+  if (fileGrid && !document.body.classList.contains("ai-drawer-animating")) {
+    fileGrid.style.width = "";
+  }
   fileRows.innerHTML = "";
   if (fileGrid) fileGrid.innerHTML = "";
   const useGridView = state.viewMode === "grid" && !state.trashMode;
@@ -9235,11 +9262,24 @@ function resetAiDrawerWidth() {
   try {
     localStorage.removeItem(AI_DRAWER_WIDTH_STORAGE_KEY);
   } catch {}
+  const contentEl = driveView?.querySelector(".content");
+  const prevMarginRight = contentEl ? (parseFloat(window.getComputedStyle(contentEl).marginRight) || 0) : 0;
+  const inGridMode = Boolean(fileGrid && !fileGrid.classList.contains("hidden") && driveView?.classList.contains("ai-drawer-docked"));
+  const firstSnap = inGridMode ? captureFileGridFirstRects() : null;
   document.documentElement.style.removeProperty("--ai-dock-width");
+  const panel = aiDrawer?.querySelector(".ai-drawer");
+  const currentWidth = panel ? Math.round(panel.getBoundingClientRect().width) : null;
+  syncAiDockedContentDensity(currentWidth && currentWidth > 0 ? currentWidth : null);
+  if (firstSnap) {
+    window.clearTimeout(aiDrawerAnimTimer);
+    document.body.classList.add("ai-drawer-animating");
+    animateFileGridForDrawerTransition(true, firstSnap, prevMarginRight);
+    aiDrawerAnimTimer = window.setTimeout(() => {
+      document.body.classList.remove("ai-drawer-animating");
+      unlockFileGridAfterDrawerTransition();
+    }, 350);
+  }
   window.requestAnimationFrame(() => {
-    const panel = aiDrawer?.querySelector(".ai-drawer");
-    const currentWidth = panel ? Math.round(panel.getBoundingClientRect().width) : null;
-    syncAiDockedContentDensity(currentWidth && currentWidth > 0 ? currentWidth : null);
     autoResizeAiPromptInput();
   });
   setStatus("已恢复 AI 对话框默认宽度");
@@ -9252,8 +9292,10 @@ function endAiDrawerResizeDrag({ persist = true } = {}) {
   }
   const active = aiDrawerResizeDrag;
   aiDrawerResizeDrag = null;
-  document.body.classList.remove("ai-drawer-resizing");
-  if (!active) return;
+  if (!active) {
+    document.body.classList.remove("ai-drawer-resizing");
+    return;
+  }
   if (aiDrawerResizeHandle && active.pointerId !== undefined) {
     try {
       if (aiDrawerResizeHandle.hasPointerCapture?.(active.pointerId)) {
@@ -9263,9 +9305,25 @@ function endAiDrawerResizeDrag({ persist = true } = {}) {
   }
   const finalWidth = aiDrawerPendingWidth ?? active.lastWidth;
   aiDrawerPendingWidth = null;
-  if (persist && Number.isFinite(finalWidth)) {
-    applyAiDrawerWidth(finalWidth, { persist: true });
-    autoResizeAiPromptInput();
+  try {
+    if (persist && Number.isFinite(finalWidth)) {
+      const bounds = active.bounds || getAiDrawerWidthBounds();
+      const clamped = Math.round(Math.min(bounds.maxWidth, Math.max(bounds.minWidth, Number(finalWidth) || bounds.minWidth)));
+      const nextPanelW = Math.max(260, window.innerWidth - bounds.sidebarWidth - clamped - 8 - (active.panelOverhead || 0));
+      const nextColCount = estimateGridColumnCount(nextPanelW);
+      const inGridMode = Boolean(fileGrid && !fileGrid.classList.contains("hidden"));
+      if (inGridMode && active.lastColCount && nextColCount !== active.lastColCount) {
+        const firstSnap = captureFileGridFirstRects();
+        clearFileGridFlipCardStyles();
+        applyAiDrawerWidth(clamped, { persist: true, cachedBounds: bounds });
+        runLiveDragColumnFlip(firstSnap);
+      } else {
+        applyAiDrawerWidth(clamped, { persist: true, cachedBounds: bounds });
+      }
+      autoResizeAiPromptInput();
+    }
+  } finally {
+    document.body.classList.remove("ai-drawer-resizing");
   }
 }
 
@@ -9340,16 +9398,17 @@ window.addEventListener("blur", () => {
   if (aiDrawerResizeDrag) endAiDrawerResizeDrag({ persist: true });
 });
 
-window.addEventListener("resize", () => {
-  unlockFileGridAfterDrawerTransition();
-});
-
 aiDrawerResizeHandle?.addEventListener("dblclick", (event) => {
   event.preventDefault();
   resetAiDrawerWidth();
 });
 
 window.addEventListener("resize", () => {
+  if (!isDesktopAiDockViewport() && aiDrawerResizeDrag) {
+    endAiDrawerResizeDrag({ persist: false });
+  }
+  document.body.classList.remove("ai-drawer-animating");
+  unlockFileGridAfterDrawerTransition();
   if (driveView?.classList.contains("ai-drawer-docked")) {
     restoreSavedAiDrawerWidth();
   }

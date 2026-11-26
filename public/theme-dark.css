@@ -804,8 +804,20 @@ html[data-theme="dark"] .row-action-menu button.danger-text {
   color: #ff6961 !important;
 }
 
+html[data-theme="dark"] #customContextMenu .danger:hover,
+html[data-theme="dark"] #customContextMenu .danger-item:hover,
+html[data-theme="dark"] .row-action-menu button.danger-text:hover {
+  background: #ff453a !important;
+  color: #ffffff !important;
+}
+
 html[data-theme="dark"] #customContextMenu .ai-summary-item {
   color: #64d2ff !important;
+}
+
+html[data-theme="dark"] #customContextMenu .ai-summary-item:hover {
+  background: #0a84ff !important;
+  color: #ffffff !important;
 }
 
 /* ==============================================================================
@@ -2081,4 +2093,47 @@ html[data-theme="dark"] #autostartModal #stopServerNowBtn:hover {
 
 html[data-theme="dark"] #updateAvailLatestVer {
   color: #64d2ff !important;
+}
+
+
+/* 11.12 Windows WebView2 原生下拉选项、登录/找回密码、回收站横幅与空态深色兜底 */
+html[data-theme="dark"] select option,
+html[data-theme="dark"] select optgroup {
+  background-color: #1c1c1f !important;
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .trash-banner {
+  background: rgba(255, 69, 58, 0.14) !important;
+  border-color: rgba(255, 69, 58, 0.34) !important;
+}
+
+html[data-theme="dark"] .trash-banner span {
+  color: #ffb3ae !important;
+}
+
+html[data-theme="dark"] .empty-state strong {
+  color: #f5f5f7 !important;
+}
+
+html[data-theme="dark"] .login-panel a,
+html[data-theme="dark"] .login-panel .text-link-btn,
+html[data-theme="dark"] .login-panel .login-mode-link {
+  color: #64d2ff !important;
+}
+
+html[data-theme="dark"] .login-panel .error,
+html[data-theme="dark"] .modal-error {
+  color: #ff8a80 !important;
+}
+
+html[data-theme="dark"] .login-notice {
+  background: rgba(48, 209, 88, 0.14) !important;
+  border-color: rgba(48, 209, 88, 0.34) !important;
+  color: #6ee7b7 !important;
+}
+
+html[data-theme="dark"] .upload-progress-text,
+html[data-theme="dark"] .upload-progress-percent {
+  color: #f5f5f7 !important;
 }
