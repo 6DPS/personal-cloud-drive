@@ -432,14 +432,14 @@ select {
   display: flex !important;
   flex-direction: column !important;
   gap: 0 !important;
+  padding: 11px 14px !important;
   border-radius: 20px !important;
-  transition: padding 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.2s ease,
+  transition: box-shadow 0.2s ease,
               border-color 0.2s ease !important;
 }
 
 .access-box.collapsible.collapsed {
-  padding: 10px 14px !important;
+  padding: 11px 14px !important;
   cursor: pointer;
 }
 
@@ -449,7 +449,7 @@ select {
 }
 
 .access-box.collapsible:not(.collapsed) {
-  padding: 12px 14px 14px 14px !important;
+  padding: 11px 14px !important;
   gap: 0 !important;
 }
 
@@ -617,20 +617,16 @@ select {
   transform: rotate(180deg);
 }
 
-/* 折叠主体动画 */
+/* 折叠主体动画（零 opacity 合成层切换抖动 + 零文字亚像素位移） */
 .access-box-body {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.22s ease,
-              margin-top 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 1;
-  margin-top: 10px;
+  transition: grid-template-rows 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  margin-top: 0;
 }
 
 .access-box.collapsible.collapsed .access-box-body {
   grid-template-rows: 0fr;
-  opacity: 0;
   margin-top: 0;
   pointer-events: none;
 }
@@ -641,6 +637,14 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.access-box-body-inner > :first-child {
+  margin-top: 10px;
+}
+
+.access-box-body-inner > :last-child {
+  margin-bottom: 2px;
 }
 
 .access-links {

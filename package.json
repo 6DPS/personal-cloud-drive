@@ -1,8 +1,8 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "changelog": [
-    "彻底消除左侧「访问来源」下拉展开末端抖动：为左侧边栏启用 scrollbar-gutter: stable 固定预留 5px 滚动条槽位，避免展开超屏瞬间弹出滚动条把文字挤窄重排；同时消除折叠面板内非过渡的 gap 与负外边距跳变，全程 0px 横向偏移顺滑展开"
+    "彻底消除「访问来源」下拉展开/收起时内部文字（局域网地址、公网地址、IP 访问数）末尾抖动：移除 opacity 合成层升降造成的 Windows ClearType 字体渲染切换闪烁，并消除外层 padding/margin-top 叠加过渡引起的 12px 亚像素缓慢位移，展开全程内部文字坐标 0.00px 绝对静止"
   ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",
