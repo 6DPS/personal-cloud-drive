@@ -1,9 +1,9 @@
 {
   "name": "personal-cloud-drive",
-  "version": "1.3.10",
+  "version": "1.3.11",
   "changelog": [
-    "彻底消除关闭 AI 对话框恢复原位时的文字与图标清晰度微闪（ClearType 合成层切换抖动）：过滤宽度变化小于 3.5% 的无效 scale() 双线性拉伸，静止首行卡片全程保持原生 ClearType 高清渲染，移位卡片采用 1:1 纯平移不发虚",
-    "移除卡片动画层残留的 will-change: transform 并将收尾清理精准绑定到 transitionend 事件（320ms 落位瞬间即完成清理，不再延迟 80ms 补抖）；同步固定列表视图动画期间 table-layout: fixed 与深色模式文件区 6px 统一滚动条宽度"
+    "全站动画交互 GPU 丝滑升级与帧率稳固优化：移除全站弹窗双重嵌套高负载毛玻璃（40px 内层虚化 + 28px 遮罩），改为轻量 8px 背景虚化与纯透明度遮罩淡入，所有弹窗及下拉浮层（账户气泡、右键菜单、AI 历史面板、目录选择框）统一升级为 translate3d GPU 合成入场，打开零掉帧、零抖动",
+    "消除 24 小时常驻状态绿/蓝/橙点、热更新提示红点及 AI 生成呼吸动画的 box-shadow 主线程重绘循环与进度条 width 布局回流，全部改为纯 GPU 合成层动画（transform + opacity），同时将列表/网格高频图标按钮与表单控件的 transition: all 替换为精准属性过渡，保障长时间稳定运行且功能完全不变"
   ],
   "private": true,
   "description": "DPSir 个人私有智云盘 (Personal Cloud Drive) - 核心服务与依赖配置",

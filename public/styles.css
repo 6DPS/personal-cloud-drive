@@ -186,10 +186,10 @@ button.ghost:hover {
 
 @keyframes brandGentleFloat {
   0% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateY(-5px);
+    transform: translate3d(0, -5px, 0);
   }
 }
 
@@ -528,14 +528,13 @@ select {
 }
 .access-status-badge.status-lan .status-dot {
   background-color: #10b981;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  animation: accessDotPulseGreen 2s infinite ease-in-out;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+  animation: accessDotPulseGreen 2.2s infinite ease-in-out;
 }
 
 @keyframes accessDotPulseGreen {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-  70% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0%, 100% { transform: scale3d(1, 1, 1); opacity: 1; }
+  50% { transform: scale3d(1.22, 1.22, 1); opacity: 0.55; }
 }
 
 /* 2. 本机访问 - 科技蓝 (与当前访问卡片本机蓝色呼应) */
@@ -546,14 +545,13 @@ select {
 }
 .access-status-badge.status-local .status-dot {
   background-color: #2563eb;
-  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6);
-  animation: accessDotPulseBlue 2s infinite ease-in-out;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22);
+  animation: accessDotPulseBlue 2.2s infinite ease-in-out;
 }
 
 @keyframes accessDotPulseBlue {
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6); }
-  70% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  0%, 100% { transform: scale3d(1, 1, 1); opacity: 1; }
+  50% { transform: scale3d(1.22, 1.22, 1); opacity: 0.55; }
 }
 
 /* 3. 公网访问 - 暖橙黄 (与当前访问卡片公网金橙色呼应) */
@@ -564,14 +562,13 @@ select {
 }
 .access-status-badge.status-public .status-dot {
   background-color: #f59e0b;
-  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
-  animation: accessDotPulseAmber 2s infinite ease-in-out;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+  animation: accessDotPulseAmber 2.2s infinite ease-in-out;
 }
 
 @keyframes accessDotPulseAmber {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
-  70% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  0%, 100% { transform: scale3d(1, 1, 1); opacity: 1; }
+  50% { transform: scale3d(1.22, 1.22, 1); opacity: 0.55; }
 }
 
 /* 存储位置嵌入行 */
@@ -1484,7 +1481,7 @@ tr:hover .name-cell .star-toggle-btn {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .avatar-action-btn.select-img {
@@ -1571,7 +1568,7 @@ tr:hover .name-cell .star-toggle-btn {
   cursor: pointer !important;
   box-shadow: none !important;
   flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .sidebar-logout-pill .btn-icon,
@@ -1580,7 +1577,7 @@ tr:hover .name-cell .star-toggle-btn {
   height: 13px !important;
   flex-shrink: 0 !important;
   color: #dc2626 !important;
-  transition: all 0.2s ease !important;
+  transition: color 180ms ease !important;
 }
 
 .sidebar-logout-pill:hover,
@@ -1629,7 +1626,7 @@ tr:hover .name-cell .star-toggle-btn {
   background: #f8fafc !important;
   color: #64748b !important;
   cursor: pointer !important;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   flex-shrink: 0 !important;
   box-sizing: border-box !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
@@ -1677,25 +1674,25 @@ tr:hover .name-cell .star-toggle-btn {
   left: 0;
   width: 236px;
   background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(203, 213, 225, 0.85);
   border-radius: 18px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
   padding: 14px;
   box-sizing: border-box;
   z-index: 100;
-  animation: popoverFloatIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: popoverFloatIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes popoverFloatIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.97);
+    transform: translate3d(0, 6px, 0) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -4924,11 +4921,11 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 @keyframes aiMsgIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -5435,12 +5432,12 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 
 @keyframes aiStopPulse {
   0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+    transform: scale3d(1, 1, 1);
+    opacity: 1;
   }
   50% {
-    transform: scale(1.04);
-    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.55);
+    transform: scale3d(1.04, 1.04, 1);
+    opacity: 0.86;
   }
 }
 
@@ -5459,17 +5456,13 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 @keyframes aiSendWorking {
   0%,
   100% {
-    box-shadow:
-      0 10px 24px rgba(20, 187, 176, 0.18),
-      0 0 12px rgba(240, 180, 41, 0.1),
-      0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+    transform: scale3d(1, 1, 1);
+    opacity: 1;
   }
 
   50% {
-    box-shadow:
-      0 16px 32px rgba(20, 187, 176, 0.28),
-      0 0 28px rgba(240, 180, 41, 0.24),
-      0 0 0 1px rgba(255, 255, 255, 0.24) inset;
+    transform: scale3d(1.015, 1.015, 1);
+    opacity: 0.86;
   }
 }
 
@@ -5498,13 +5491,11 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
 @keyframes aiThinkingPulse {
   0%,
   100% {
-    border-color: rgba(20, 187, 176, 0.28);
-    box-shadow: 0 2px 8px rgba(20, 187, 176, 0.05);
+    opacity: 1;
   }
 
   50% {
-    border-color: rgba(20, 187, 176, 0.55);
-    box-shadow: 0 4px 14px rgba(20, 187, 176, 0.14);
+    opacity: 0.78;
   }
 }
 
@@ -5517,7 +5508,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   padding: 24px;
   background: rgba(9, 18, 33, 0.42);
   backdrop-filter: none;
-  animation: panelIn 180ms ease both;
+  animation: modalBackdropIn 160ms ease both;
 }
 
 #zipArchiveModal {
@@ -6515,69 +6506,76 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   color: #69778d;
 }
 
-@keyframes panelIn {
+@keyframes modalBackdropIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes folderDropdownIn {
   from {
     opacity: 0;
-    transform: translateY(-6px) scaleY(0.98);
+    transform: translate3d(0, -5px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scaleY(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes loginSceneIn {
   from {
     opacity: 0;
-    filter: saturate(0.92) brightness(1.04);
   }
   to {
     opacity: 1;
-    filter: saturate(1) brightness(1);
   }
 }
 
 @keyframes loginPanelIn {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.985);
+    transform: translate3d(0, 14px, 0) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes logoFloatIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.9);
+    transform: translate3d(0, 8px, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes modalIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.985);
+    transform: translate3d(0, 10px, 0) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -7463,7 +7461,7 @@ tbody tr.drop-target-row {
   color: #334155 !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
   cursor: pointer !important;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   position: relative !important;
   flex-shrink: 0 !important;
   outline: none !important;
@@ -7474,11 +7472,11 @@ tbody tr.drop-target-row {
   color: #1769e0 !important;
   border-color: rgba(23, 105, 224, 0.45) !important;
   box-shadow: 0 3px 10px rgba(23, 105, 224, 0.15) !important;
-  transform: translateY(-1px) scale(1.06) !important;
+  transform: translate3d(0, -1px, 0) scale(1.06) !important;
 }
 
 .row-action-icon-btn:active {
-  transform: translateY(0) scale(0.95) !important;
+  transform: translate3d(0, 0, 0) scale(0.95) !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
 }
 
@@ -7602,7 +7600,7 @@ tbody tr.drop-target-row {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
   cursor: pointer !important;
   text-decoration: none !important;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   position: relative !important;
   flex-shrink: 0 !important;
   outline: none !important;
@@ -7615,11 +7613,11 @@ tbody tr.drop-target-row {
   color: #1769e0 !important;
   border-color: rgba(23, 105, 224, 0.45) !important;
   box-shadow: 0 3px 10px rgba(23, 105, 224, 0.15) !important;
-  transform: translateY(-1px) scale(1.06) !important;
+  transform: translate3d(0, -1px, 0) scale(1.06) !important;
 }
 
 .modal-action-icon-btn:active {
-  transform: translateY(0) scale(0.95) !important;
+  transform: translate3d(0, 0, 0) scale(0.95) !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
 }
 
@@ -7701,35 +7699,35 @@ tbody tr.drop-target-row {
   -webkit-backdrop-filter: none;
 }
 
-/* === iOS Frosted Glass Modals & Dialogs (弹窗与对话框视觉升级) === */
+/* === iOS Frosted Glass Modals & Dialogs (弹窗与对话框视觉升级 - GPU 丝滑优化) === */
 .modal {
   background: rgba(15, 25, 45, 0.38) !important;
-  backdrop-filter: blur(28px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-  transition: all 260ms ease !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: opacity 180ms ease !important;
 }
 
 .modal-card {
   border-radius: 26px !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(40px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(255, 255, 255, 0.95) !important;
   box-shadow:
     0 32px 80px rgba(12, 35, 75, 0.22),
     0 0 0 1px rgba(255, 255, 255, 0.7) inset,
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
-  animation: iosSheetSpring 320ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  animation: iosSheetSpring 220ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
 }
 
 @keyframes iosSheetSpring {
   0% {
     opacity: 0;
-    transform: scale(0.92) translateY(18px);
+    transform: translate3d(0, 12px, 0) scale(0.96);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -7903,7 +7901,7 @@ tbody tr.drop-target-row {
   background: rgba(245, 247, 252, 0.85) !important;
   border: 1.5px solid rgba(210, 222, 238, 0.8) !important;
   padding: 9px 13px !important;
-  transition: all 180ms ease !important;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
 }
 
 .modal input:focus,
@@ -8462,7 +8460,7 @@ select:focus {
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-color, #e2e8f0);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
   font-weight: 500;
 }
 
@@ -9921,7 +9919,7 @@ select:focus {
 
 #aiHistoryBtn {
   color: #687d96;
-  transition: all 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #aiHistoryBtn:hover {
@@ -9955,13 +9953,13 @@ select:focus {
   bottom: 0;
   z-index: 20;
   background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-radius: 0 0 inherit inherit;
   display: flex;
   flex-direction: column;
   padding: 16px 20px 20px;
-  animation: aiHistoryPanelIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: aiHistoryPanelIn 190ms cubic-bezier(0.22, 1, 0.36, 1) both;
   box-shadow: 0 -8px 24px rgba(20, 40, 70, 0.04);
 }
 
@@ -9972,11 +9970,11 @@ select:focus {
 @keyframes aiHistoryPanelIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -10056,7 +10054,7 @@ select:focus {
   border: 1px solid rgba(212, 226, 244, 0.95);
   border-radius: 16px;
   cursor: pointer;
-  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 2px 6px rgba(35, 52, 76, 0.03);
 }
 
@@ -10064,7 +10062,7 @@ select:focus {
   background: #ffffff;
   border-color: rgba(20, 115, 230, 0.45);
   box-shadow: 0 6px 18px rgba(20, 115, 230, 0.1);
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
 }
 
 .ai-history-card.active {
@@ -10134,7 +10132,7 @@ select:focus {
   color: #94a3b8;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .ai-history-card-edit-btn svg {
@@ -10790,9 +10788,9 @@ tbody tr.context-active-row {
   min-width: 200px;
   max-width: 260px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
   border: 1px solid rgba(203, 213, 225, 0.85);
   border-radius: 12px;
   box-shadow:
@@ -10812,16 +10810,16 @@ tbody tr.context-active-row {
 @keyframes desktopContextMenuFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-3px);
+    transform: translate3d(0, -3px, 0) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 .desktop-context-menu:not(.hidden) {
-  animation: desktopContextMenuFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: desktopContextMenuFadeIn 130ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* 菜单项基础按钮样式 (强制重置全局 button 样式) */
@@ -11207,17 +11205,17 @@ tbody tr.context-active-row {
 
 .update-progress-fill {
   height: 100%;
-  width: 0%;
+  width: 45%;
   background: linear-gradient(90deg, #3b82f6, #10b981);
   border-radius: 10px;
-  transition: width 0.3s ease;
-  animation: update-indeterminate 1.5s infinite;
+  transform-origin: left center;
+  animation: update-indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes update-indeterminate {
-  0% { transform: translateX(-100%); width: 40%; }
-  50% { transform: translateX(50%); width: 60%; }
-  100% { transform: translateX(200%); width: 40%; }
+  0% { transform: translate3d(-100%, 0, 0) scaleX(0.85); }
+  50% { transform: translate3d(80%, 0, 0) scaleX(1.2); }
+  100% { transform: translate3d(240%, 0, 0) scaleX(0.85); }
 }
 
 /* ==============================================================================
@@ -11240,15 +11238,14 @@ tbody tr.context-active-row {
   background: #ef4444;
   border-radius: 50%;
   border: 2px solid #ffffff;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
-  animation: pulseDotAnim 2s infinite;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.26);
+  animation: pulseDotAnim 2.2s ease-in-out infinite;
   z-index: 10;
 }
 
 @keyframes pulseDotAnim {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-  70% { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0%, 100% { transform: scale3d(0.95, 0.95, 1); opacity: 1; }
+  50% { transform: scale3d(1.18, 1.18, 1); opacity: 0.58; }
 }
 
 .update-badge-tag {
@@ -11267,10 +11264,11 @@ tbody tr.context-active-row {
   position: fixed;
   top: 18px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0);
   z-index: 99999;
   background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(59, 130, 246, 0.35);
   box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.15), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
   border-radius: 14px;
@@ -11278,12 +11276,12 @@ tbody tr.context-active-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  animation: slideDownUpdateAnim 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideDownUpdateAnim 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes slideDownUpdateAnim {
-  from { opacity: 0; transform: translate(-50%, -20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translate3d(-50%, -18px, 0); }
+  to { opacity: 1; transform: translate3d(-50%, 0, 0); }
 }
 
 .auto-update-content {
@@ -11324,14 +11322,14 @@ tbody tr.context-active-row {
   padding: 6px 14px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
   white-space: nowrap;
 }
 
 .auto-update-btn-primary:hover {
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
 }
 
 .auto-update-btn-dismiss {
@@ -11667,7 +11665,7 @@ tbody tr.context-active-row {
     transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
     width 260ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 140ms ease;
-  will-change: transform, width;
+  will-change: transform;
 }
 
 .browse-segmented-pill.ready {
@@ -11958,7 +11956,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-out,
 .file-grid.view-switch-out {
   opacity: 0;
-  transform: scale(0.988) translateY(4px);
+  transform: translate3d(0, 4px, 0) scale(0.988);
   transform-origin: center top;
   transition:
     opacity 85ms cubic-bezier(0.4, 0, 1, 1),
@@ -11970,7 +11968,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-enter,
 .file-grid.view-switch-enter {
   opacity: 0;
-  transform: scale(0.988) translateY(6px);
+  transform: translate3d(0, 6px, 0) scale(0.988);
   transform-origin: center top;
   transition: none !important;
   will-change: opacity, transform;
@@ -11979,7 +11977,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-enter-active,
 .file-grid.view-switch-enter-active {
   opacity: 1;
-  transform: scale(1) translateY(0);
+  transform: translate3d(0, 0, 0) scale(1);
   transform-origin: center top;
   transition:
     opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -12063,7 +12061,7 @@ tbody tr.context-active-row {
 .file-grid-card:hover {
   border-color: rgba(37, 99, 235, 0.42);
   box-shadow: 0 8px 22px rgba(37, 99, 235, 0.1);
-  transform: translateY(-2px);
+  transform: translate3d(0, -2px, 0);
 }
 
 .file-grid-card.selected-row {
@@ -12225,16 +12223,16 @@ body.selection-active .file-grid-select-wrap {
   border: 1px solid rgba(203, 218, 238, 0.85);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   opacity: 0;
-  transform: translateY(4px);
+  transform: translate3d(0, 4px, 0);
   pointer-events: none;
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .file-grid-card:hover .file-grid-actions,
 .file-grid-card:focus-within .file-grid-actions,
 .file-grid-actions.has-active-menu {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
   pointer-events: auto;
 }
 
