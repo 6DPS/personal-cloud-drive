@@ -475,6 +475,11 @@ function syncAiModeUi(options = {}) {
 
 function setAiModeEnabled(enabled, { render = true } = {}) {
   state.aiModeEnabled = Boolean(enabled);
+  const wasDrawerVisible = Boolean(
+    aiDrawer &&
+    !aiDrawer.classList.contains("hidden") &&
+    !aiDrawer.classList.contains("ai-drawer-preopen")
+  );
   if (!state.aiModeEnabled) {
     closeAiDrawer();
     closeContextMenu();
@@ -489,12 +494,20 @@ function setAiModeEnabled(enabled, { render = true } = {}) {
   if (render) {
     cancelAnimationFrame(aiModeRenderFrame);
     window.clearTimeout(aiModeRenderTimer);
+    if (!state.aiModeEnabled) {
+      // 关闭 AI 模式时原地移除各行/各卡片内的 AI 图标按钮，绝不清空重建 DOM，避免打断 320ms 抽屉关闭 FLIP 动画造成抖动
+      document
+        .querySelectorAll("#fileGrid .file-grid-action-btn.ai-btn, #fileRows .row-action-icon-btn.ai-action-btn")
+        .forEach((btn) => btn.remove());
+      return;
+    }
+    const delayMs = (wasDrawerVisible || document.body.classList.contains("ai-drawer-animating")) ? 360 : 215;
     aiModeRenderTimer = window.setTimeout(() => {
       aiModeRenderTimer = 0;
       aiModeRenderFrame = requestAnimationFrame(() => {
         renderRows({ noAnimation: false, animateAi: state.aiModeEnabled });
       });
-    }, 215);
+    }, delayMs);
   }
 }
 

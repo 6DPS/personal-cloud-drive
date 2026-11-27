@@ -3276,6 +3276,23 @@ tr:hover .name-cell .star-toggle-btn {
       filter 180ms ease,
       box-shadow 140ms ease;
   }
+
+  /* 当直接点击“关闭 AI 模式”同时收起 AI 对话抽屉时，将“+ 全库问答”收起曲线与主工作区 320ms 展开曲线完全同步，消除工具栏按钮双速拐点抖动 */
+  body.ai-drawer-animating .ai-global-search,
+  body.ai-drawer-animating .ai-global-search.hidden {
+    transition:
+      width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      min-width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      max-width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      padding-left 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      padding-right 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-left 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 140ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0ms linear 320ms,
+      filter 180ms ease,
+      box-shadow 140ms ease;
+  }
 }
 
 .ai-global-search:hover,
@@ -8943,15 +8960,9 @@ select:focus {
     transform: translateY(0) scale(0.97) !important;
   }
 
-  /* 顶部工具栏微调 */
+  /* 顶部工具栏微调：空间充裕的大屏不强行缩小顶栏按钮，避免关闭抽屉首帧按钮突然撑宽反跳；窄空间由 .ai-content-compact / .ai-content-tight 接管 */
   .drive-shell.ai-drawer-docked .topbar {
     gap: 8px;
-  }
-
-  .drive-shell.ai-drawer-docked .actions button {
-    min-height: 32px;
-    padding-inline: 10px;
-    font-size: 13px;
   }
 
   /* 更多操作下拉菜单：在 AI 抽屉打开时跟随文件列表自适应缩放与统一字号 */
