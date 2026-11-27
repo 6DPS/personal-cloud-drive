@@ -41,6 +41,9 @@ html[data-theme="dark"] *::-webkit-scrollbar {
 html[data-theme="dark"] .sidebar::-webkit-scrollbar {
   width: 5px;
 }
+html[data-theme="dark"] .file-panel::-webkit-scrollbar {
+  width: 6px !important;
+}
 html[data-theme="dark"] *::-webkit-scrollbar-track {
   background: transparent;
 }

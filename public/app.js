@@ -1178,6 +1178,7 @@ function clearFileGridFlipCardStyles() {
     card.style.transform = "";
     card.style.transformOrigin = "";
     card.style.zIndex = "";
+    delete card.dataset.flipScaled;
   }
 }
 
@@ -1242,17 +1243,24 @@ function playFileGridCardsFlip(firstSnap, playClassName) {
     const dy = first.relTop - (last.top - lastPanelRect.top);
     const sx = first.width / last.width;
     const scale = Math.max(0.65, Math.min(1.5, sx));
+    const needsScale = Math.abs(scale - 1) >= 0.035;
+    const needsMove = Math.abs(dx) >= 1 || Math.abs(dy) >= 1;
 
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(scale - 1) < 0.004) {
+    if (!needsMove && !needsScale) {
       continue;
     }
 
     card.classList.add("grid-flip-invert");
-    card.style.transformOrigin = "top left";
+    if (needsScale) {
+      card.style.transformOrigin = "top left";
+    }
     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
       card.style.zIndex = "2";
     }
-    card.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+    card.style.transform = needsScale
+      ? `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`
+      : `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0)`;
+    card.dataset.flipScaled = needsScale ? "1" : "0";
     animatedCards.push(card);
   }
 
@@ -1300,7 +1308,7 @@ function animateFileGridForDrawerTransition(targetDocked, firstSnap, prevMarginR
   for (const card of animatedCards) {
     card.classList.remove("grid-flip-invert");
     card.classList.add("grid-flip-playing");
-    card.style.transform = "translate3d(0, 0, 0) scale(1)";
+    card.style.transform = card.dataset.flipScaled === "1" ? "translate3d(0, 0, 0) scale(1)" : "translate3d(0, 0, 0)";
   }
 }
 
@@ -1312,7 +1320,7 @@ function runLiveDragColumnFlip(firstSnap) {
   for (const card of animatedCards) {
     card.classList.remove("grid-flip-invert");
     card.classList.add("grid-flip-drag");
-    card.style.transform = "translate3d(0, 0, 0) scale(1)";
+    card.style.transform = card.dataset.flipScaled === "1" ? "translate3d(0, 0, 0) scale(1)" : "translate3d(0, 0, 0)";
   }
   window.clearTimeout(gridDragFlipTimer);
   gridDragFlipTimer = window.setTimeout(() => {
@@ -1321,7 +1329,48 @@ function runLiveDragColumnFlip(firstSnap) {
   }, 240);
 }
 
+let aiDrawerTransitionCleanup = null;
+
+function clearAiDrawerTransitionListener() {
+  if (typeof aiDrawerTransitionCleanup === "function") {
+    const fn = aiDrawerTransitionCleanup;
+    aiDrawerTransitionCleanup = null;
+    fn();
+  }
+}
+
+function scheduleAfterContentDrawerTransition(callback, fallbackMs = 350) {
+  clearAiDrawerTransitionListener();
+  let done = false;
+  let timer = 0;
+  const contentEl = driveView?.querySelector(".content");
+  const finish = () => {
+    if (done) return;
+    done = true;
+    window.clearTimeout(timer);
+    if (contentEl) contentEl.removeEventListener("transitionend", onEnd);
+    aiDrawerTransitionCleanup = null;
+    callback();
+  };
+  const onEnd = (e) => {
+    if (e.target === contentEl && e.propertyName === "margin-right") {
+      finish();
+    }
+  };
+  if (contentEl && isDesktopAiDockViewport()) {
+    contentEl.addEventListener("transitionend", onEnd);
+  }
+  timer = window.setTimeout(finish, fallbackMs);
+  aiDrawerTransitionCleanup = () => {
+    done = true;
+    window.clearTimeout(timer);
+    if (contentEl) contentEl.removeEventListener("transitionend", onEnd);
+  };
+  return timer;
+}
+
 function cancelAiDrawerPendingTimers() {
+  clearAiDrawerTransitionListener();
   window.clearTimeout(aiDrawerCloseTimer);
   window.clearTimeout(aiDrawerFocusTimer);
   window.clearTimeout(aiDrawerPersistTimer);
@@ -1367,10 +1416,10 @@ function openAiDrawer(mode = "global", item = null, options = {}) {
     document.body.classList.add("ai-drawer-open");
     restoreSavedAiDrawerWidth();
     animateFileGridForDrawerTransition(true, firstSnap, prevMarginRight);
-    aiDrawerAnimTimer = window.setTimeout(() => {
+    aiDrawerAnimTimer = scheduleAfterContentDrawerTransition(() => {
       document.body.classList.remove("ai-drawer-animating");
       unlockFileGridAfterDrawerTransition();
-    }, 360);
+    }, 350);
   };
 
   if (isDesktopAiDockViewport()) {
@@ -1525,13 +1574,13 @@ function closeAiDrawer() {
   animateFileGridForDrawerTransition(false, firstSnap, prevMarginRight);
   aiDrawer.classList.add("closing");
   aiDrawer?.setAttribute("aria-hidden", "true");
-  aiDrawerCloseTimer = window.setTimeout(() => {
+  aiDrawerCloseTimer = scheduleAfterContentDrawerTransition(() => {
     aiDrawer.classList.add("hidden");
     aiDrawer.classList.remove("closing");
     document.body.classList.remove("ai-drawer-animating");
     unlockFileGridAfterDrawerTransition();
     setStatus(state.items?.length ? `已加载 ${state.items.length} 个项目，上传将保存到当前目录。` : "准备就绪");
-  }, 360);
+  }, 350);
   aiDrawerPersistTimer = window.setTimeout(() => {
     archiveCurrentAiSession();
     saveAiConversation();

@@ -8811,6 +8811,10 @@ select:focus {
     transition: none !important;
   }
 
+  body.ai-drawer-animating .file-panel table {
+    table-layout: fixed !important;
+  }
+
   body.ai-drawer-animating #statusLine {
     display: block !important;
     white-space: nowrap !important;
@@ -12009,17 +12013,14 @@ tbody tr.context-active-row {
 
 .file-grid-card.grid-flip-invert {
   transition: none !important;
-  will-change: transform;
 }
 
 .file-grid-card.grid-flip-playing {
   transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  will-change: transform;
 }
 
 .file-grid-card.grid-flip-drag {
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
