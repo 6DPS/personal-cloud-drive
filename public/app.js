@@ -473,6 +473,51 @@ function syncAiModeUi(options = {}) {
   syncAiGlobalBtnUi();
 }
 
+function syncAiButtonsInPlace({ animateAi = false } = {}) {
+  if (state.trashMode || !Array.isArray(state.items)) return false;
+  const itemByPath = new Map();
+  for (const item of state.items) {
+    const key = item.path || item.id || item.trashId;
+    if (key) itemByPath.set(key, item);
+  }
+  const useGridView = state.viewMode === "grid";
+  if (useGridView && fileGrid) {
+    const cards = Array.from(fileGrid.querySelectorAll(".file-grid-card[data-path]"));
+    if (cards.length !== state.items.length) return false;
+    for (const card of cards) {
+      const item = itemByPath.get(card.dataset.path);
+      const actionsBar = card.querySelector(".file-grid-actions");
+      if (!item || !actionsBar) continue;
+      if (actionsBar.querySelector(".file-grid-action-btn.ai-btn")) continue;
+      const aiBtn = document.createElement("button");
+      aiBtn.type = "button";
+      aiBtn.className = "file-grid-action-btn ai-btn";
+      aiBtn.title = `与“${itemName(item)}”进行 AI 对话`;
+      aiBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+      aiBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openAiChatPlaceholder(item);
+      });
+      actionsBar.prepend(aiBtn);
+    }
+    return true;
+  }
+  if (!useGridView && fileRows) {
+    const rows = Array.from(fileRows.querySelectorAll("tr[data-path]"));
+    if (rows.length !== state.items.length) return false;
+    rows.forEach((tr, index) => {
+      const item = itemByPath.get(tr.dataset.path);
+      const actionsEl = tr.querySelector(".row-actions");
+      if (!item || !actionsEl) return;
+      if (actionsEl.querySelector(".row-action-icon-btn.ai-action-btn")) return;
+      const aiBtn = aiActionSlot(item, { animateAi }, index);
+      if (aiBtn) actionsEl.prepend(aiBtn);
+    });
+    return true;
+  }
+  return false;
+}
+
 function setAiModeEnabled(enabled, { render = true } = {}) {
   state.aiModeEnabled = Boolean(enabled);
   const wasDrawerVisible = Boolean(
@@ -499,6 +544,10 @@ function setAiModeEnabled(enabled, { render = true } = {}) {
       document
         .querySelectorAll("#fileGrid .file-grid-action-btn.ai-btn, #fileRows .row-action-icon-btn.ai-action-btn")
         .forEach((btn) => btn.remove());
+      return;
+    }
+    // 开启 AI 模式同样原地注入各卡片/各行的 AI 图标按钮，彻底消除 215ms 清空重画造成的缩略图闪烁与列表抖动
+    if (syncAiButtonsInPlace({ animateAi: true })) {
       return;
     }
     const delayMs = (wasDrawerVisible || document.body.classList.contains("ai-drawer-animating")) ? 360 : 215;
@@ -9278,7 +9327,7 @@ function syncAiDockedContentDensity(explicitDrawerWidth = null, cachedSidebarWid
     const contentEl = driveView.querySelector(".content");
     contentWidth = contentEl ? Math.round(contentEl.getBoundingClientRect().width) : window.innerWidth;
   }
-  driveView.classList.toggle("ai-content-compact", contentWidth > 0 && contentWidth < 760);
+  driveView.classList.toggle("ai-content-compact", contentWidth > 0 && contentWidth < 680);
   driveView.classList.toggle("ai-content-tight", contentWidth > 0 && contentWidth < 620);
   const effectiveDrawerWidth = Number.isFinite(explicitDrawerWidth)
     ? explicitDrawerWidth

@@ -46,7 +46,6 @@ button {
     background 160ms ease,
     filter 160ms ease,
     opacity 160ms ease;
-  will-change: transform;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -137,7 +136,6 @@ button.ghost:hover {
     0 24px 60px rgba(18, 52, 105, 0.18),
     0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   transform-style: preserve-3d;
-  will-change: transform;
   transition: box-shadow 320ms ease;
 }
 
@@ -510,7 +508,7 @@ select {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  transition: all 0.2s ease;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .access-status-badge .status-dot {
@@ -863,7 +861,7 @@ select {
   background: #ecfdf5;
   padding: 1.5px 6px;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
   white-space: nowrap;
 }
 
@@ -921,7 +919,7 @@ select {
   color: #2563eb;
   font-weight: 700;
   font-size: 11.5px;
-  transition: all 0.2s ease;
+  transition: color 180ms ease;
 }
 
 .storage-percent-text.badge-warning {
@@ -951,7 +949,7 @@ select {
   justify-content: space-between !important;
   font-size: 11.5px;
   color: #475569;
-  transition: all 0.18s ease;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .storage-mini-tile:hover {
@@ -1812,7 +1810,7 @@ tr:hover .name-cell .star-toggle-btn {
   font-weight: 550;
   cursor: pointer;
   text-align: left;
-  transition: all 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease;
   box-sizing: border-box;
 }
 
@@ -1896,7 +1894,7 @@ tr:hover .name-cell .star-toggle-btn {
   background: transparent;
   border-radius: 9px;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
   white-space: nowrap;
 }
 
@@ -1993,7 +1991,7 @@ tr:hover .name-cell .star-toggle-btn {
   background: #fff5f5;
   border: 1px solid #fed7d7;
   border-radius: 10px;
-  transition: all 0.16s ease;
+  transition: background-color 160ms ease, border-color 160ms ease;
   flex-shrink: 0;
 }
 
@@ -2036,7 +2034,7 @@ tr:hover .name-cell .star-toggle-btn {
   display: inline-grid !important;
   place-items: center !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   flex-shrink: 0 !important;
   position: relative !important;
   outline: none !important;
@@ -2067,7 +2065,7 @@ tr:hover .name-cell .star-toggle-btn {
   background: #e11d48 !important;
   color: #ffffff !important;
   border: none !important;
-  transition: all 0.16s ease !important;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease, transform 160ms ease !important;
 }
 
 .sec-danger-btn:hover:not(:disabled) {
@@ -2436,7 +2434,7 @@ tr:hover .name-cell .star-toggle-btn {
   border: 1px solid rgba(191, 219, 254, 0.9);
   border-radius: 999px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
   user-select: none;
 }
 
@@ -2690,7 +2688,6 @@ tr:hover .name-cell .star-toggle-btn {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 16px 36px rgba(35, 52, 76, 0.09);
   overflow: hidden;
-  transition: min-height 0.2s ease, padding 0.2s ease;
 }
 
 .path-controls {
@@ -2824,12 +2821,10 @@ tr:hover .name-cell .star-toggle-btn {
   color: #69778d;
   font-size: 13px;
   line-height: 1.4;
-  word-break: break-word;
-  word-wrap: break-word;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   max-width: 100%;
 }
 
@@ -2870,14 +2865,12 @@ tr:hover .name-cell .star-toggle-btn {
     border-color 140ms ease,
     color 140ms ease,
     filter 140ms ease;
-  will-change: transform, box-shadow;
 }
 
 .actions button .btn-icon {
   width: 15px;
   height: 15px;
   transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
 }
 
 /* 1. 上传文件：品牌科技蓝 + 物理下沉 + 向上微跳 */
@@ -3083,14 +3076,12 @@ tr:hover .name-cell .star-toggle-btn {
     box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
     background 140ms ease,
     border-color 140ms ease;
-  will-change: transform, box-shadow;
 }
 
 #searchBtn .btn-icon {
   width: 15px;
   height: 15px;
   transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
 }
 
 #searchBtn:hover:not(:disabled) {
@@ -3217,7 +3208,6 @@ tr:hover .name-cell .star-toggle-btn {
   font-weight: 700;
   letter-spacing: 0.1px;
   line-height: 1;
-  transition: font-size 0.16s ease, letter-spacing 0.16s ease;
 }
 
 /* 无论处于全库问答还是文件夹对话，字号均完全统一为 14px，与 AI模式 开 完全对齐 */
@@ -3229,7 +3219,6 @@ tr:hover .name-cell .star-toggle-btn {
 
 @media (min-width: 769px) {
   .ai-global-search {
-    will-change: width, opacity, transform;
     transform: translateZ(0) scale(1);
     visibility: visible;
     transition:
@@ -3629,7 +3618,7 @@ td.select-col {
   display: inline-grid !important;
   place-items: center !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   vertical-align: middle !important;
   outline: none !important;
   position: relative !important;
@@ -4209,7 +4198,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(20, 187, 176, 0.1);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .ai-drawer-back-button:hover {
@@ -4906,7 +4895,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
 .ai-msg-action-btn:hover {
@@ -5961,7 +5950,7 @@ body:not(.ai-drawer-open) .ai-drawer-shell:not(.hidden):not(.closing) .ai-drawer
   border-radius: 10px !important;
   overflow: hidden !important;
   box-shadow: 0 2px 8px rgba(20, 115, 230, 0.08) !important;
-  transition: all 180ms ease !important;
+  transition: border-color 160ms ease, box-shadow 160ms ease !important;
   height: 38px !important;
   box-sizing: border-box !important;
   vertical-align: middle !important;
@@ -7443,7 +7432,7 @@ tbody tr.drop-target-row {
   border: 1px solid rgba(254, 202, 202, 0.85) !important;
   font-weight: 600 !important;
   box-shadow: none !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
 }
 
 .row-actions button.danger:hover,
@@ -8167,7 +8156,7 @@ select:focus {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: all 0.15s ease;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .zip-entry-row:hover {
@@ -8325,7 +8314,7 @@ select:focus {
   border: 1.5px dashed #94a3b8;
   color: #1e293b;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
@@ -8654,7 +8643,7 @@ select:focus {
   font-weight: 600;
   color: #334155;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .ai-code-copy-btn:hover {
@@ -8752,7 +8741,6 @@ select:focus {
   /* 平滑流体过渡：与右侧抽屉、网格卡片 FLIP 保持完全一致的 320ms 曲线，实现同频零抖动推入/退回 */
   .content {
     transition: margin-right 320ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: margin-right;
     contain: layout style;
   }
 
@@ -8864,13 +8852,11 @@ select:focus {
   }
 
   .drive-shell.ai-drawer-docked #statusLine {
-    word-break: break-word;
-    word-wrap: break-word;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    display: block;
+    white-space: nowrap;
     overflow: hidden;
-    white-space: normal;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .drive-shell.ai-drawer-docked .search-box span {
@@ -10317,7 +10303,7 @@ select:focus {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  transition: all 180ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .conflict-multi-banner {
@@ -10386,7 +10372,7 @@ select:focus {
   justify-content: center !important;
   cursor: pointer !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
-  transition: all 180ms ease !important;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
   user-select: none !important;
 }
 
@@ -10546,7 +10532,7 @@ select:focus {
   background: #ffffff;
   cursor: pointer;
   text-align: left;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 1.5px 6px rgba(15, 30, 60, 0.04);
   box-sizing: border-box;
   position: relative;
@@ -10724,7 +10710,7 @@ select:focus {
   display: inline-grid !important;
   place-items: center !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
-  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1) !important;
   flex-shrink: 0 !important;
   position: relative !important;
   outline: none !important;
@@ -10763,7 +10749,7 @@ select:focus {
   border: 1px solid rgba(254, 202, 202, 0.85) !important;
   box-shadow: none !important;
   cursor: pointer !important;
-  transition: all 0.2s ease !important;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -11967,8 +11953,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-out,
 .file-grid.view-switch-out {
   opacity: 0;
-  transform: translate3d(0, 4px, 0) scale(0.988);
-  transform-origin: center top;
+  transform: translate3d(0, 4px, 0);
   transition:
     opacity 85ms cubic-bezier(0.4, 0, 1, 1),
     transform 85ms cubic-bezier(0.4, 0, 1, 1);
@@ -11979,8 +11964,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-enter,
 .file-grid.view-switch-enter {
   opacity: 0;
-  transform: translate3d(0, 6px, 0) scale(0.988);
-  transform-origin: center top;
+  transform: translate3d(0, 6px, 0);
   transition: none !important;
   will-change: opacity, transform;
 }
@@ -11988,8 +11972,7 @@ tbody tr.context-active-row {
 .file-panel table.view-switch-enter-active,
 .file-grid.view-switch-enter-active {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
-  transform-origin: center top;
+  transform: translate3d(0, 0, 0);
   transition:
     opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
