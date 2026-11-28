@@ -2545,9 +2545,9 @@ function buildAiEmptyHeroElement() {
   const cardsWrap = document.createElement("div");
   cardsWrap.className = "ai-empty-cards";
   const cardIcons = [
-    { tone: modeKind === "folder" ? "amber" : "", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
-    { tone: "teal", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' },
-    { tone: modeKind === "file" ? "indigo" : "amber", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+    { tone: modeKind === "folder" ? "amber" : "", svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
+    { tone: "teal", svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' },
+    { tone: modeKind === "file" ? "indigo" : "amber", svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
   ];
 
   const suggestions = buildAiSuggestionItems();
@@ -2576,6 +2576,7 @@ function buildAiEmptyHeroElement() {
 
     card.append(iconSpan, body, arrow);
     card.addEventListener("click", () => {
+      if (isAiGenerating) return;
       if (aiPromptInput) {
         aiPromptInput.value = prompt || label;
         autoResizeAiPromptInput();
@@ -2914,10 +2915,14 @@ function buildAiSuggestionItems() {
 }
 
 function renderAiSuggestionsDynamic() {
-  if (!aiSuggestionList) return;
-  aiSuggestionList.replaceChildren();
-  for (const [label, prompt] of buildAiSuggestionItems()) {
-    aiSuggestionList.append(aiSuggestionButton(label, prompt));
+  if (aiSuggestionList) {
+    aiSuggestionList.replaceChildren();
+    for (const [label, prompt] of buildAiSuggestionItems()) {
+      aiSuggestionList.append(aiSuggestionButton(label, prompt));
+    }
+  }
+  if (aiMessages && aiMessages.classList.contains("is-empty-hero")) {
+    aiMessages.replaceChildren(buildAiEmptyHeroElement());
   }
 }
 

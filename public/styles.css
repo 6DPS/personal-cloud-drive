@@ -3065,44 +3065,48 @@ tr:hover .name-cell .star-toggle-btn {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background: linear-gradient(180deg, #f5f8fc 0%, #eaf0f7 100%);
+  background-image: none;
+  background-color: #eff4fa;
   color: #1e293b;
   border: 1px solid rgba(15, 23, 42, 0.11);
   box-shadow:
     0 2px 6px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
   transition:
-    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    color 160ms ease;
 }
 
 #searchBtn .btn-icon {
   width: 15px;
   height: 15px;
-  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #searchBtn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #edf3fa 0%, #e1e9f3 100%);
-  color: #0f172a;
-  border-color: rgba(23, 105, 224, 0.28);
-  transform: translate3d(0, -1.5px, 0);
+  background-image: none;
+  background-color: #e4effc;
+  color: #1473e6;
+  border-color: rgba(20, 115, 230, 0.32);
+  transform: translate3d(0, -1px, 0);
   box-shadow:
-    0 6px 14px rgba(15, 23, 42, 0.09),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    0 5px 14px rgba(20, 115, 230, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
 #searchBtn:active:not(:disabled) {
-  transform: translate3d(0, 1px, 0) scale(0.982);
-  background: linear-gradient(180deg, #dde6f2 0%, #d3dfee 100%);
-  border-color: rgba(15, 23, 42, 0.16);
+  transform: translate3d(0, 0, 0) scale(0.96);
+  background-image: none;
+  background-color: #d4e6fb;
+  color: #0e5ec4;
+  border-color: rgba(20, 115, 230, 0.44);
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.08),
-    inset 0 2px 4px rgba(15, 23, 42, 0.08);
-  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background-color 60ms ease;
+    0 0 0 3px rgba(20, 115, 230, 0.14),
+    inset 0 1px 3px rgba(20, 115, 230, 0.12);
+  transition-duration: 90ms;
 }
 
 #searchBtn:active:not(:disabled) .btn-icon {
@@ -9624,15 +9628,15 @@ select:focus {
     width: 4px;
     height: 48px;
     border-radius: 999px;
-    background: rgba(148, 163, 184, 0.36);
-    transition: background 160ms ease, height 180ms ease, width 160ms ease, box-shadow 160ms ease;
+    background-color: rgba(148, 163, 184, 0.36);
+    transform: scale3d(1, 1, 1);
+    transition: background-color 180ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease;
   }
 
   .ai-drawer-resize-handle:hover::after,
   body.ai-drawer-resizing .ai-drawer-resize-handle::after {
-    width: 4.5px;
-    height: 76px;
-    background: rgba(37, 99, 235, 0.78);
+    transform: scale3d(1.15, 1.58, 1);
+    background-color: rgba(37, 99, 235, 0.78);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   }
 
@@ -12609,16 +12613,28 @@ aside.ai-drawer {
   align-items: center;
   min-height: 32px;
   height: 32px;
-  padding: 0 11px;
-  border-radius: 9px;
+  padding: 0 13px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
   box-shadow: none;
-  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, color 180ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    color 160ms ease,
+    box-shadow 180ms ease,
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ai-drawer-back-button:hover {
+  transform: translate3d(0, -0.5px, 0);
+  box-shadow: 0 3px 10px rgba(20, 187, 176, 0.14);
 }
 
 .ai-drawer-back-button:active {
-  transform: scale(0.96);
+  transform: translate3d(0, 0, 0) scale(0.955);
+  box-shadow: 0 0 0 3px rgba(20, 187, 176, 0.18);
+  transition-duration: 90ms;
 }
 
 .ai-drawer-header-actions {
@@ -12633,11 +12649,16 @@ aside.ai-drawer {
   min-width: 36px !important;
   min-height: 36px !important;
   max-height: 36px !important;
-  border-radius: 10px !important;
+  border-radius: 999px !important;
   border: 1px solid transparent !important;
-  background: transparent !important;
+  background-image: none !important;
+  background-color: transparent !important;
   box-shadow: none !important;
-  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, transform 130ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms ease,
+    box-shadow 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .ai-drawer-header-btn svg,
@@ -12646,20 +12667,52 @@ aside.ai-drawer {
   height: 19px !important;
 }
 
-.ai-drawer-header-btn:hover,
-.ai-drawer-close-btn:hover,
-#aiHistoryBtn:hover,
-#aiNewChatBtn:hover {
-  transform: none !important;
-  box-shadow: none !important;
+#aiHistoryBtn:hover {
+  background-color: rgba(20, 115, 230, 0.12) !important;
+  color: #1473e6 !important;
   border-color: transparent !important;
+  box-shadow: none !important;
+  transform: translate3d(0, -0.5px, 0) !important;
 }
 
-.ai-drawer-header-btn:active,
-.ai-drawer-close-btn:active,
-#aiHistoryBtn:active,
+#aiHistoryBtn:active {
+  background-color: rgba(20, 115, 230, 0.22) !important;
+  color: #0e5ec4 !important;
+  box-shadow: 0 0 0 3px rgba(20, 115, 230, 0.14) !important;
+  transform: translate3d(0, 0, 0) scale(0.92) !important;
+  transition-duration: 85ms !important;
+}
+
+#aiNewChatBtn:hover {
+  background-color: rgba(20, 187, 176, 0.14) !important;
+  color: #0d9488 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: translate3d(0, -0.5px, 0) !important;
+}
+
 #aiNewChatBtn:active {
-  transform: scale(0.92) !important;
+  background-color: rgba(20, 187, 176, 0.24) !important;
+  color: #0f766e !important;
+  box-shadow: 0 0 0 3px rgba(20, 187, 176, 0.16) !important;
+  transform: translate3d(0, 0, 0) scale(0.92) !important;
+  transition-duration: 85ms !important;
+}
+
+.ai-drawer-close-btn:hover {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: translate3d(0, -0.5px, 0) !important;
+}
+
+.ai-drawer-close-btn:active {
+  background-color: rgba(239, 68, 68, 0.22) !important;
+  color: #b91c1c !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+  transform: translate3d(0, 0, 0) scale(0.92) !important;
+  transition-duration: 85ms !important;
 }
 
 .ai-header-scope-pill,
@@ -12798,12 +12851,13 @@ aside.ai-drawer {
   gap: 8px;
 }
 
-/* 上下文条按钮（预览 / 下载 / 进入目录）：消除旧渐变突跳，改用纯色平滑过渡 + 细腻弹性按压 */
-#aiContextCard .ai-context-actions button {
+/* 上下文条按钮与 AI 结果卡按钮统一胶囊风格：纯色平滑过渡 + 醒目舒适点击光环与弹性微按压 */
+#aiContextCard .ai-context-actions button,
+.ai-result-actions button:not(.ai-result-primary) {
   min-height: 32px;
   height: 32px;
-  padding: 0 13px;
-  border-radius: 9px;
+  padding: 0 15px;
+  border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background-image: none;
   background-color: #ffffff;
@@ -12816,34 +12870,38 @@ aside.ai-drawer {
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    color 180ms ease,
+    color 160ms ease,
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #aiContextCard .ai-context-actions button:hover,
-#aiContextCard .ai-context-actions button:focus-visible {
+#aiContextCard .ai-context-actions button:focus-visible,
+.ai-result-actions button:not(.ai-result-primary):hover,
+.ai-result-actions button:not(.ai-result-primary):focus-visible {
   background-image: none;
-  background-color: #f1f5f9;
-  border-color: rgba(15, 23, 42, 0.22);
-  color: #0f172a;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
-  transform: translate3d(0, -0.5px, 0) scale(1);
+  background-color: #eef6ff;
+  border-color: rgba(20, 115, 230, 0.3);
+  color: #1473e6;
+  box-shadow: 0 3px 10px rgba(20, 115, 230, 0.11);
+  transform: translate3d(0, -1px, 0) scale(1);
 }
 
-#aiContextCard .ai-context-actions button:active {
+#aiContextCard .ai-context-actions button:active,
+.ai-result-actions button:not(.ai-result-primary):active {
   background-image: none;
-  background-color: #e2e8f0;
-  border-color: rgba(15, 23, 42, 0.24);
-  box-shadow: none;
+  background-color: #dcecff;
+  border-color: rgba(20, 115, 230, 0.44);
+  color: #0e5ec4;
+  box-shadow: 0 0 0 3px rgba(20, 115, 230, 0.15);
   transform: translate3d(0, 0, 0) scale(0.955);
   transition-duration: 90ms;
 }
 
 #aiContextCard .ai-context-actions button.primary-subtle {
   background-image: none;
-  background-color: rgba(20, 115, 230, 0.09);
-  border-color: rgba(20, 115, 230, 0.22);
+  background-color: rgba(20, 115, 230, 0.1);
+  border-color: rgba(20, 115, 230, 0.24);
   color: #1473e6;
   box-shadow: none;
 }
@@ -12851,19 +12909,19 @@ aside.ai-drawer {
 #aiContextCard .ai-context-actions button.primary-subtle:hover,
 #aiContextCard .ai-context-actions button.primary-subtle:focus-visible {
   background-image: none;
-  background-color: rgba(20, 115, 230, 0.16);
-  border-color: rgba(20, 115, 230, 0.38);
+  background-color: rgba(20, 115, 230, 0.18);
+  border-color: rgba(20, 115, 230, 0.42);
   color: #0e5ec4;
-  box-shadow: 0 2px 10px rgba(20, 115, 230, 0.14);
-  transform: translate3d(0, -0.5px, 0) scale(1);
+  box-shadow: 0 4px 12px rgba(20, 115, 230, 0.16);
+  transform: translate3d(0, -1px, 0) scale(1);
 }
 
 #aiContextCard .ai-context-actions button.primary-subtle:active {
   background-image: none;
-  background-color: rgba(20, 115, 230, 0.24);
-  border-color: rgba(20, 115, 230, 0.44);
+  background-color: rgba(20, 115, 230, 0.28);
+  border-color: rgba(20, 115, 230, 0.54);
   color: #0b4fa8;
-  box-shadow: none;
+  box-shadow: 0 0 0 3px rgba(20, 115, 230, 0.18);
   transform: translate3d(0, 0, 0) scale(0.955);
   transition-duration: 90ms;
 }
@@ -12883,27 +12941,27 @@ aside.ai-drawer {
   padding: 16px 22px 20px;
 }
 
-/* 居中现代空态欢迎引导区 */
+/* 居中现代空态欢迎引导区（放大易读字号 + 统一胶囊卡片 + 醒目舒适顺滑点击反馈） */
 .ai-empty-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 440px;
+  max-width: 476px;
   width: 100%;
   margin: 0 auto;
 }
 
 .ai-empty-emblem {
-  width: 50px;
-  height: 50px;
-  border-radius: 15px;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
   background: linear-gradient(135deg, #14bbb0 0%, #1668e3 100%);
   color: #ffffff;
   display: grid;
   place-items: center;
   box-shadow: 0 10px 24px -6px rgba(20, 187, 176, 0.36);
-  margin-bottom: 13px;
+  margin-bottom: 14px;
 }
 
 .ai-empty-emblem.folder-mode {
@@ -12917,24 +12975,24 @@ aside.ai-drawer {
 }
 
 .ai-empty-title {
-  margin: 0 0 6px;
-  font-size: 17.5px;
+  margin: 0 0 7px;
+  font-size: 20px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.015em;
 }
 
 .ai-empty-sub {
-  margin: 0 0 20px;
-  font-size: 12.5px;
+  margin: 0 0 22px;
+  font-size: 13.5px;
   color: #64748b;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .ai-empty-cards {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   text-align: left;
 }
@@ -12942,48 +13000,70 @@ aside.ai-drawer {
 .ai-empty-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 11px 14px;
-  border-radius: 13px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: #f8fafd;
+  padding: 13px 20px 13px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  background-image: none;
+  background-color: #f8fafd;
   cursor: pointer;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   text-align: left;
-  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 190ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.ai-empty-card:hover {
-  background: #ffffff;
-  border-color: rgba(20, 187, 176, 0.45);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-  transform: translate3d(0, -1px, 0);
+.ai-empty-card:hover,
+.ai-empty-card:focus-visible {
+  background-image: none;
+  background-color: #eef8ff;
+  border-color: rgba(20, 187, 176, 0.52);
+  box-shadow: 0 6px 18px -4px rgba(20, 187, 176, 0.2);
+  transform: translate3d(0, -1px, 0) scale(1);
+}
+
+.ai-empty-card:active {
+  background-image: none;
+  background-color: #ddf3f1;
+  border-color: #14bbb0;
+  box-shadow: 0 0 0 3px rgba(20, 187, 176, 0.18);
+  transform: translate3d(0, 0, 0) scale(0.98);
+  transition-duration: 95ms;
 }
 
 .ai-empty-card-icon {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  border-radius: 9px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 999px;
   display: grid;
   place-items: center;
-  background: rgba(22, 104, 227, 0.09);
+  background: rgba(22, 104, 227, 0.1);
   color: #1668e3;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ai-empty-card:hover .ai-empty-card-icon {
+  transform: scale(1.06);
 }
 
 .ai-empty-card-icon.teal {
-  background: rgba(20, 187, 176, 0.12);
+  background: rgba(20, 187, 176, 0.13);
   color: #0d9488;
 }
 
 .ai-empty-card-icon.amber {
-  background: rgba(245, 158, 11, 0.12);
+  background: rgba(245, 158, 11, 0.13);
   color: #d97706;
 }
 
 .ai-empty-card-icon.indigo {
-  background: rgba(79, 70, 229, 0.1);
+  background: rgba(79, 70, 229, 0.11);
   color: #4f46e5;
 }
 
@@ -12992,32 +13072,36 @@ aside.ai-drawer {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .ai-empty-card-body strong {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 700;
   color: #0f172a;
+  line-height: 1.3;
 }
 
 .ai-empty-card-body span {
-  font-size: 11.5px;
+  font-size: 13px;
   color: #64748b;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .ai-empty-card-arrow {
+  font-size: 16px;
+  font-weight: 600;
   color: #94a3b8;
   flex-shrink: 0;
-  transition: transform 150ms ease, color 150ms ease;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease;
 }
 
 .ai-empty-card:hover .ai-empty-card-arrow {
   color: #0d9488;
-  transform: translate3d(2px, 0, 0);
+  transform: translate3d(3px, 0, 0);
 }
 
 /* 底部双层输入卡片（保留原有边框/底色与发送键品牌配色，仅优化排布结构） */
@@ -13073,12 +13157,18 @@ aside.ai-drawer {
 }
 
 .ai-send-btn {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  border-radius: 11px;
-  opacity: 0.85;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+  opacity: 0.88;
+}
+
+.ai-send-btn:active:not(:disabled) {
+  transform: translate3d(0, 0, 0) scale(0.92) !important;
+  box-shadow: 0 0 0 3px rgba(20, 187, 176, 0.22) !important;
+  transition-duration: 85ms !important;
 }
 
 .ai-drawer-shell.ai-drawer-narrow .ai-header-scope-pill {

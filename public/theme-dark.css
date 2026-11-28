@@ -432,8 +432,9 @@ html[data-theme="dark"] #newFolderBtn {
 }
 
 html[data-theme="dark"] #searchBtn {
-  background: linear-gradient(180deg, #32343d 0%, #262830 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-image: none !important;
+  background-color: #2b2d36 !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
   color: #f3f4f6 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -441,17 +442,21 @@ html[data-theme="dark"] #searchBtn {
 }
 
 html[data-theme="dark"] #searchBtn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #3c3f4a 0%, #2e313b 100%) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  background-image: none !important;
+  background-color: #313b4b !important;
+  border-color: rgba(100, 181, 255, 0.38) !important;
+  color: #8cc9ff !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 6px 14px rgba(0, 0, 0, 0.36) !important;
+    0 5px 14px rgba(10, 132, 255, 0.2) !important;
 }
 
 html[data-theme="dark"] #searchBtn:active:not(:disabled) {
-  background: linear-gradient(180deg, #24262e 0%, #1d1f26 100%) !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45) !important;
+  background-image: none !important;
+  background-color: #253449 !important;
+  border-color: rgba(100, 181, 255, 0.52) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22) !important;
 }
 
 html[data-theme="dark"] button.secondary {
@@ -2206,18 +2211,40 @@ html[data-theme="dark"] .ai-drawer-close-btn {
   box-shadow: none !important;
 }
 
-html[data-theme="dark"] .ai-drawer-header-btn:hover {
-  background: rgba(255, 255, 255, 0.09) !important;
+html[data-theme="dark"] #aiHistoryBtn:hover {
+  background-color: rgba(10, 132, 255, 0.18) !important;
   border-color: transparent !important;
-  color: #ffffff !important;
+  color: #64b5ff !important;
   box-shadow: none !important;
 }
 
+html[data-theme="dark"] #aiHistoryBtn:active {
+  background-color: rgba(10, 132, 255, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2) !important;
+}
+
+html[data-theme="dark"] #aiNewChatBtn:hover {
+  background-color: rgba(45, 212, 191, 0.18) !important;
+  border-color: transparent !important;
+  color: #5eead4 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] #aiNewChatBtn:active {
+  background-color: rgba(45, 212, 191, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2) !important;
+}
+
 html[data-theme="dark"] .ai-drawer-close-btn:hover {
-  background: rgba(255, 69, 58, 0.18) !important;
+  background-color: rgba(255, 69, 58, 0.2) !important;
   border-color: transparent !important;
   color: #ff6961 !important;
   box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ai-drawer-close-btn:active {
+  background-color: rgba(255, 69, 58, 0.32) !important;
+  box-shadow: 0 0 0 3px rgba(255, 69, 58, 0.22) !important;
 }
 
 html[data-theme="dark"] #aiContextCard .ai-context-icon:not(.folder):not(.archive) {
@@ -2266,8 +2293,9 @@ html[data-theme="dark"] #aiContextCard .ai-context-actions button:focus-visible 
 }
 
 html[data-theme="dark"] #aiContextCard .ai-context-actions button:active {
-  background-color: #242730 !important;
-  box-shadow: none !important;
+  background-color: #263242 !important;
+  border-color: rgba(100, 181, 255, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2) !important;
   transform: translate3d(0, 0, 0) scale(0.955) !important;
 }
 
@@ -2284,12 +2312,13 @@ html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle
   background-color: rgba(10, 132, 255, 0.28) !important;
   border-color: rgba(10, 132, 255, 0.48) !important;
   color: #8cc9ff !important;
-  box-shadow: 0 2px 10px rgba(10, 132, 255, 0.22) !important;
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.24) !important;
 }
 
 html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle:active {
-  background-color: rgba(10, 132, 255, 0.36) !important;
-  box-shadow: none !important;
+  background-color: rgba(10, 132, 255, 0.38) !important;
+  border-color: rgba(100, 181, 255, 0.62) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.24) !important;
   transform: translate3d(0, 0, 0) scale(0.955) !important;
 }
 
@@ -2309,14 +2338,26 @@ html[data-theme="dark"] .ai-empty-sub {
 }
 
 html[data-theme="dark"] .ai-empty-card {
-  background: #24252a !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-image: none !important;
+  background-color: #24252a !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
   box-shadow: none !important;
 }
 
-html[data-theme="dark"] .ai-empty-card:hover {
-  background: #2b2d34 !important;
-  border-color: rgba(45, 212, 191, 0.42) !important;
+html[data-theme="dark"] .ai-empty-card:hover,
+html[data-theme="dark"] .ai-empty-card:focus-visible {
+  background-image: none !important;
+  background-color: #25313d !important;
+  border-color: rgba(45, 212, 191, 0.5) !important;
+  box-shadow: 0 6px 18px -4px rgba(20, 187, 176, 0.24) !important;
+}
+
+html[data-theme="dark"] .ai-empty-card:active {
+  background-image: none !important;
+  background-color: #1d333a !important;
+  border-color: #2dd4bf !important;
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2) !important;
+  transform: translate3d(0, 0, 0) scale(0.98) !important;
 }
 
 html[data-theme="dark"] .ai-empty-card-body strong {
