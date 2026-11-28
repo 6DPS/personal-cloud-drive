@@ -12112,10 +12112,91 @@ tbody tr.context-active-row {
   transform: scale(1.03);
 }
 
+/* 全站列表/单列视图与缩略图网格文档图标统一：微立体右上折角纸张 + 正文微横线 + 底部语义色丝带 */
+.file-icon:not(.folder):not(.archive) {
+  position: relative !important;
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 34px !important;
+  margin-inline: 4px !important;
+  border-radius: 5px 9px 5px 5px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.11) !important;
+  box-shadow:
+    0 2px 6px -1px rgba(15, 23, 42, 0.09),
+    0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  display: inline-flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: 0 0 4px 0 !important;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.file-icon:not(.folder):not(.archive)::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 9px !important;
+  height: 9px !important;
+  background: linear-gradient(225deg, #f8fafc 48%, rgba(15, 23, 42, 0.1) 50%, #e6edf6 55%, #ffffff 100%) !important;
+  border-bottom-left-radius: 3px !important;
+  pointer-events: none !important;
+}
+
+.file-icon:not(.folder):not(.archive)::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 9px !important;
+  left: 6px !important;
+  right: 9px !important;
+  height: 2px !important;
+  border-radius: 1.5px !important;
+  background: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 4.5px 0 rgba(15, 23, 42, 0.07) !important;
+  pointer-events: none !important;
+}
+
+.file-icon:not(.folder):not(.archive).pdf { color: #dc2626 !important; border-bottom: 2.5px solid #ef4444 !important; }
+.file-icon:not(.folder):not(.archive).word { color: #1d4ed8 !important; border-bottom: 2.5px solid #2563eb !important; }
+.file-icon:not(.folder):not(.archive).ppt { color: #d97706 !important; border-bottom: 2.5px solid #f59e0b !important; }
+.file-icon:not(.folder):not(.archive).excel { color: #059669 !important; border-bottom: 2.5px solid #10b981 !important; }
+.file-icon:not(.folder):not(.archive).image { color: #0284c7 !important; border-bottom: 2.5px solid #0ea5e9 !important; }
+.file-icon:not(.folder):not(.archive).media,
+.file-icon:not(.folder):not(.archive).audio { color: #7c3aed !important; border-bottom: 2.5px solid #8b5cf6 !important; }
+.file-icon:not(.folder):not(.archive).text,
+.file-icon:not(.folder):not(.archive).file { color: #475569 !important; border-bottom: 2.5px solid #64748b !important; }
+
+.drive-shell.ai-drawer-docked .name-cell .file-icon:not(.folder):not(.archive) {
+  flex: 0 0 26px !important;
+  width: 26px !important;
+  height: 30px !important;
+  margin-inline: 2px !important;
+  padding-bottom: 3px !important;
+  font-size: 7.5px !important;
+}
+
+.drive-shell.ai-drawer-docked .name-cell .file-icon:not(.folder):not(.archive)::before {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.drive-shell.ai-drawer-docked .name-cell .file-icon:not(.folder):not(.archive)::after {
+  top: 7.5px !important;
+  left: 5px !important;
+  right: 8px !important;
+  box-shadow: 0 4px 0 rgba(15, 23, 42, 0.07) !important;
+}
+
 .file-grid-thumb .file-icon {
   width: 62px !important;
   height: 50px !important;
   flex: 0 0 auto !important;
+  margin-inline: 0 !important;
   font-size: 14px !important;
   border-radius: 14px !important;
 }
@@ -12126,6 +12207,7 @@ tbody tr.context-active-row {
   width: 52px !important;
   height: 64px !important;
   flex: 0 0 auto !important;
+  margin-inline: 0 !important;
   border-radius: 8px 14px 8px 8px !important;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
   border: 1px solid rgba(15, 23, 42, 0.1) !important;
@@ -12167,15 +12249,15 @@ tbody tr.context-active-row {
   pointer-events: none !important;
 }
 
-.file-grid-thumb .file-icon.pdf { color: #dc2626 !important; border-bottom: 3.5px solid #ef4444 !important; }
-.file-grid-thumb .file-icon.word { color: #1d4ed8 !important; border-bottom: 3.5px solid #2563eb !important; }
-.file-grid-thumb .file-icon.ppt { color: #d97706 !important; border-bottom: 3.5px solid #f59e0b !important; }
-.file-grid-thumb .file-icon.excel { color: #059669 !important; border-bottom: 3.5px solid #10b981 !important; }
-.file-grid-thumb .file-icon.image { color: #0284c7 !important; border-bottom: 3.5px solid #0ea5e9 !important; }
-.file-grid-thumb .file-icon.media,
-.file-grid-thumb .file-icon.audio { color: #7c3aed !important; border-bottom: 3.5px solid #8b5cf6 !important; }
-.file-grid-thumb .file-icon.text,
-.file-grid-thumb .file-icon.file { color: #475569 !important; border-bottom: 3.5px solid #64748b !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).pdf { color: #dc2626 !important; border-bottom: 3.5px solid #ef4444 !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).word { color: #1d4ed8 !important; border-bottom: 3.5px solid #2563eb !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).ppt { color: #d97706 !important; border-bottom: 3.5px solid #f59e0b !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).excel { color: #059669 !important; border-bottom: 3.5px solid #10b981 !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).image { color: #0284c7 !important; border-bottom: 3.5px solid #0ea5e9 !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).media,
+.file-grid-thumb .file-icon:not(.folder):not(.archive).audio { color: #7c3aed !important; border-bottom: 3.5px solid #8b5cf6 !important; }
+.file-grid-thumb .file-icon:not(.folder):not(.archive).text,
+.file-grid-thumb .file-icon:not(.folder):not(.archive).file { color: #475569 !important; border-bottom: 3.5px solid #64748b !important; }
 
 .file-grid-thumb .file-icon.folder,
 .file-grid-thumb .file-icon.archive {

@@ -666,46 +666,51 @@ html[data-theme="dark"] .row-action-icon-btn.lock-action-btn.is-locked {
   color: #ffd60a !important;
 }
 
-/* Apple 柔和半透明文档图标 */
+/* 列表与缩略图网格统一折角文档图标（深色模式） */
 html[data-theme="dark"] .file-icon:not(.folder):not(.archive) {
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: none !important;
+  background: linear-gradient(180deg, #2b2e38 0%, #23252d 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
 }
-html[data-theme="dark"] .file-icon.pdf {
-  background: rgba(255, 69, 58, 0.18) !important;
+
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive)::before {
+  background: linear-gradient(225deg, #1c1c1e 48%, rgba(255, 255, 255, 0.15) 50%, #323542 55%, #2b2e38 100%) !important;
+}
+
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive)::after {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 4.5px 0 rgba(255, 255, 255, 0.09) !important;
+}
+
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).pdf {
   color: #ff6961 !important;
-  border-color: rgba(255, 69, 58, 0.34) !important;
+  border-bottom: 2.5px solid #ff453a !important;
 }
-html[data-theme="dark"] .file-icon.word {
-  background: rgba(10, 132, 255, 0.2) !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).word {
   color: #64b5ff !important;
-  border-color: rgba(10, 132, 255, 0.36) !important;
+  border-bottom: 2.5px solid #0a84ff !important;
 }
-html[data-theme="dark"] .file-icon.ppt {
-  background: rgba(255, 159, 10, 0.2) !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).ppt {
   color: #ffb340 !important;
-  border-color: rgba(255, 159, 10, 0.36) !important;
+  border-bottom: 2.5px solid #ff9f0a !important;
 }
-html[data-theme="dark"] .file-icon.excel {
-  background: rgba(48, 209, 88, 0.18) !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).excel {
   color: #30d158 !important;
-  border-color: rgba(48, 209, 88, 0.34) !important;
+  border-bottom: 2.5px solid #30d158 !important;
 }
-html[data-theme="dark"] .file-icon.text,
-html[data-theme="dark"] .file-icon.file {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: #e5e5ea !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).text,
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).file {
+  color: #cbd5e1 !important;
+  border-bottom: 2.5px solid #94a3b8 !important;
 }
-html[data-theme="dark"] .file-icon.image {
-  background: rgba(100, 210, 255, 0.18) !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).image {
   color: #64d2ff !important;
-  border-color: rgba(100, 210, 255, 0.34) !important;
+  border-bottom: 2.5px solid #64d2ff !important;
 }
-html[data-theme="dark"] .file-icon.media,
-html[data-theme="dark"] .file-icon.audio {
-  background: rgba(191, 90, 242, 0.2) !important;
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).media,
+html[data-theme="dark"] .file-icon:not(.folder):not(.archive).audio {
   color: #da8fff !important;
-  border-color: rgba(191, 90, 242, 0.36) !important;
+  border-bottom: 2.5px solid #bf5af2 !important;
 }
 
 /* 缩略图网格折角文档图标（深色模式同步） */
@@ -724,15 +729,15 @@ html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive)::
   box-shadow: 0 7px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
-html[data-theme="dark"] .file-grid-thumb .file-icon.pdf { color: #ff6961 !important; border-bottom: 3.5px solid #ff453a !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.word { color: #64b5ff !important; border-bottom: 3.5px solid #0a84ff !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.ppt { color: #ffb340 !important; border-bottom: 3.5px solid #ff9f0a !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.excel { color: #30d158 !important; border-bottom: 3.5px solid #30d158 !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.image { color: #64d2ff !important; border-bottom: 3.5px solid #64d2ff !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.media,
-html[data-theme="dark"] .file-grid-thumb .file-icon.audio { color: #da8fff !important; border-bottom: 3.5px solid #bf5af2 !important; }
-html[data-theme="dark"] .file-grid-thumb .file-icon.text,
-html[data-theme="dark"] .file-grid-thumb .file-icon.file { color: #cbd5e1 !important; border-bottom: 3.5px solid #94a3b8 !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).pdf { color: #ff6961 !important; border-bottom: 3.5px solid #ff453a !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).word { color: #64b5ff !important; border-bottom: 3.5px solid #0a84ff !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).ppt { color: #ffb340 !important; border-bottom: 3.5px solid #ff9f0a !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).excel { color: #30d158 !important; border-bottom: 3.5px solid #30d158 !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).image { color: #64d2ff !important; border-bottom: 3.5px solid #64d2ff !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).media,
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).audio { color: #da8fff !important; border-bottom: 3.5px solid #bf5af2 !important; }
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).text,
+html[data-theme="dark"] .file-grid-thumb .file-icon:not(.folder):not(.archive).file { color: #cbd5e1 !important; border-bottom: 3.5px solid #94a3b8 !important; }
 
 /* 缩略图网格卡片 */
 html[data-theme="dark"] .file-grid-card {
