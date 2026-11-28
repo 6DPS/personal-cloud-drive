@@ -9891,8 +9891,9 @@ select:focus {
     flex: 0 1 132px;
   }
 
+  /* v1.3.20: 不再强制隐藏 model-badge，改由 @container ai-drawer 自动换行排布 */
   .ai-drawer-shell.ai-drawer-narrow .ai-drawer-header .model-badge {
-    display: none !important;
+    display: inline-flex !important;
   }
 }
 
@@ -12571,26 +12572,30 @@ aside.ai-drawer {
 
 .ai-drawer-header {
   flex: 0 0 auto;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   margin: 0;
   width: 100%;
   max-width: 100%;
   padding: 15px 18px 13px;
-  gap: 10px;
+  row-gap: 9px;
+  column-gap: 10px;
 }
+
+.ai-drawer-header .ai-drawer-back-button { order: 1; }
+.ai-drawer-header .ai-drawer-title-group { order: 2; flex: 1 1 auto; min-width: 0; }
+.ai-drawer-header #aiScopeBtn { order: 3; flex: 0 0 auto; }
+.ai-drawer-header .ai-drawer-header-actions { order: 4; flex: 0 0 auto; margin-left: auto; }
 
 .ai-drawer-header.has-back-btn .ai-drawer-icon {
   display: grid !important;
 }
 
-/* 有返回/范围切换按钮时，隐藏冗余的「全部文件」胶囊避免顶栏拥挤遮挡 */
-.ai-drawer-header.has-back-btn .ai-header-scope-pill,
-.ai-drawer-header.has-back-btn #aiScopeBtn {
-  display: none !important;
-}
-
 .ai-drawer-header h2 {
   min-width: 0;
   max-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .ai-drawer-header h2 .title-text {
@@ -12599,8 +12604,8 @@ aside.ai-drawer {
   text-overflow: ellipsis;
 }
 
-.ai-drawer-shell.ai-drawer-narrow .ai-drawer-header.has-back-btn .ai-drawer-icon {
-  display: none !important;
+.ai-drawer-header h2 .model-badge {
+  flex-shrink: 0;
 }
 
 .ai-drawer-icon {
@@ -13190,46 +13195,90 @@ aside.ai-drawer {
   transition-duration: 85ms !important;
 }
 
-.ai-drawer-shell.ai-drawer-narrow .ai-header-scope-pill {
-  display: none !important;
-}
+/* ============================================================================
+   v1.3.20 全元素保留式容器自适应（绝不隐藏任何功能标签，空间收紧时优雅换位排布）
+   ============================================================================ */
 
-/* 抽屉顶栏多档自适应断点（基于容器实宽，拖拽或任意分辨率下均零遮挡、零半截裁剪） */
-@container ai-drawer (max-width: 640px) {
-  .ai-drawer-header .ai-header-scope-pill,
-  .ai-drawer-header #aiScopeBtn {
-    display: none !important;
+/* 有返回/范围切换按钮且抽屉宽度 <= 720px 时：自动换为清爽两行，保留全部胶囊零遮挡 */
+@container ai-drawer (max-width: 720px) {
+  .ai-drawer-header.has-back-btn {
+    flex-wrap: wrap;
+    padding: 14px 16px 12px;
+    row-gap: 8px;
+    column-gap: 8px;
+  }
+  .ai-drawer-header.has-back-btn .ai-drawer-title-group {
+    order: 1;
+    flex: 1 1 calc(100% - 140px);
+    min-width: 0;
+  }
+  .ai-drawer-header.has-back-btn .ai-drawer-header-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .ai-drawer-header.has-back-btn .ai-drawer-back-button {
+    order: 3;
+  }
+  .ai-drawer-header.has-back-btn #aiScopeBtn {
+    order: 4;
+    margin-right: 0;
   }
 }
 
-@container ai-drawer (max-width: 580px) {
+/* 无返回按钮但抽屉宽度 <= 620px 时：同样自动将「📁 全部文件」优雅换到第二行，绝不隐藏 */
+@container ai-drawer (max-width: 620px) {
   .ai-drawer-header {
-    padding: 14px 14px 12px;
+    flex-wrap: wrap;
+    padding: 14px 16px 12px;
+    row-gap: 8px;
+    column-gap: 8px;
+  }
+  .ai-drawer-header .ai-drawer-title-group {
+    order: 1;
+    flex: 1 1 calc(100% - 140px);
+    min-width: 0;
+  }
+  .ai-drawer-header .ai-drawer-header-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .ai-drawer-header .ai-drawer-back-button {
+    order: 3;
+  }
+  .ai-drawer-header #aiScopeBtn {
+    order: 4;
+    margin-right: 0;
+  }
+}
+
+/* 抽屉较窄（<= 480px）时：标题与模型胶囊支持优雅自动换行，依然完整保留不删减不截断 */
+@container ai-drawer (max-width: 480px) {
+  .ai-drawer-header {
+    padding: 12px 14px 11px;
+    row-gap: 8px;
+    column-gap: 6px;
+  }
+  .ai-drawer-header .ai-drawer-title-group {
+    flex: 1 1 calc(100% - 118px);
     gap: 8px;
   }
-  .ai-drawer-header.has-back-btn .ai-drawer-icon {
-    display: none !important;
-  }
-}
-
-@container ai-drawer (max-width: 500px) {
-  .ai-drawer-header {
-    padding: 13px 12px 11px;
-    gap: 6px;
+  .ai-drawer-icon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
   }
   .ai-drawer-header h2 {
     font-size: 16.5px;
-    gap: 6px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 6px;
+    white-space: normal;
   }
   .ai-drawer-header h2 .model-badge {
     font-size: 11px;
     padding: 2px 8px;
-  }
-  .ai-drawer-back-button {
-    height: 30px;
-    min-height: 30px;
-    padding: 0 10px;
-    font-size: 12px;
   }
   .ai-drawer-header-actions {
     gap: 2px;
@@ -13248,16 +13297,81 @@ aside.ai-drawer {
     width: 17px !important;
     height: 17px !important;
   }
+  .ai-drawer-back-button {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+  .ai-header-scope-pill,
+  #aiScopeBtn.ai-header-scope-pill {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
 }
 
+/* 抽屉窄态下上下文条与提示词卡片同步自适应，防止长文件名挤扁或按钮溢出 */
 @container ai-drawer (max-width: 440px) {
-  .ai-drawer-header h2 .model-badge {
-    display: none !important;
+  #aiContextCard {
+    flex-wrap: wrap;
+    margin: 10px 12px 0;
+    padding: 10px 12px;
+    row-gap: 8px;
+  }
+  #aiContextCard .ai-context-info {
+    flex: 1 1 calc(100% - 52px);
+  }
+  #aiContextCard .ai-context-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .ai-empty-card {
+    padding: 11px 16px 11px 12px;
+    gap: 10px;
+    border-radius: 26px;
+  }
+  .ai-empty-card-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+  .ai-empty-card-body strong {
+    font-size: 14px;
+  }
+  .ai-empty-card-body span {
+    font-size: 12.5px;
   }
 }
 
-@container ai-drawer (max-width: 390px) {
-  .ai-drawer-header .ai-drawer-icon {
-    display: none !important;
-  }
+/* 全局窗口尺寸自适应兜底：确保任何窗口大小下顶栏、搜索栏、弹窗与主工作区均零溢出 */
+.topbar .path-panel,
+.topbar .path-controls,
+.topbar .path-controls > div {
+  min-width: 0;
+}
+
+.topbar .breadcrumb {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-panel .search-row {
+  flex-wrap: wrap;
+}
+
+.search-panel .search-box {
+  min-width: min(160px, 100%);
+}
+
+.modal-card {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 28px);
+}
+
+.modal-card.small {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
