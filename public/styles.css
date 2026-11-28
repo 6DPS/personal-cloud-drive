@@ -12565,6 +12565,8 @@ aside.ai-drawer {
   flex-direction: column;
   gap: 0;
   padding: 0;
+  container-name: ai-drawer;
+  container-type: inline-size;
 }
 
 .ai-drawer-header {
@@ -12578,6 +12580,23 @@ aside.ai-drawer {
 
 .ai-drawer-header.has-back-btn .ai-drawer-icon {
   display: grid !important;
+}
+
+/* 有返回/范围切换按钮时，隐藏冗余的「全部文件」胶囊避免顶栏拥挤遮挡 */
+.ai-drawer-header.has-back-btn .ai-header-scope-pill,
+.ai-drawer-header.has-back-btn #aiScopeBtn {
+  display: none !important;
+}
+
+.ai-drawer-header h2 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ai-drawer-header h2 .title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ai-drawer-shell.ai-drawer-narrow .ai-drawer-header.has-back-btn .ai-drawer-icon {
@@ -13173,4 +13192,72 @@ aside.ai-drawer {
 
 .ai-drawer-shell.ai-drawer-narrow .ai-header-scope-pill {
   display: none !important;
+}
+
+/* 抽屉顶栏多档自适应断点（基于容器实宽，拖拽或任意分辨率下均零遮挡、零半截裁剪） */
+@container ai-drawer (max-width: 640px) {
+  .ai-drawer-header .ai-header-scope-pill,
+  .ai-drawer-header #aiScopeBtn {
+    display: none !important;
+  }
+}
+
+@container ai-drawer (max-width: 580px) {
+  .ai-drawer-header {
+    padding: 14px 14px 12px;
+    gap: 8px;
+  }
+  .ai-drawer-header.has-back-btn .ai-drawer-icon {
+    display: none !important;
+  }
+}
+
+@container ai-drawer (max-width: 500px) {
+  .ai-drawer-header {
+    padding: 13px 12px 11px;
+    gap: 6px;
+  }
+  .ai-drawer-header h2 {
+    font-size: 16.5px;
+    gap: 6px;
+  }
+  .ai-drawer-header h2 .model-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+  .ai-drawer-back-button {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .ai-drawer-header-actions {
+    gap: 2px;
+  }
+  .ai-drawer-header-btn,
+  .ai-drawer-close-btn {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+  }
+  .ai-drawer-header-btn svg,
+  .ai-drawer-close-btn svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+}
+
+@container ai-drawer (max-width: 440px) {
+  .ai-drawer-header h2 .model-badge {
+    display: none !important;
+  }
+}
+
+@container ai-drawer (max-width: 390px) {
+  .ai-drawer-header .ai-drawer-icon {
+    display: none !important;
+  }
 }

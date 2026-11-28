@@ -2683,6 +2683,7 @@ function aiSuggestionScopeItems() {
 }
 
 function aiSuggestionScopeLabel() {
+  if (state.aiDrawer?.mode === "global" && state.aiDrawer?.forceGlobal) return "全部文件";
   if (state.searchActive && state.searchQuery) return `当前搜索结果「${state.searchQuery}」`;
   return displayFolder(state.path || "") || "全部文件";
 }
@@ -2868,8 +2869,8 @@ function buildAiSuggestionItems() {
   const suggestions = [];
   const seen = new Set();
   const pushSuggestion = (label, prompt) => {
-    const key = `${label}|${prompt}`;
-    if (seen.has(key)) return;
+    const key = String(label || "").trim();
+    if (!key || seen.has(key)) return;
     seen.add(key);
     suggestions.push([label, prompt]);
   };
