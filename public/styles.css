@@ -3065,17 +3065,18 @@ tr:hover .name-cell .star-toggle-btn {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background: linear-gradient(180deg, #009e8e 0%, #008275 100%);
-  color: #fff;
-  border: 1px solid rgba(0, 114, 102, 0.35);
+  background: linear-gradient(180deg, #f5f8fc 0%, #eaf0f7 100%);
+  color: #1e293b;
+  border: 1px solid rgba(15, 23, 42, 0.11);
   box-shadow:
-    0 4px 12px rgba(0, 141, 127, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition:
     transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background 140ms ease,
-    border-color 140ms ease;
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 #searchBtn .btn-icon {
@@ -3085,20 +3086,23 @@ tr:hover .name-cell .star-toggle-btn {
 }
 
 #searchBtn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #02ab9b 0%, #008d7f 100%);
-  transform: translateY(-1.5px);
+  background: linear-gradient(180deg, #edf3fa 0%, #e1e9f3 100%);
+  color: #0f172a;
+  border-color: rgba(23, 105, 224, 0.28);
+  transform: translate3d(0, -1.5px, 0);
   box-shadow:
-    0 8px 20px rgba(0, 141, 127, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    0 6px 14px rgba(15, 23, 42, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 #searchBtn:active:not(:disabled) {
-  transform: translateY(1.5px) scale(0.982);
-  background: linear-gradient(180deg, #007367 0%, #005c52 100%);
+  transform: translate3d(0, 1px, 0) scale(0.982);
+  background: linear-gradient(180deg, #dde6f2 0%, #d3dfee 100%);
+  border-color: rgba(15, 23, 42, 0.16);
   box-shadow:
-    0 2px 4px rgba(0, 92, 82, 0.35),
-    inset 0 2px 5px rgba(0, 0, 0, 0.25);
-  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background 60ms ease;
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    inset 0 2px 4px rgba(15, 23, 42, 0.08);
+  transition: transform 60ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 60ms ease, background-color 60ms ease;
 }
 
 #searchBtn:active:not(:disabled) .btn-icon {
@@ -12116,6 +12120,63 @@ tbody tr.context-active-row {
   border-radius: 14px !important;
 }
 
+/* 缩略图网格文档图标：微立体右上折角纸张 + 正文微横线 + 底部语义色丝带 */
+.file-grid-thumb .file-icon:not(.folder):not(.archive) {
+  position: relative !important;
+  width: 52px !important;
+  height: 64px !important;
+  flex: 0 0 auto !important;
+  border-radius: 8px 14px 8px 8px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow:
+    0 6px 14px -4px rgba(15, 23, 42, 0.11),
+    0 1px 2px rgba(15, 23, 42, 0.06) !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding-bottom: 10px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  box-sizing: border-box !important;
+}
+
+.file-grid-thumb .file-icon:not(.folder):not(.archive)::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  background: linear-gradient(225deg, #f3f8fe 48%, rgba(15, 23, 42, 0.09) 50%, #e8eef6 54%, #ffffff 100%) !important;
+  border-bottom-left-radius: 5px !important;
+  pointer-events: none !important;
+}
+
+.file-grid-thumb .file-icon:not(.folder):not(.archive)::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 19px !important;
+  left: 11px !important;
+  right: 11px !important;
+  height: 3px !important;
+  border-radius: 2px !important;
+  background: rgba(15, 23, 42, 0.09) !important;
+  box-shadow: 0 7px 0 rgba(15, 23, 42, 0.065) !important;
+  pointer-events: none !important;
+}
+
+.file-grid-thumb .file-icon.pdf { color: #dc2626 !important; border-bottom: 3.5px solid #ef4444 !important; }
+.file-grid-thumb .file-icon.word { color: #1d4ed8 !important; border-bottom: 3.5px solid #2563eb !important; }
+.file-grid-thumb .file-icon.ppt { color: #d97706 !important; border-bottom: 3.5px solid #f59e0b !important; }
+.file-grid-thumb .file-icon.excel { color: #059669 !important; border-bottom: 3.5px solid #10b981 !important; }
+.file-grid-thumb .file-icon.image { color: #0284c7 !important; border-bottom: 3.5px solid #0ea5e9 !important; }
+.file-grid-thumb .file-icon.media,
+.file-grid-thumb .file-icon.audio { color: #7c3aed !important; border-bottom: 3.5px solid #8b5cf6 !important; }
+.file-grid-thumb .file-icon.text,
+.file-grid-thumb .file-icon.file { color: #475569 !important; border-bottom: 3.5px solid #64748b !important; }
+
 .file-grid-thumb .file-icon.folder,
 .file-grid-thumb .file-icon.archive {
   width: 36px !important;
@@ -12142,8 +12203,9 @@ tbody tr.context-active-row {
   pointer-events: none;
 }
 
-/* 图片缩略图不叠加角标，避免遮挡科研图表右下角图例或照片细节 */
-.file-grid-thumb.has-image .file-grid-ext-badge {
+/* 图片缩略图与已带清晰文字标识的折角文档图标不重复叠加黑色角标（保留压缩包 ZIP 角标） */
+.file-grid-thumb.has-image .file-grid-ext-badge,
+.file-grid-thumb:has(.file-icon:not(.folder):not(.archive)) .file-grid-ext-badge {
   display: none;
 }
 
