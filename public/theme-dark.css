@@ -2249,15 +2249,48 @@ html[data-theme="dark"] #aiContextCard .ai-context-info span {
 }
 
 html[data-theme="dark"] #aiContextCard .ai-context-actions button {
-  background: #2c2f38 !important;
+  background-image: none !important;
+  background-color: #2c2f38 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
   color: rgba(235, 235, 245, 0.9) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] #aiContextCard .ai-context-actions button:hover,
+html[data-theme="dark"] #aiContextCard .ai-context-actions button:focus-visible {
+  background-image: none !important;
+  background-color: #363a45 !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="dark"] #aiContextCard .ai-context-actions button:active {
+  background-color: #242730 !important;
+  box-shadow: none !important;
+  transform: translate3d(0, 0, 0) scale(0.955) !important;
 }
 
 html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle {
-  background: rgba(10, 132, 255, 0.18) !important;
+  background-image: none !important;
+  background-color: rgba(10, 132, 255, 0.18) !important;
   border-color: rgba(10, 132, 255, 0.32) !important;
   color: #64b5ff !important;
+}
+
+html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle:hover,
+html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle:focus-visible {
+  background-image: none !important;
+  background-color: rgba(10, 132, 255, 0.28) !important;
+  border-color: rgba(10, 132, 255, 0.48) !important;
+  color: #8cc9ff !important;
+  box-shadow: 0 2px 10px rgba(10, 132, 255, 0.22) !important;
+}
+
+html[data-theme="dark"] #aiContextCard .ai-context-actions button.primary-subtle:active {
+  background-color: rgba(10, 132, 255, 0.36) !important;
+  box-shadow: none !important;
+  transform: translate3d(0, 0, 0) scale(0.955) !important;
 }
 
 html[data-theme="dark"] .ai-empty-hero,

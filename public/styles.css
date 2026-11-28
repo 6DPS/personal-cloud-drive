@@ -12568,8 +12568,8 @@ aside.ai-drawer {
   margin: 0;
   width: 100%;
   max-width: 100%;
-  padding: 14px 16px 12px;
-  gap: 8px;
+  padding: 15px 18px 13px;
+  gap: 10px;
 }
 
 .ai-drawer-header.has-back-btn .ai-drawer-icon {
@@ -12581,63 +12581,69 @@ aside.ai-drawer {
 }
 
 .ai-drawer-icon {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  border-radius: 10px;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 11px;
 }
 
 .ai-drawer-icon svg {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
 }
 
 .ai-drawer-header h2 {
-  font-size: 16px;
-  gap: 7px;
+  font-size: 18.5px;
+  gap: 8px;
 }
 
 .ai-drawer-header h2 .model-badge {
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 12px;
+  padding: 3px 10px;
 }
 
 .ai-drawer-back-button {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  height: 28px;
-  padding: 0 9px;
-  border-radius: 8px;
-  font-size: 12px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 13px;
   font-weight: 600;
   box-shadow: none;
+  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, color 180ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ai-drawer-back-button:active {
+  transform: scale(0.96);
 }
 
 .ai-drawer-header-actions {
-  gap: 3px;
+  gap: 5px;
 }
 
 .ai-drawer-header-btn,
 .ai-drawer-close-btn {
-  flex: 0 0 32px !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
-  border-radius: 9px !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  border-radius: 10px !important;
   border: 1px solid transparent !important;
   background: transparent !important;
   box-shadow: none !important;
+  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease, transform 130ms cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .ai-drawer-header-btn svg,
 .ai-drawer-close-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 19px !important;
+  height: 19px !important;
 }
 
 .ai-drawer-header-btn:hover,
@@ -12649,18 +12655,25 @@ aside.ai-drawer {
   border-color: transparent !important;
 }
 
+.ai-drawer-header-btn:active,
+.ai-drawer-close-btn:active,
+#aiHistoryBtn:active,
+#aiNewChatBtn:active {
+  transform: scale(0.92) !important;
+}
+
 .ai-header-scope-pill,
 #aiScopeBtn.ai-header-scope-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 26px;
-  min-height: 26px;
-  padding: 0 9px;
+  gap: 5px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 11px;
   margin-left: 0;
   margin-right: 4px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
   box-shadow: none !important;
 }
@@ -12680,11 +12693,11 @@ aside.ai-drawer {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 16px 0;
-  padding: 9px 12px;
-  min-height: 52px;
-  border-radius: 13px;
+  gap: 12px;
+  margin: 12px 16px 0;
+  padding: 11px 14px;
+  min-height: 60px;
+  border-radius: 14px;
   box-shadow: none;
 }
 
@@ -12697,12 +12710,12 @@ aside.ai-drawer {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 #aiContextCard .ai-context-info strong {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14.5px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -12710,26 +12723,26 @@ aside.ai-drawer {
 
 #aiContextCard .ai-context-info span {
   margin-top: 0;
-  font-size: 11.5px;
-  line-height: 1.35;
+  font-size: 12.5px;
+  line-height: 1.38;
 }
 
 /* 上下文条里的文档图标同步折角纸张工艺（与列表/网格视图 1:1 一致） */
 #aiContextCard .ai-context-icon:not(.folder):not(.archive) {
   position: relative !important;
-  flex: 0 0 30px !important;
-  width: 30px !important;
-  height: 34px !important;
-  border-radius: 5px 9px 5px 5px !important;
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  height: 38px !important;
+  border-radius: 6px 10px 6px 6px !important;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
   border: 1px solid rgba(15, 23, 42, 0.11) !important;
   border-bottom: 2.5px solid #2563eb !important;
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.07) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.07) !important;
   display: inline-flex !important;
   align-items: flex-end !important;
   justify-content: center !important;
-  padding: 0 0 4px 0 !important;
-  font-size: 8.5px !important;
+  padding: 0 0 5px 0 !important;
+  font-size: 9.5px !important;
   font-weight: 800 !important;
   letter-spacing: 0.02em !important;
   line-height: 1 !important;
@@ -12742,8 +12755,8 @@ aside.ai-drawer {
   position: absolute !important;
   top: 0 !important;
   right: 0 !important;
-  width: 9px !important;
-  height: 9px !important;
+  width: 10px !important;
+  height: 10px !important;
   background: linear-gradient(225deg, #f8fafc 48%, rgba(15, 23, 42, 0.1) 50%, #e6edf6 55%, #ffffff 100%) !important;
   border-bottom-left-radius: 3px !important;
   pointer-events: none !important;
@@ -12752,13 +12765,13 @@ aside.ai-drawer {
 #aiContextCard .ai-context-icon:not(.folder):not(.archive)::after {
   content: "" !important;
   position: absolute !important;
-  top: 9px !important;
-  left: 6px !important;
-  right: 9px !important;
+  top: 10px !important;
+  left: 7px !important;
+  right: 10px !important;
   height: 2px !important;
   border-radius: 1.5px !important;
   background: rgba(15, 23, 42, 0.1) !important;
-  box-shadow: 0 4.5px 0 rgba(15, 23, 42, 0.07) !important;
+  box-shadow: 0 5px 0 rgba(15, 23, 42, 0.07) !important;
   pointer-events: none !important;
 }
 
@@ -12774,31 +12787,85 @@ aside.ai-drawer {
 
 #aiContextCard .ai-context-icon.folder,
 #aiContextCard .ai-context-icon.archive {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 28px;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 32px;
 }
 
 #aiContextCard .ai-context-actions {
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* 上下文条按钮（预览 / 下载 / 进入目录）：消除旧渐变突跳，改用纯色平滑过渡 + 细腻弹性按压 */
 #aiContextCard .ai-context-actions button {
-  min-height: 28px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 8px;
-  font-size: 12px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background-image: none;
+  background-color: #ffffff;
+  color: #334155;
+  font-size: 13px;
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms ease,
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#aiContextCard .ai-context-actions button:hover,
+#aiContextCard .ai-context-actions button:focus-visible {
+  background-image: none;
+  background-color: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.22);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+  transform: translate3d(0, -0.5px, 0) scale(1);
+}
+
+#aiContextCard .ai-context-actions button:active {
+  background-image: none;
+  background-color: #e2e8f0;
+  border-color: rgba(15, 23, 42, 0.24);
   box-shadow: none;
+  transform: translate3d(0, 0, 0) scale(0.955);
+  transition-duration: 90ms;
 }
 
 #aiContextCard .ai-context-actions button.primary-subtle {
-  background: rgba(20, 115, 230, 0.08);
+  background-image: none;
+  background-color: rgba(20, 115, 230, 0.09);
   border-color: rgba(20, 115, 230, 0.22);
   color: #1473e6;
+  box-shadow: none;
+}
+
+#aiContextCard .ai-context-actions button.primary-subtle:hover,
+#aiContextCard .ai-context-actions button.primary-subtle:focus-visible {
+  background-image: none;
+  background-color: rgba(20, 115, 230, 0.16);
+  border-color: rgba(20, 115, 230, 0.38);
+  color: #0e5ec4;
+  box-shadow: 0 2px 10px rgba(20, 115, 230, 0.14);
+  transform: translate3d(0, -0.5px, 0) scale(1);
+}
+
+#aiContextCard .ai-context-actions button.primary-subtle:active {
+  background-image: none;
+  background-color: rgba(20, 115, 230, 0.24);
+  border-color: rgba(20, 115, 230, 0.44);
+  color: #0b4fa8;
+  box-shadow: none;
+  transform: translate3d(0, 0, 0) scale(0.955);
+  transition-duration: 90ms;
 }
 
 /* 消息区弹性占满中间高度 */
