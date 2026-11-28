@@ -741,7 +741,7 @@ function autoResizeAiPromptInput() {
   if (!aiPromptInput) return;
   aiPromptInput.style.height = "auto";
   const scrollH = aiPromptInput.scrollHeight;
-  const targetH = Math.min(Math.max(scrollH, 24), 140);
+  const targetH = Math.min(Math.max(scrollH, 38), 140);
   aiPromptInput.style.height = `${targetH}px`;
   aiPromptInput.style.overflowY = scrollH > 140 ? "auto" : "hidden";
 }
@@ -1814,30 +1814,46 @@ function renderAiContextCard() {
   aiContextCard.replaceChildren();
   if (state.aiDrawer.mode === "global") {
     const isFolder = Boolean(state.path) && !state.aiDrawer?.forceGlobal;
+    if (!isFolder) {
+      aiContextCard.classList.add("is-hidden-global");
+      aiContextCard.dataset.mode = "global";
+      return;
+    }
+    aiContextCard.classList.remove("is-hidden-global");
+    aiContextCard.dataset.mode = "folder";
+    const folderLabel = displayFolder(state.path) || "当前文件夹";
+    const icon = renderFileIcon({ type: "folder", name: folderLabel, path: state.path }, { baseClass: "ai-context-icon" });
+    const info = document.createElement("div");
+    info.className = "ai-context-info";
     const title = document.createElement("strong");
-    title.textContent = isFolder ? "AI文件夹对话" : "AI全库问答";
-    const desc = document.createElement("span");
-    const scopePath = isFolder ? `全部文件 / ${state.path}` : "全部文件";
-    desc.textContent = isFolder
-      ? `范围：${scopePath}；围绕当前文件夹内容进行问答与梳理。`
-      : `范围：${scopePath}；可结合文件名、路径和全库结构。`;
-    aiContextCard.append(title, desc);
+    title.textContent = folderLabel;
+    const meta = document.createElement("span");
+    meta.textContent = `当前文件夹 · 全部文件 / ${state.path}`;
+    info.append(title, meta);
+    aiContextCard.append(icon, info);
     return;
   }
 
   const item = state.aiDrawer.item;
-  if (!item) return;
+  if (!item) {
+    aiContextCard.classList.add("is-hidden-global");
+    return;
+  }
+  aiContextCard.classList.remove("is-hidden-global");
+  aiContextCard.dataset.mode = item.type === "folder" ? "folder" : "file";
   const icon = renderFileIcon(item, { baseClass: "ai-context-icon" });
   const info = document.createElement("div");
+  info.className = "ai-context-info";
   const title = document.createElement("strong");
   title.textContent = itemName(item);
   const meta = document.createElement("span");
-  meta.textContent = `${item.type === "folder" ? "文件夹" : formatSize(item.size)} · ${formatTime(item.modifiedAt)}`;
+  const pathPart = item.type === "folder" && item.path ? ` · 全部文件 / ${item.path}` : "";
+  meta.textContent = `${item.type === "folder" ? "文件夹" : formatSize(item.size)}${pathPart} · ${formatTime(item.modifiedAt)}`;
   info.append(title, meta);
   const actions = document.createElement("div");
   actions.className = "ai-context-actions";
-  actions.append(aiActionLink(item.type === "folder" ? "进入" : "预览", () => openItemFromAi(item)));
-  if (item.type === "file") actions.append(aiActionLink("下载", () => downloadFile(item)));
+  actions.append(aiActionLink(item.type === "folder" ? "进入目录 ↗" : "预览", () => openItemFromAi(item), "ai-ctx-btn primary-subtle"));
+  if (item.type === "file") actions.append(aiActionLink("下载", () => downloadFile(item), "ai-ctx-btn"));
   aiContextCard.append(icon, info, actions);
 }
 
@@ -2474,9 +2490,118 @@ function createAiMessageBubble(message, index, total, lastCompletedAssistantInde
   return bubble;
 }
 
+function isAiMessageInitialGreeting(message, index) {
+  if (!message) return false;
+  if (message.isInitial) return true;
+  if (message.role !== "assistant" || message.pending) return false;
+  const hasUserBefore = state.aiDrawer.messages.slice(0, index).some((m) => m.role === "user");
+  return !hasUserBefore && index === 0;
+}
+
+function getAiVisibleMessages() {
+  return state.aiDrawer.messages
+    .map((message, index) => ({ message, index }))
+    .filter(({ message, index }) => !isAiMessageInitialGreeting(message, index));
+}
+
+function buildAiEmptyHeroElement() {
+  const isItemMode = state.aiDrawer.mode === "item";
+  const item = state.aiDrawer.item;
+  const currentScope = getCurrentAiScope();
+  const modeKind = isItemMode
+    ? (item?.type === "folder" ? "folder" : "file")
+    : (currentScope.type === "folder" ? "folder" : "global");
+
+  const hero = document.createElement("div");
+  hero.className = "ai-empty-hero";
+
+  const emblem = document.createElement("div");
+  emblem.className = `ai-empty-emblem ${modeKind === "folder" ? "folder-mode" : (modeKind === "file" ? "file-mode" : "global-mode")}`;
+  if (modeKind === "folder") {
+    emblem.innerHTML = '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+  } else if (modeKind === "file") {
+    emblem.innerHTML = '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  } else {
+    emblem.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>';
+  }
+
+  const title = document.createElement("h3");
+  title.className = "ai-empty-title";
+  const sub = document.createElement("p");
+  sub.className = "ai-empty-sub";
+
+  if (modeKind === "folder") {
+    const folderName = isItemMode && item ? itemName(item) : (displayFolder(state.path || "") || "当前文件夹");
+    title.textContent = `围绕「${folderName}」提问`;
+    sub.textContent = "仅检索该文件夹及子目录内容，精准汇总与对比资料";
+  } else if (modeKind === "file") {
+    title.textContent = "关于这份文档，想了解什么？";
+    sub.textContent = "已关联文档内容 · 支持深度解读、要点提炼与汇报大纲生成";
+  } else {
+    title.textContent = "想查网盘里的什么资料？";
+    sub.textContent = "当前范围：全部文件 · 可结合文件名、路径与全库结构智能检索";
+  }
+
+  const cardsWrap = document.createElement("div");
+  cardsWrap.className = "ai-empty-cards";
+  const cardIcons = [
+    { tone: modeKind === "folder" ? "amber" : "", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
+    { tone: "teal", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' },
+    { tone: modeKind === "file" ? "indigo" : "amber", svg: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+  ];
+
+  const suggestions = buildAiSuggestionItems();
+  suggestions.forEach(([label, prompt], idx) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "ai-empty-card";
+
+    const iconSpec = cardIcons[idx % cardIcons.length];
+    const iconSpan = document.createElement("span");
+    iconSpan.className = `ai-empty-card-icon${iconSpec.tone ? " " + iconSpec.tone : ""}`;
+    iconSpan.innerHTML = iconSpec.svg;
+
+    const body = document.createElement("span");
+    body.className = "ai-empty-card-body";
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    const desc = document.createElement("span");
+    desc.textContent = prompt || label;
+    body.append(strong, desc);
+
+    const arrow = document.createElement("span");
+    arrow.className = "ai-empty-card-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "→";
+
+    card.append(iconSpan, body, arrow);
+    card.addEventListener("click", () => {
+      if (aiPromptInput) {
+        aiPromptInput.value = prompt || label;
+        autoResizeAiPromptInput();
+      }
+      syncAiPromptSendState();
+      pulseAiSendButton();
+      submitAiPrompt();
+    });
+    cardsWrap.append(card);
+  });
+
+  hero.append(emblem, title, sub, cardsWrap);
+  return hero;
+}
+
 function renderAiMessages() {
   if (!aiMessages) return;
   aiMessages.replaceChildren();
+  const visibleEntries = getAiVisibleMessages();
+  if (!visibleEntries.length) {
+    aiMessages.classList.add("is-empty-hero");
+    aiMessages.append(buildAiEmptyHeroElement());
+    return;
+  }
+
+  aiMessages.classList.remove("is-empty-hero");
   const total = state.aiDrawer.messages.length;
   let lastCompletedAssistantIndex = -1;
   for (let i = total - 1; i >= 0; i--) {
@@ -2487,7 +2612,7 @@ function renderAiMessages() {
     }
   }
 
-  state.aiDrawer.messages.forEach((message, index) => {
+  visibleEntries.forEach(({ message, index }) => {
     aiMessages.append(createAiMessageBubble(message, index, total, lastCompletedAssistantIndex, false));
   });
   requestAnimationFrame(() => {
@@ -2839,6 +2964,8 @@ function renderAiDrawer() {
     }
   }
   if (aiScopeBtn) {
+    const isGlobalRoot = !isItemMode && currentScope.type !== "folder";
+    aiScopeBtn.classList.toggle("hidden", !isGlobalRoot);
     let scopeIcon = "📁";
     let scopeText = "全部文件";
     let scopeFull = "全部文件";
@@ -2858,10 +2985,6 @@ function renderAiDrawer() {
       scopeIcon = "📂";
       scopeText = `文件夹：${folderName}`;
       scopeFull = state.path ? `全部文件 / ${state.path}` : folderName;
-    } else {
-      scopeIcon = "📁";
-      scopeText = "全部文件";
-      scopeFull = "全部文件";
     }
 
     const iconEl = aiScopeBtn.querySelector(".pill-icon");
@@ -2918,7 +3041,8 @@ async function executeAiChatTurn(prompt) {
   state.aiDrawer.messages.push(pendingMessage);
 
   const total = state.aiDrawer.messages.length;
-  if (aiMessages && aiMessages.children.length === total - 2) {
+  const visibleCount = getAiVisibleMessages().length;
+  if (aiMessages && !aiMessages.classList.contains("is-empty-hero") && aiMessages.children.length === visibleCount - 2) {
     const userMsg = state.aiDrawer.messages[total - 2];
     aiMessages.append(
       createAiMessageBubble(userMsg, total - 2, total, -1, true),

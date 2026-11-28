@@ -12550,3 +12550,470 @@ body.selection-active .file-grid-select-wrap {
   color: #1d4ed8;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
+
+/* ============================================================================
+   v1.3.16 AI 对话抽屉三模式结构精修（单行清爽顶栏 + 钉住单行上下文条 + 居中空态 + 底部双层输入卡）
+   严格保留原有对话框配色与对话气泡配色不改动
+   ============================================================================ */
+
+aside.ai-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.ai-drawer-header {
+  flex: 0 0 auto;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 14px 16px 12px;
+  gap: 8px;
+}
+
+.ai-drawer-header.has-back-btn .ai-drawer-icon {
+  display: grid !important;
+}
+
+.ai-drawer-shell.ai-drawer-narrow .ai-drawer-header.has-back-btn .ai-drawer-icon {
+  display: none !important;
+}
+
+.ai-drawer-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 10px;
+}
+
+.ai-drawer-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.ai-drawer-header h2 {
+  font-size: 16px;
+  gap: 7px;
+}
+
+.ai-drawer-header h2 .model-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.ai-drawer-back-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.ai-drawer-header-actions {
+  gap: 3px;
+}
+
+.ai-drawer-header-btn,
+.ai-drawer-close-btn {
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  border-radius: 9px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ai-drawer-header-btn svg,
+.ai-drawer-close-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ai-drawer-header-btn:hover,
+.ai-drawer-close-btn:hover,
+#aiHistoryBtn:hover,
+#aiNewChatBtn:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.ai-header-scope-pill,
+#aiScopeBtn.ai-header-scope-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 9px;
+  margin-left: 0;
+  margin-right: 4px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+
+.ai-header-scope-pill.hidden,
+#aiScopeBtn.hidden {
+  display: none !important;
+}
+
+.ai-drawer-toolbar,
+#aiSuggestionList {
+  display: none !important;
+}
+
+/* 紧贴顶栏的单行上下文条（仅文件夹/单文件对话显示，全库问答隐藏） */
+#aiContextCard {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 16px 0;
+  padding: 9px 12px;
+  min-height: 52px;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+#aiContextCard.is-hidden-global {
+  display: none !important;
+}
+
+#aiContextCard .ai-context-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#aiContextCard .ai-context-info strong {
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#aiContextCard .ai-context-info span {
+  margin-top: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+/* 上下文条里的文档图标同步折角纸张工艺（与列表/网格视图 1:1 一致） */
+#aiContextCard .ai-context-icon:not(.folder):not(.archive) {
+  position: relative !important;
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 34px !important;
+  border-radius: 5px 9px 5px 5px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.11) !important;
+  border-bottom: 2.5px solid #2563eb !important;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.07) !important;
+  display: inline-flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: 0 0 4px 0 !important;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+#aiContextCard .ai-context-icon:not(.folder):not(.archive)::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 9px !important;
+  height: 9px !important;
+  background: linear-gradient(225deg, #f8fafc 48%, rgba(15, 23, 42, 0.1) 50%, #e6edf6 55%, #ffffff 100%) !important;
+  border-bottom-left-radius: 3px !important;
+  pointer-events: none !important;
+}
+
+#aiContextCard .ai-context-icon:not(.folder):not(.archive)::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 9px !important;
+  left: 6px !important;
+  right: 9px !important;
+  height: 2px !important;
+  border-radius: 1.5px !important;
+  background: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 4.5px 0 rgba(15, 23, 42, 0.07) !important;
+  pointer-events: none !important;
+}
+
+#aiContextCard .ai-context-icon.pdf:not(.folder):not(.archive) { border-bottom-color: #ef4444 !important; color: #dc2626 !important; }
+#aiContextCard .ai-context-icon.word:not(.folder):not(.archive) { border-bottom-color: #2563eb !important; color: #1d4ed8 !important; }
+#aiContextCard .ai-context-icon.ppt:not(.folder):not(.archive) { border-bottom-color: #f59e0b !important; color: #d97706 !important; }
+#aiContextCard .ai-context-icon.excel:not(.folder):not(.archive) { border-bottom-color: #10b981 !important; color: #059669 !important; }
+#aiContextCard .ai-context-icon.image:not(.folder):not(.archive) { border-bottom-color: #0ea5e9 !important; color: #0284c7 !important; }
+#aiContextCard .ai-context-icon.media:not(.folder):not(.archive),
+#aiContextCard .ai-context-icon.audio:not(.folder):not(.archive) { border-bottom-color: #8b5cf6 !important; color: #7c3aed !important; }
+#aiContextCard .ai-context-icon.text:not(.folder):not(.archive),
+#aiContextCard .ai-context-icon.file:not(.folder):not(.archive) { border-bottom-color: #64748b !important; color: #475569 !important; }
+
+#aiContextCard .ai-context-icon.folder,
+#aiContextCard .ai-context-icon.archive {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 28px;
+}
+
+#aiContextCard .ai-context-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+#aiContextCard .ai-context-actions button {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+#aiContextCard .ai-context-actions button.primary-subtle {
+  background: rgba(20, 115, 230, 0.08);
+  border-color: rgba(20, 115, 230, 0.22);
+  color: #1473e6;
+}
+
+/* 消息区弹性占满中间高度 */
+#aiMessages {
+  flex: 1 1 0%;
+  min-height: 0;
+  padding: 14px 18px;
+}
+
+#aiMessages.is-empty-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  padding: 16px 22px 20px;
+}
+
+/* 居中现代空态欢迎引导区 */
+.ai-empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.ai-empty-emblem {
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #14bbb0 0%, #1668e3 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px -6px rgba(20, 187, 176, 0.36);
+  margin-bottom: 13px;
+}
+
+.ai-empty-emblem.folder-mode {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  box-shadow: 0 10px 24px -6px rgba(245, 158, 11, 0.36);
+}
+
+.ai-empty-emblem.file-mode {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  box-shadow: 0 10px 24px -6px rgba(37, 99, 235, 0.36);
+}
+
+.ai-empty-title {
+  margin: 0 0 6px;
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+}
+
+.ai-empty-sub {
+  margin: 0 0 20px;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.ai-empty-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.ai-empty-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 13px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafd;
+  cursor: pointer;
+  box-shadow: none;
+  text-align: left;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.ai-empty-card:hover {
+  background: #ffffff;
+  border-color: rgba(20, 187, 176, 0.45);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  transform: translate3d(0, -1px, 0);
+}
+
+.ai-empty-card-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: rgba(22, 104, 227, 0.09);
+  color: #1668e3;
+}
+
+.ai-empty-card-icon.teal {
+  background: rgba(20, 187, 176, 0.12);
+  color: #0d9488;
+}
+
+.ai-empty-card-icon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.ai-empty-card-icon.indigo {
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+}
+
+.ai-empty-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-empty-card-body strong {
+  font-size: 13px;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.ai-empty-card-body span {
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-empty-card-arrow {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 150ms ease, color 150ms ease;
+}
+
+.ai-empty-card:hover .ai-empty-card-arrow {
+  color: #0d9488;
+  transform: translate3d(2px, 0, 0);
+}
+
+/* 底部双层输入卡片（保留原有边框/底色与发送键品牌配色，仅优化排布结构） */
+#aiPromptForm {
+  flex: 0 0 auto;
+  padding: 8px 16px 16px;
+}
+
+.ai-prompt-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 12px 10px 14px;
+  border-radius: 18px;
+}
+
+#aiPromptHint {
+  display: none;
+}
+
+.ai-prompt-box textarea {
+  min-height: 38px;
+  height: 38px;
+  padding: 2px 4px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.ai-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.ai-composer-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-composer-toggles .ai-model-pill {
+  height: 29px;
+  min-height: 29px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.ai-send-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 11px;
+  opacity: 0.85;
+}
+
+.ai-drawer-shell.ai-drawer-narrow .ai-header-scope-pill {
+  display: none !important;
+}
